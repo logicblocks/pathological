@@ -1,10 +1,9 @@
 (defproject logicblocks/derivative "0.0.1"
-  :description "General purpose in place scaffolding tool."
+  :description "General purpose in place scaffolding and source code rewrite tool."
   :url "https://github.com/logicblocks/derivative"
   :license {:name "The MIT License"
             :url  "https://opensource.org/licenses/MIT"}
-  :dependencies [[clj-commons/fs "1.5.0"]
-                 [com.rpl/specter "1.1.2"]]
+  :dependencies [[clj-commons/fs "1.5.0"]]
   :plugins [[lein-cloverage "1.0.13"]
             [lein-shell "0.5.0"]
             [lein-ancient "0.6.15"]
