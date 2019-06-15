@@ -31,4 +31,6 @@
                   ["vcs" "commit"]
                   ["vcs" "tag"]
                   ["vcs" "push"]]
-  :aliases {"test" ["eftest" ":all"]})
+  :aliases {"test" ["do"
+                    ["with-profile" "unit" "eftest" ":all"]
+                    ["with-profile" "integration" "eftest" ":all"]]})
