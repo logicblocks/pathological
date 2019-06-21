@@ -2,11 +2,11 @@
   (:require
     [clojure.string :as string]
 
-    [me.raynes.fs
-     :refer [delete-dir]]))
+    [pathological.files :as f]
+    [pathological.paths :as p]))
 
 (defn multiline-str [& strings]
-  (string/join "\n" strings))
+  (string/join (format "%n") strings))
 
 (defn with-empty-directory [path]
-  #(do (delete-dir path) (%)))
+  #(do (f/delete-recursively (p/path path)) (%)))

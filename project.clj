@@ -3,7 +3,8 @@
   :url "https://github.com/logicblocks/derivative"
   :license {:name "The MIT License"
             :url  "https://opensource.org/licenses/MIT"}
-  :dependencies [[clj-commons/fs "1.5.0"]]
+  :dependencies [[clj-commons/fs "1.5.0"]
+                 [com.google.jimfs/jimfs "1.1"]]
   :plugins [[lein-cloverage "1.0.13"]
             [lein-shell "0.5.0"]
             [lein-ancient "0.6.15"]
