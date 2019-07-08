@@ -147,4 +147,35 @@
               "require_relative '../lib/whatever'"
               ""
               "Whatever.new.read_other_thing('first', 'second')"
+              "")))))
+
+  (deftest finds-and-replaces-based-on-regular-expression-when-supplied
+    (let [file-path "work/test.rb"
+
+          initial-content
+          (multiline-str
+            "def thing_doer(arg1, arg2)"
+            "  arg1 * arg2"
+            "end"
+            "")
+
+          _ (make-parents file-path)
+          _ (spit file-path initial-content)
+
+          pipeline
+          [{:type          :find-and-replace
+            :configuration {:find    #"arg(\d+)"
+                            :replace "argument_$1"
+                            :in      (str "path:./" file-path)}}]
+
+          _ (derivative/derive pipeline
+              {:source-directory "."
+               :target-directory "."})
+
+          final-content (slurp file-path)]
+      (is (= final-content
+            (multiline-str
+              "def thing_doer(argument_1, argument_2)"
+              "  argument_1 * argument_2"
+              "end"
               ""))))))
