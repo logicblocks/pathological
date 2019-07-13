@@ -31,11 +31,17 @@
 
 (defmethod apply-transformation :find-and-replace
   [{:keys [configuration]}
-   {:keys [source-directory target-directory]}]
+   {:keys [directories vars]
+    :or   {vars {}}}]
   (let [{:keys [find replace in]} configuration
-        source-directory-path (paths/path source-directory)
-        target-directory-path (paths/path target-directory)
-        input-file-paths (determine-inputs source-directory-path in)]
+        {:keys [source target]} directories
+
+        source-directory-path (paths/path source)
+        target-directory-path (paths/path target)
+
+        input-file-paths (determine-inputs source-directory-path in)
+
+        context {:var vars}]
     (doseq [input-file-path input-file-paths]
       (let [output-file-path
             (paths/path target-directory-path
@@ -50,7 +56,8 @@
               find)
 
             replace-fn
-            #(templates/render replace {:matches (build-match-map %)})
+            #(templates/render replace
+               (assoc context :match (build-match-map %)))
 
             transformed-content
             (string/replace initial-content find-pattern replace-fn)]

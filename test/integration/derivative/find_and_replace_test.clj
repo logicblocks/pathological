@@ -35,8 +35,8 @@
                             :in      (str "path:./" file-path)}}]
 
           _ (derivative/derive pipeline
-              {:source-directory "."
-               :target-directory "."})
+              {:directories {:source "."
+                             :target "."}})
 
           final-content (slurp file-path)]
       (is (= final-content
@@ -72,8 +72,8 @@
                             :in      (str "path:./" file-path)}}]
 
           _ (derivative/derive pipeline
-              {:source-directory "."
-               :target-directory "."})
+              {:directories {:source "."
+                             :target "."}})
 
           final-content (slurp file-path)]
       (is (= final-content
@@ -125,8 +125,8 @@
                             :in      "glob:./work/**/*"}}]
 
           _ (derivative/derive pipeline
-              {:source-directory "."
-               :target-directory "."})
+              {:directories {:source "."
+                             :target "."}})
 
           final-content-1 (slurp file-1-path)
           final-content-2 (slurp file-2-path)]
@@ -165,17 +165,49 @@
           pipeline
           [{:type          :find-and-replace
             :configuration {:find    #"arg(\d+)"
-                            :replace "argument_{{matches.$1}}"
+                            :replace "argument_{{match.$1}}"
                             :in      (str "path:./" file-path)}}]
 
           _ (derivative/derive pipeline
-              {:source-directory "."
-               :target-directory "."})
+              {:directories {:source "."
+                             :target "."}})
 
           final-content (slurp file-path)]
       (is (= final-content
             (multiline-str
               "def thing_doer(argument_1, argument_2)"
               "  argument_1 * argument_2"
+              "end"
+              "")))))
+
+  (deftest allows-variables-to-be-interpolated-into-replacements
+    (let [file-path "work/test.rb"
+
+          initial-content
+          (multiline-str
+            "def thing_doer(arg1, arg2)"
+            "  arg1 * arg2"
+            "end"
+            "")
+
+          _ (make-parents file-path)
+          _ (spit file-path initial-content)
+
+          pipeline
+          [{:type          :find-and-replace
+            :configuration {:find    "thing"
+                            :replace "{{var.name}}"
+                            :in      (str "path:./" file-path)}}]
+
+          _ (derivative/derive pipeline
+              {:vars        {:name "stuff"}
+               :directories {:source "."
+                             :target "."}})
+
+          final-content (slurp file-path)]
+      (is (= final-content
+            (multiline-str
+              "def stuff_doer(arg1, arg2)"
+              "  arg1 * arg2"
               "end"
               ""))))))
