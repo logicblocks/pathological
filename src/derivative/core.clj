@@ -1,26 +1,26 @@
 (ns derivative.core
   (:refer-clojure :exclude [derive])
   (:require
-    [clojure.string :as s]
+    [clojure.string :as string]
 
-    [cljstache.core :as m]
+    [cljstache.core :as templates]
 
-    [pathological.paths :as p]
-    [pathological.files :as f])
+    [pathological.paths :as paths]
+    [pathological.files :as files])
   (:import [java.util.regex Pattern]))
 
 (def ^:dynamic *line-separator*
   (format "%n"))
 
 (defn join-lines [coll]
-  (s/join *line-separator* coll))
+  (string/join *line-separator* coll))
 
 (defn determine-inputs [search-path pattern]
-  (if (s/starts-with? pattern "path:")
-    [(p/path search-path (s/replace pattern "path:" ""))]
-    (f/find search-path (fn [path _] (p/matches? path pattern)))))
+  (if (string/starts-with? pattern "path:")
+    [(paths/path search-path (string/replace pattern "path:" ""))]
+    (files/find search-path (fn [path _] (paths/matches? path pattern)))))
 
-(defn match->map [match]
+(defn build-match-map [match]
   (into {}
     (map-indexed
       (fn [index item] [(keyword (str "$" index)) item])
@@ -33,16 +33,16 @@
   [{:keys [configuration]}
    {:keys [source-directory target-directory]}]
   (let [{:keys [find replace in]} configuration
-        source-directory-path (p/path source-directory)
-        target-directory-path (p/path target-directory)
+        source-directory-path (paths/path source-directory)
+        target-directory-path (paths/path target-directory)
         input-file-paths (determine-inputs source-directory-path in)]
     (doseq [input-file-path input-file-paths]
       (let [output-file-path
-            (p/path target-directory-path
-              (p/relativize source-directory-path input-file-path))
+            (paths/path target-directory-path
+              (paths/relativize source-directory-path input-file-path))
 
             initial-content
-            (join-lines (f/read-all-lines input-file-path))
+            (join-lines (files/read-all-lines input-file-path))
 
             find-pattern
             (if (string? find)
@@ -50,11 +50,12 @@
               find)
 
             replace-fn
-            #(m/render replace {:matches (match->map %)})
+            #(templates/render replace {:matches (build-match-map %)})
 
             transformed-content
-            (s/replace initial-content find-pattern replace-fn)]
-        (f/write-lines output-file-path (s/split-lines transformed-content))))))
+            (string/replace initial-content find-pattern replace-fn)]
+        (files/write-lines output-file-path
+          (string/split-lines transformed-content))))))
 
 (defn derive [pipeline options]
   (let [transformation (first pipeline)]
