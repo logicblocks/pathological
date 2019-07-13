@@ -3,15 +3,15 @@
   :url "https://github.com/logicblocks/derivative"
   :license {:name "The MIT License"
             :url  "https://opensource.org/licenses/MIT"}
-  :dependencies [[clj-commons/fs "1.5.0"]
-                 [com.google.jimfs/jimfs "1.1"]]
+  :dependencies [[cljstache "2.0.4"]]
   :plugins [[lein-cloverage "1.0.13"]
             [lein-shell "0.5.0"]
             [lein-ancient "0.6.15"]
             [lein-changelog "0.3.2"]
             [lein-eftest "0.5.3"]]
   :profiles {:shared      {:dependencies   [[org.clojure/clojure "1.10.0"]
-                                            [eftest "0.5.3"]]
+                                            [eftest "0.5.3"]
+                                            [com.google.jimfs/jimfs "1.1"]]
                            :resource-paths ["test_resources"]}
              :dev         [:shared {:source-paths ["dev"]}]
              :unit        [:shared {:test-paths ^:replace ["test/unit"]

@@ -165,7 +165,7 @@
           pipeline
           [{:type          :find-and-replace
             :configuration {:find    #"arg(\d+)"
-                            :replace "argument_$1"
+                            :replace "argument_{{matches.$1}}"
                             :in      (str "path:./" file-path)}}]
 
           _ (derivative/derive pipeline

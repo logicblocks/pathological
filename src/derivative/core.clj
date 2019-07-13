@@ -3,8 +3,11 @@
   (:require
     [clojure.string :as s]
 
+    [cljstache.core :as m]
+
     [pathological.paths :as p]
-    [pathological.files :as f]))
+    [pathological.files :as f])
+  (:import [java.util.regex Pattern]))
 
 (def ^:dynamic *line-separator*
   (format "%n"))
@@ -16,6 +19,12 @@
   (if (s/starts-with? pattern "path:")
     [(p/path search-path (s/replace pattern "path:" ""))]
     (f/find search-path (fn [path _] (p/matches? path pattern)))))
+
+(defn match->map [match]
+  (into {}
+    (map-indexed
+      (fn [index item] [(keyword (str "$" index)) item])
+      match)))
 
 (defmulti apply-transformation
   (fn [transformation _] (:type transformation)))
@@ -32,8 +41,19 @@
             (p/path target-directory-path
               (p/relativize source-directory-path input-file-path))
 
-            initial-content (join-lines (f/read-all-lines input-file-path))
-            transformed-content (s/replace initial-content find replace)]
+            initial-content
+            (join-lines (f/read-all-lines input-file-path))
+
+            find-pattern
+            (if (string? find)
+              (re-pattern (Pattern/quote find))
+              find)
+
+            replace-fn
+            #(m/render replace {:matches (match->map %)})
+
+            transformed-content
+            (s/replace initial-content find-pattern replace-fn)]
         (f/write-lines output-file-path (s/split-lines transformed-content))))))
 
 (defn derive [pipeline options]
