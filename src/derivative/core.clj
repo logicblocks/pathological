@@ -5,6 +5,8 @@
 
     [cljstache.core :as templates]
 
+    [camel-snake-kebab.core :as cases]
+
     [pathological.paths :as paths]
     [pathological.files :as files])
   (:import [java.util.regex Pattern]))
@@ -26,6 +28,10 @@
       (fn [index item] [(keyword (str "$" index)) item])
       match)))
 
+(defn snake-case [value]
+  (fn [render-fn]
+    (cases/->snake_case_string (render-fn value))))
+
 (defmulti apply-transformation
   (fn [transformation _] (:type transformation)))
 
@@ -41,7 +47,8 @@
 
         input-file-paths (determine-inputs source-directory-path in)
 
-        context {:var vars}]
+        context {:var vars
+                 :fn {:snake-case snake-case}}]
     (doseq [input-file-path input-file-paths]
       (let [output-file-path
             (paths/path target-directory-path
@@ -52,8 +59,13 @@
 
             find-pattern
             (if (string? find)
-              (re-pattern (Pattern/quote find))
-              find)
+              (re-pattern (Pattern/quote (templates/render find context)))
+              (re-pattern
+                (templates/render
+                  (-> (.pattern find)
+                    (string/replace "\\{\\{" "{{")
+                    (string/replace "\\}\\}" "}}"))
+                  context)))
 
             replace-fn
             #(templates/render replace

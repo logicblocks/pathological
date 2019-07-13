@@ -223,6 +223,7 @@
 (defn delete-recursively
   [^Path path]
   (letfn [(delete-fn [_ path _] (delete path))]
-    (walk-file-tree path
-      :visit-file-fn delete-fn
-      :post-visit-directory-fn delete-fn)))
+    (if (exists? path)
+      (walk-file-tree path
+        :visit-file-fn delete-fn
+        :post-visit-directory-fn delete-fn))))

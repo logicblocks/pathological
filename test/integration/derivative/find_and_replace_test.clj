@@ -210,4 +210,134 @@
               "def stuff_doer(arg1, arg2)"
               "  arg1 * arg2"
               "end"
+              "")))))
+
+  (deftest allows-variables-to-be-interpolated-into-finders-when-string
+    (let [file-path "work/test.rb"
+
+          initial-content
+          (multiline-str
+            "def old_name_doer(arg1, arg2)"
+            "  arg1 * arg2"
+            "end"
+            "")
+
+          _ (make-parents file-path)
+          _ (spit file-path initial-content)
+
+          pipeline
+          [{:type          :find-and-replace
+            :configuration {:find    "{{var.old-name}}"
+                            :replace "new_name"
+                            :in      (str "path:./" file-path)}}]
+
+          _ (derivative/derive pipeline
+              {:vars        {:old-name "old_name"}
+               :directories {:source "."
+                             :target "."}})
+
+          final-content (slurp file-path)]
+      (is (= final-content
+            (multiline-str
+              "def new_name_doer(arg1, arg2)"
+              "  arg1 * arg2"
+              "end"
+              "")))))
+
+  (deftest allows-variables-to-be-interpolated-into-finders-when-regex
+    (let [file-path "work/test.rb"
+
+          initial-content
+          (multiline-str
+            "def thing_doer(arg1, arg2)"
+            "  arg1 * arg2"
+            "end"
+            "")
+
+          _ (make-parents file-path)
+          _ (spit file-path initial-content)
+
+          pipeline
+          [{:type          :find-and-replace
+            :configuration {:find    #"\{\{var.arg-prefix\}\}(\d+)"
+                            :replace "argument_{{match.$1}}"
+                            :in      (str "path:./" file-path)}}]
+
+          _ (derivative/derive pipeline
+              {:vars        {:arg-prefix "arg"}
+               :directories {:source "."
+                             :target "."}})
+
+          final-content (slurp file-path)]
+      (is (= final-content
+            (multiline-str
+              "def thing_doer(argument_1, argument_2)"
+              "  argument_1 * argument_2"
+              "end"
+              "")))))
+
+  (deftest provides-functions-to-manipulate-replacements
+    (let [file-path "work/test.rb"
+
+          initial-content
+          (multiline-str
+            "def thing_doer(arg1, arg2)"
+            "  arg1 * arg2"
+            "end"
+            "")
+
+          _ (make-parents file-path)
+          _ (spit file-path initial-content)
+
+          pipeline
+          [{:type :find-and-replace
+            :configuration
+                  {:find    "thing"
+                   :replace "{{#fn.snake-case}}{{var.name}}{{/fn.snake-case}}"
+                   :in      (str "path:./" file-path)}}]
+
+          _ (derivative/derive pipeline
+              {:vars        {:name "someThing"}
+               :directories {:source "."
+                             :target "."}})
+
+          final-content (slurp file-path)]
+      (is (= final-content
+            (multiline-str
+              "def some_thing_doer(arg1, arg2)"
+              "  arg1 * arg2"
+              "end"
+              "")))))
+
+  (deftest provides-functions-to-manipulate-finders
+    (let [file-path "work/test.rb"
+
+          initial-content
+          (multiline-str
+            "def some_thing_doer(arg1, arg2)"
+            "  arg1 * arg2"
+            "end"
+            "")
+
+          _ (make-parents file-path)
+          _ (spit file-path initial-content)
+
+          pipeline
+          [{:type :find-and-replace
+            :configuration
+                  {:find    "{{#fn.snake-case}}{{var.name}}{{/fn.snake-case}}"
+                   :replace "other_thing"
+                   :in      (str "path:./" file-path)}}]
+
+          _ (derivative/derive pipeline
+              {:vars        {:name "someThing"}
+               :directories {:source "."
+                             :target "."}})
+
+          final-content (slurp file-path)]
+      (is (= final-content
+            (multiline-str
+              "def other_thing_doer(arg1, arg2)"
+              "  arg1 * arg2"
+              "end"
               ""))))))
