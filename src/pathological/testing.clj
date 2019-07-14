@@ -1,12 +1,11 @@
-(ns pathological.test-support.file-systems
-  (:require
-    [pathological.test-support.data :as data])
+(ns pathological.testing
   (:import
     [com.google.common.jimfs Configuration
                              Feature
                              Jimfs
                              PathNormalization
-                             PathType]))
+                             PathType]
+    [java.util UUID]))
 
 (def ^:dynamic *features*
   {:links                   Feature/LINKS
@@ -30,6 +29,9 @@
 (def ^:dynamic *path-types*
   {:unix    (PathType/unix)
    :windows (PathType/windows)})
+
+(defn random-file-system-name []
+  (str (UUID/randomUUID)))
 
 (defn lookup-for [var]
   (fn [value] (or (get var value) value)))
@@ -121,7 +123,7 @@
                                            :file-channel}}))
 
 (defn new-in-memory-file-system
-  ([] (new-in-memory-file-system (data/random-uuid)))
+  ([] (new-in-memory-file-system (random-file-system-name)))
   ([name] (new-in-memory-file-system name unix-configuration))
   ([name configuration]
    (Jimfs/newFileSystem name configuration)))

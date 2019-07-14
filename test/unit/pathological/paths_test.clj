@@ -4,9 +4,9 @@
 
     [pathological.paths :as p]
 
-    [pathological.test-support.data :as data]
-    [pathological.test-support.file-systems
-     :refer [new-in-memory-file-system]])
+    [pathological.testing
+     :refer [random-file-system-name
+             new-in-memory-file-system]])
   (:import
     [java.nio.file FileSystem
                    FileSystems]))
@@ -19,10 +19,10 @@
 
 (deftest path
   (let [^FileSystem test-file-system-1
-        (new-in-memory-file-system (data/random-uuid))
+        (new-in-memory-file-system (random-file-system-name))
 
         ^FileSystem test-file-system-2
-        (new-in-memory-file-system (data/random-uuid))]
+        (new-in-memory-file-system (random-file-system-name))]
 
     (testing "uses supplied file system to build path"
       (is (= (.getPath test-file-system-1 "first"
@@ -81,7 +81,7 @@
 (deftest normalize
   (testing "returns path with redundancies removed"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           absolute-path
           (p/path test-file-system "/some/nested/../directory/./file.txt")]
@@ -91,7 +91,7 @@
 (deftest relativize
   (testing "returns path relative to supplied directory"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           absolute-path
           (p/path test-file-system "/some/nested/directory/file.txt")
@@ -103,7 +103,7 @@
 (deftest matches?
   (testing "returns true if path matches pattern"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           pattern "glob:**/*.html"
           path (p/path test-file-system "/directory/index.html")]
@@ -111,7 +111,7 @@
 
   (testing "returns false if path does not match pattern"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           pattern "glob:**/*.txt"
           path (p/path test-file-system "/directory/index.html")]

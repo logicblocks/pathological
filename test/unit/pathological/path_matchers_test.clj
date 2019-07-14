@@ -6,20 +6,20 @@
     [pathological.path-matchers :as pm]
     [pathological.paths :as p]
 
-    [pathological.test-support.data :as data]
-    [pathological.test-support.file-systems
-     :refer [new-in-memory-file-system
+    [pathological.testing
+     :refer [random-file-system-name
+             new-in-memory-file-system
              unix-configuration
              windows-configuration]]))
 
 (deftest path-matcher
   (testing "uses the default file system when none specified"
     (let [unix-test-file-system
-          (new-in-memory-file-system (data/random-uuid)
+          (new-in-memory-file-system (random-file-system-name)
             unix-configuration)
 
           windows-test-file-system
-          (new-in-memory-file-system (data/random-uuid)
+          (new-in-memory-file-system (random-file-system-name)
             windows-configuration)]
       (with-bindings {#'fs/*file-system* windows-test-file-system}
         (let [path-matcher (pm/path-matcher "glob:C:\\\\*.html")
@@ -41,11 +41,11 @@
 
   (testing "uses the specified file system when supplied"
     (let [unix-test-file-system
-          (new-in-memory-file-system (data/random-uuid)
+          (new-in-memory-file-system (random-file-system-name)
             unix-configuration)
 
           windows-test-file-system
-          (new-in-memory-file-system (data/random-uuid)
+          (new-in-memory-file-system (random-file-system-name)
             windows-configuration)]
       (with-bindings {#'fs/*file-system* unix-test-file-system}
         (let [path-matcher

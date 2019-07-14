@@ -4,7 +4,8 @@
   :license {:name "The MIT License"
             :url  "https://opensource.org/licenses/MIT"}
   :dependencies [[cljstache "2.0.4"]
-                 [camel-snake-kebab "672421b575737c5496b7ddcfb83cf150b0d0bc75"]]
+                 [camel-snake-kebab "672421b575737c5496b7ddcfb83cf150b0d0bc75"]
+                 [com.google.jimfs/jimfs "1.1"]]
   :middleware [lein-git-down.plugin/inject-properties]
   :plugins [[lein-cloverage "1.0.13"]
             [lein-shell "0.5.0"]
@@ -13,8 +14,7 @@
             [lein-eftest "0.5.3"]
             [reifyhealth/lein-git-down "0.3.5"]]
   :profiles {:shared      {:dependencies   [[org.clojure/clojure "1.10.0"]
-                                            [eftest "0.5.3"]
-                                            [com.google.jimfs/jimfs "1.1"]]
+                                            [eftest "0.5.3"]]
                            :resource-paths ["test_resources"]}
              :dev         [:shared {:source-paths ["dev"]}]
              :unit        [:shared {:test-paths ^:replace ["test/unit"]

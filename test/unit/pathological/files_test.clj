@@ -7,9 +7,9 @@
     [pathological.paths :as p]
     [pathological.utils :as u]
 
-    [pathological.test-support.data :as data]
-    [pathological.test-support.file-systems
-     :refer [new-in-memory-file-system]])
+    [pathological.testing
+     :refer [random-file-system-name
+             new-in-memory-file-system]])
   (:import
     [java.nio.file Files Path LinkOption NoSuchFileException]
     [java.nio.file.attribute PosixFilePermissions]
@@ -18,7 +18,7 @@
 (deftest create-directories
   (testing "creates all directories in path"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/some/very/nested/path/")]
       (f/create-directories path)
@@ -27,7 +27,7 @@
 
   (testing "applies supplied file attributes when creating directories"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/some/very/nested/path/")]
       (f/create-directories path
@@ -45,7 +45,7 @@
 (deftest create-directory
   (testing "creates single directory"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/path/")]
       (f/create-directory path)
@@ -54,7 +54,7 @@
 
   (testing "applies supplied file attributes when creating directory"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/path/")]
       (f/create-directory path
@@ -72,7 +72,7 @@
 (deftest create-file
   (testing "creates a file"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/some-file")]
       (f/create-file path)
@@ -81,7 +81,7 @@
 
   (testing "applies supplied file attributes when creating file"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/some-file")]
       (f/create-file path
@@ -99,7 +99,7 @@
 (deftest create-symbolic-link
   (testing "creates a symbolic link"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           target-path (p/path test-file-system "/target")
           link-path (p/path test-file-system "/link")]
@@ -113,7 +113,7 @@
 
   (testing "applies supplied file attributes when creating symbolic link"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           target-path (p/path test-file-system "/target")
           link-path (p/path test-file-system "/link")]
@@ -137,7 +137,7 @@
 (deftest create-link
   (testing "creates a link"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           target-path (p/path test-file-system "/target")
           link-path (p/path test-file-system "/link")]
@@ -151,7 +151,7 @@
 
   (testing "fails if the link target does not exist"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           target-path (p/path test-file-system "/target")
           link-path (p/path test-file-system "/link")]
@@ -161,7 +161,7 @@
 (deftest delete
   (testing "deletes a file"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/file")]
       (f/create-file path)
@@ -172,7 +172,7 @@
 
   (testing "deletes an empty directory"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/directory")]
       (f/create-directory path)
@@ -184,7 +184,7 @@
 (deftest read-symbolic-link
   (testing "returns the path of the link target"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           target-path (p/path test-file-system "/target")
           link-path (p/path test-file-system "/link")]
@@ -196,7 +196,7 @@
 (deftest find
   (testing "returns a seq of matching paths"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/work")
 
@@ -219,7 +219,7 @@
 
   (testing "honours file visit options when supplied"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/work")
 
@@ -252,7 +252,7 @@
 
   (testing "honours maximum depth option when supplied"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/work")
 
@@ -279,7 +279,7 @@
 
   (testing "returns true when the file exists"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/some-file")]
       (f/create-file path)
@@ -288,7 +288,7 @@
 
   (testing "returns false when the file does not exist"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/some-file")]
       (is (false? (f/exists? path))))))
@@ -298,7 +298,7 @@
 
   (testing "returns true when path is a regular file"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/some-file")]
       (f/create-file path)
@@ -307,7 +307,7 @@
 
   (testing "returns false when path is not a regular file"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/some-directory")]
       (f/create-directory path)
@@ -319,7 +319,7 @@
 
   (testing "returns true when path is a directory"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/some-directory")]
       (f/create-directory path)
@@ -328,7 +328,7 @@
 
   (testing "returns false when path is not a directory"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/some-file")]
       (f/create-file path)
@@ -338,7 +338,7 @@
 (deftest symbolic-link?
   (testing "returns true when path is a symbolic link"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           target-path (p/path test-file-system "/target")
           link-path (p/path test-file-system "/link")]
@@ -349,7 +349,7 @@
 
   (testing "returns false when path is not a symbolic link"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/not-link")]
       (f/create-file path)
@@ -359,7 +359,7 @@
 (deftest same-file?
   (testing "returns true when both paths are the same"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path-1 (p/path test-file-system "/file")
           path-2 (p/path test-file-system "/file")]
@@ -369,7 +369,7 @@
 
   (testing "returns true when both paths point at the same file"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path-1 (p/path test-file-system "/file")
           path-2 (p/path test-file-system "/link")]
@@ -380,7 +380,7 @@
 
   (testing "returns false when paths point at different files"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path-1 (p/path test-file-system "/file1")
           path-2 (p/path test-file-system "/file2")]
@@ -392,7 +392,7 @@
 (deftest write-lines
   (testing "writes the provided lines to the path"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/path/to/file")
           content ["line 1" "line 2" "line 3"]]
@@ -404,7 +404,7 @@
 
   (testing "uses the provided charset when writing"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/path/to/file")
           content ["line 1" "line 2" "line 3"]]
@@ -416,7 +416,7 @@
 
   (testing "uses the provided file options when writing"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           ^Path path (p/path test-file-system "/path/to/file")
 
@@ -436,7 +436,7 @@
 (deftest read-lines
   (testing "reads all lines from the path"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           ^Path path (p/path test-file-system "/path/to/file")
           content ["line 1" "line 2" "line 3"]
@@ -450,7 +450,7 @@
 
   (testing "reads using the supplied charset"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           ^Path path (p/path test-file-system "/path/to/file")
           content ["line 1" "line 2" "line 3"]
@@ -465,7 +465,7 @@
 (deftest populate-file-tree
   (testing "creates top level file with contents"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")
           definition
@@ -479,7 +479,7 @@
 
   (testing "creates top level files with content"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")
           definition
@@ -498,7 +498,7 @@
 
   (testing "creates top level symbolic link"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")
           definition
@@ -513,7 +513,7 @@
 
   (testing "creates top level symbolic links"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")
           definition
@@ -534,7 +534,7 @@
 
   (testing "throws exception when no target supplied on symlink"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")
           definition
@@ -545,7 +545,7 @@
 
   (testing "creates top level link"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")
           definition
@@ -560,7 +560,7 @@
 
   (testing "creates top level links"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")
           definition
@@ -581,7 +581,7 @@
 
   (testing "creates top level directory"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")
           definition
@@ -593,7 +593,7 @@
 
   (testing "creates top level directories"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")
           definition
@@ -608,7 +608,7 @@
 
   (testing "creates nested file with contents"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")
           definition
@@ -621,7 +621,7 @@
 
   (testing "creates nested files with contents"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")
           definition
@@ -639,7 +639,7 @@
 
   (testing "creates nested symbolic link"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")
           definition
@@ -660,7 +660,7 @@
 
   (testing "creates nested symbolic links"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")
           definition
@@ -689,7 +689,7 @@
 
   (testing "creates nested link"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")
           definition
@@ -710,7 +710,7 @@
 
   (testing "creates nested links"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")
           definition
@@ -738,7 +738,7 @@
 (deftest walk-file-tree
   (testing "walks top level files and returns accumulated result"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -759,7 +759,7 @@
 
   (testing "walks directories depth first"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/work")]
       (f/populate-file-tree root-path
@@ -791,7 +791,7 @@
 
   (testing "terminates when requested"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/work")]
       (f/populate-file-tree root-path
@@ -819,7 +819,7 @@
 
   (testing "skips entire subtree when requested"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/work")]
       (f/populate-file-tree root-path
@@ -852,7 +852,7 @@
 
   (testing "skips all siblings when requested"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/work")]
       (f/populate-file-tree root-path
@@ -889,7 +889,7 @@
 
   (testing "assumes continue when no control returned"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/work")]
       (f/populate-file-tree root-path
@@ -914,7 +914,7 @@
 
   (testing "follows symlinks when requested"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/work")]
       (f/populate-file-tree root-path
@@ -948,7 +948,7 @@
 (deftest delete-recursively
   (testing "deletes all files in a directory"
     (let [test-file-system
-          (new-in-memory-file-system (data/random-uuid))
+          (new-in-memory-file-system (random-file-system-name))
 
           root-path (p/path test-file-system "/root")]
       (f/create-directory root-path)
