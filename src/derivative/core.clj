@@ -8,7 +8,8 @@
     [camel-snake-kebab.core :as cases]
 
     [pathological.paths :as paths]
-    [pathological.files :as files])
+    [pathological.files :as files]
+    [pathological.file-systems :as file-systems])
   (:import [java.util.regex Pattern]))
 
 (def ^:dynamic *line-separator*
@@ -37,13 +38,14 @@
 
 (defmethod apply-transformation :find-and-replace
   [{:keys [configuration]}
-   {:keys [directories vars]
-    :or   {vars {}}}]
+   {:keys [directories vars file-system]
+    :or   {vars {}
+           file-system (file-systems/default-file-system)}}]
   (let [{:keys [find replace in]} configuration
         {:keys [source target]} directories
 
-        source-directory-path (paths/path source)
-        target-directory-path (paths/path target)
+        source-directory-path (paths/path file-system source)
+        target-directory-path (paths/path file-system target)
 
         input-file-paths (determine-inputs source-directory-path in)
 

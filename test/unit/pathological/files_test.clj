@@ -943,6 +943,7 @@
   ; TODO: test basic file attributes as map
   ; TODO: exception cases, visit file failed
   ; TODO: test maximum depth
+  ; TODO: deal with pre-existing files and directories
   )
 
 (deftest delete-recursively

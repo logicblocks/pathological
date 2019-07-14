@@ -1,4 +1,7 @@
 (ns pathological.testing
+  (:require
+    [pathological.files :as f]
+    [pathological.paths :as p])
   (:import
     [com.google.common.jimfs Configuration
                              Feature
@@ -103,7 +106,7 @@
   (configuration
     {:path-type         :unix
      :roots             ["/"]
-     :working-directory "/work"
+     :working-directory "/"
      :attribute-views   #{:basic :owner :posix :unix}
      :features          #{:links
                           :symbolic-links
@@ -114,7 +117,7 @@
   (configuration
     {:path-type                          :windows
      :roots                              ["C:\\"]
-     :working-directory                  "C:\\work"
+     :working-directory                  "C:\\"
      :name-canonical-normalization       #{:case-fold-ascii}
      :path-equality-uses-canonical-form? true
      :attribute-views                    #{:basic}
@@ -125,5 +128,8 @@
 (defn new-in-memory-file-system
   ([] (new-in-memory-file-system (random-file-system-name)))
   ([name] (new-in-memory-file-system name unix-configuration))
-  ([name configuration]
-   (Jimfs/newFileSystem name configuration)))
+  ([name configuration] (new-in-memory-file-system name configuration []))
+  ([name configuration definition]
+   (let [file-system (Jimfs/newFileSystem name configuration)]
+     (f/populate-file-tree (p/path file-system "/") definition)
+     file-system)))
