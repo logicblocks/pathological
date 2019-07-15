@@ -1,4 +1,4 @@
-(ns derivative.find-and-replace-test
+(ns derivative.transformations.find-and-replace-test
   (:require
     [clojure.test :refer :all]
 
@@ -9,15 +9,14 @@
              new-in-memory-file-system
              unix-configuration]]
 
-    [derivative.test-support
-     :refer [multiline-str
-             with-empty-directory]]
-
-    [derivative.core :as derivative]))
+    [derivative.transformations.core :as transformations]
+    [derivative.transformations.find-and-replace]))
 
 (deftest finds-and-replaces-one-occurrence-in-single-file-in-place
   (let [file-system
-        (new-in-memory-file-system (random-file-system-name) unix-configuration
+        (new-in-memory-file-system
+          (random-file-system-name)
+          (unix-configuration)
           [[:work
             [:test.rb
              {:content
@@ -31,7 +30,7 @@
                          :replace "other_thing"
                          :in      "path:work/test.rb"}}
 
-        _ (derivative/apply-transformation transformation
+        _ (transformations/apply-transformation transformation
             {:file-system file-system
              :directories {:source "." :target "."}})
 
@@ -43,7 +42,9 @@
 
 (deftest finds-and-replaces-many-occurrences-in-single-file-in-place
   (let [file-system
-        (new-in-memory-file-system (random-file-system-name) unix-configuration
+        (new-in-memory-file-system
+          (random-file-system-name)
+          (unix-configuration)
           [[:work
             [:test.rb
              {:content
@@ -63,7 +64,7 @@
                          :replace "other_thing"
                          :in      "path:./work/test.rb"}}
 
-        _ (derivative/apply-transformation transformation
+        _ (transformations/apply-transformation transformation
             {:file-system file-system
              :directories {:source "." :target "."}})
 
@@ -81,7 +82,9 @@
 
 (deftest finds-and-replaces-many-occurrences-in-many-files-in-place
   (let [file-system
-        (new-in-memory-file-system (random-file-system-name) unix-configuration
+        (new-in-memory-file-system
+          (random-file-system-name)
+          (unix-configuration)
           [[:work
             [:lib
              [:whatever.rb
@@ -108,7 +111,7 @@
                          :replace "other_thing"
                          :in      "glob:./work/**/*"}}
 
-        _ (derivative/apply-transformation transformation
+        _ (transformations/apply-transformation transformation
             {:file-system file-system
              :directories {:source "." :target "."}})
 
@@ -133,7 +136,9 @@
 
 (deftest finds-and-replaces-based-on-regular-expression-when-supplied
   (let [file-system
-        (new-in-memory-file-system (random-file-system-name) unix-configuration
+        (new-in-memory-file-system
+          (random-file-system-name)
+          (unix-configuration)
           [[:work
             [:test.rb
              {:content
@@ -147,7 +152,7 @@
                          :replace "argument_{{match.$1}}"
                          :in      "path:./work/test.rb"}}
 
-        _ (derivative/apply-transformation transformation
+        _ (transformations/apply-transformation transformation
             {:file-system file-system
              :directories {:source "." :target "."}})
 
@@ -159,7 +164,9 @@
 
 (deftest allows-variables-to-be-interpolated-into-replacements
   (let [file-system
-        (new-in-memory-file-system (random-file-system-name) unix-configuration
+        (new-in-memory-file-system
+          (random-file-system-name)
+          (unix-configuration)
           [[:work
             [:test.rb
              {:content
@@ -173,7 +180,7 @@
                          :replace "{{var.name}}"
                          :in      "path:./work/test.rb"}}
 
-        _ (derivative/apply-transformation transformation
+        _ (transformations/apply-transformation transformation
             {:vars        {:name "stuff"}
              :file-system file-system
              :directories {:source "." :target "."}})
@@ -186,7 +193,9 @@
 
 (deftest allows-variables-to-be-interpolated-into-finders-when-string
   (let [file-system
-        (new-in-memory-file-system (random-file-system-name) unix-configuration
+        (new-in-memory-file-system
+          (random-file-system-name)
+          (unix-configuration)
           [[:work
             [:test.rb
              {:content
@@ -200,7 +209,7 @@
                          :replace "new_name"
                          :in      "path:./work/test.rb"}}
 
-        _ (derivative/apply-transformation transformation
+        _ (transformations/apply-transformation transformation
             {:vars        {:old-name "old_name"}
              :file-system file-system
              :directories {:source "." :target "."}})
@@ -213,7 +222,9 @@
 
 (deftest allows-variables-to-be-interpolated-into-finders-when-regex
   (let [file-system
-        (new-in-memory-file-system (random-file-system-name) unix-configuration
+        (new-in-memory-file-system
+          (random-file-system-name)
+          (unix-configuration)
           [[:work
             [:test.rb
              {:content
@@ -227,7 +238,7 @@
                          :replace "argument_{{match.$1}}"
                          :in      "path:./work/test.rb"}}
 
-        _ (derivative/apply-transformation transformation
+        _ (transformations/apply-transformation transformation
             {:vars        {:arg-prefix "arg"}
              :file-system file-system
              :directories {:source "." :target "."}})
@@ -240,7 +251,9 @@
 
 (deftest provides-functions-to-manipulate-replacements
   (let [file-system
-        (new-in-memory-file-system (random-file-system-name) unix-configuration
+        (new-in-memory-file-system
+          (random-file-system-name)
+          (unix-configuration)
           [[:work
             [:test.rb
              {:content
@@ -252,10 +265,10 @@
         {:type :find-and-replace
          :configuration
                {:find    "thing"
-                :replace "{{#fn.snake-case}}{{var.name}}{{/fn.snake-case}}"
+                :replace "{{#snake_case}}{{var.name}}{{/snake_case}}"
                 :in      "path:./work/test.rb"}}
 
-        _ (derivative/apply-transformation transformation
+        _ (transformations/apply-transformation transformation
             {:vars        {:name "someThing"}
              :file-system file-system
              :directories {:source "."
@@ -269,7 +282,9 @@
 
 (deftest provides-functions-to-manipulate-finders
   (let [file-system
-        (new-in-memory-file-system (random-file-system-name) unix-configuration
+        (new-in-memory-file-system
+          (random-file-system-name)
+          (unix-configuration)
           [[:work
             [:test.rb
              {:content
@@ -280,11 +295,11 @@
         transformation
         {:type :find-and-replace
          :configuration
-               {:find    "{{#fn.snake-case}}{{var.name}}{{/fn.snake-case}}"
+               {:find    "{{#snake_case}}{{var.name}}{{/snake_case}}"
                 :replace "other_thing"
                 :in      "path:./work/test.rb"}}
 
-        _ (derivative/apply-transformation transformation
+        _ (transformations/apply-transformation transformation
             {:vars        {:name "someThing"}
              :file-system file-system
              :directories {:source "."

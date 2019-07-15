@@ -198,7 +198,7 @@
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
-          root-path (p/path test-file-system "/work")
+          root-path (p/path test-file-system "/")
 
           _ (f/populate-file-tree root-path
               [[:directory-1
@@ -212,16 +212,16 @@
           matches (f/find root-path
                     (fn [path _] (p/matches? path "glob:**/matching-*")))]
       (is (seq? matches))
-      (is (= [(p/path test-file-system "/work/directory-1/matching-path-1")
-              (p/path test-file-system "/work/directory-1/matching-path-2")
-              (p/path test-file-system "/work/directory-2/matching-path-3")]
+      (is (= [(p/path test-file-system "/directory-1/matching-path-1")
+              (p/path test-file-system "/directory-1/matching-path-2")
+              (p/path test-file-system "/directory-2/matching-path-3")]
             matches))))
 
   (testing "honours file visit options when supplied"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
-          root-path (p/path test-file-system "/work")
+          root-path (p/path test-file-system "/")
 
           _ (f/populate-file-tree root-path
               [[:directory-1
@@ -233,28 +233,28 @@
                  [:matching-path-3 {:content ["Line 7" "Line 8"]}]
                  [:other-path-2 {:content ["Line 9" "Line 10"]}]]]
                [:directory-2 {:type :symbolic-link
-                              :target "/work/directory-1/subdirectory-1"}]])
+                              :target "/directory-1/subdirectory-1"}]])
 
           matches (f/find root-path
                     (fn [path _] (p/matches? path "glob:**/matching-*"))
                     :file-visit-options #{:follow-links})]
       (is (= [(p/path test-file-system
-                "/work/directory-1/subdirectory-1/matching-path-1")
+                "/directory-1/subdirectory-1/matching-path-1")
               (p/path test-file-system
-                "/work/directory-1/subdirectory-1/matching-path-2")
+                "/directory-1/subdirectory-1/matching-path-2")
               (p/path test-file-system
-                "/work/directory-1/subdirectory-2/matching-path-3")
+                "/directory-1/subdirectory-2/matching-path-3")
               (p/path test-file-system
-                "/work/directory-2/matching-path-1")
+                "/directory-2/matching-path-1")
               (p/path test-file-system
-                "/work/directory-2/matching-path-2")]
+                "/directory-2/matching-path-2")]
             matches))))
 
   (testing "honours maximum depth option when supplied"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
-          root-path (p/path test-file-system "/work")
+          root-path (p/path test-file-system "/")
 
           _ (f/populate-file-tree root-path
               [[:directory-1
@@ -269,9 +269,9 @@
                     (fn [path _] (p/matches? path "glob:**/matching-*"))
                     :maximum-depth 2)]
       (is (= [(p/path test-file-system
-                "/work/directory-1/matching-path-1")
+                "/directory-1/matching-path-1")
               (p/path test-file-system
-                "/work/directory-1/matching-path-2")]
+                "/directory-1/matching-path-2")]
             matches)))))
 
 (deftest exists?
@@ -761,7 +761,7 @@
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
-          root-path (p/path test-file-system "/work")]
+          root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
         [[:directory1
           [:file1 {:content ["Item 1"]}]
@@ -778,22 +778,22 @@
                      :visit-file-fn (->visit-fn :file)
                      :pre-visit-directory-fn (->visit-fn :pre)
                      :post-visit-directory-fn (->visit-fn :post))]
-        (is (= [[:pre "/work"]
-                [:pre "/work/directory1"]
-                [:file "/work/directory1/file1"]
-                [:file "/work/directory1/file2"]
-                [:post "/work/directory1"]
-                [:pre "/work/directory2"]
-                [:file "/work/directory2/file3"]
-                [:post "/work/directory2"]
-                [:post "/work"]]
+        (is (= [[:pre "/"]
+                [:pre "/directory1"]
+                [:file "/directory1/file1"]
+                [:file "/directory1/file2"]
+                [:post "/directory1"]
+                [:pre "/directory2"]
+                [:file "/directory2/file3"]
+                [:post "/directory2"]
+                [:post "/"]]
               result)))))
 
   (testing "terminates when requested"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
-          root-path (p/path test-file-system "/work")]
+          root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
         [[:directory1
           [:file1 {:content ["Item 1"]}]
@@ -811,17 +811,17 @@
                      :pre-visit-directory-fn (->visit-fn :pre)
                      :post-visit-directory-fn
                      (fn [_ _ _] {:control :terminate}))]
-        (is (= [[:pre "/work"]
-                [:pre "/work/directory1"]
-                [:file "/work/directory1/file1"]
-                [:file "/work/directory1/file2"]]
+        (is (= [[:pre "/"]
+                [:pre "/directory1"]
+                [:file "/directory1/file1"]
+                [:file "/directory1/file2"]]
               result)))))
 
   (testing "skips entire subtree when requested"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
-          root-path (p/path test-file-system "/work")]
+          root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
         [[:directory1
           [:file1 {:content ["Item 1"]}]
@@ -838,23 +838,23 @@
                      :visit-file-fn (->visit-fn :file)
                      :pre-visit-directory-fn
                      (fn [accumulator path _]
-                       (if (= (str path) "/work/directory1")
+                       (if (= (str path) "/directory1")
                          {:control :skip-subtree}
                          {:control :continue
                           :result  (conj accumulator [:pre (str path)])}))
                      :post-visit-directory-fn (->visit-fn :post))]
-        (is (= [[:pre "/work"]
-                [:pre "/work/directory2"]
-                [:file "/work/directory2/file3"]
-                [:post "/work/directory2"]
-                [:post "/work"]]
+        (is (= [[:pre "/"]
+                [:pre "/directory2"]
+                [:file "/directory2/file3"]
+                [:post "/directory2"]
+                [:post "/"]]
               result)))))
 
   (testing "skips all siblings when requested"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
-          root-path (p/path test-file-system "/work")]
+          root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
         [[:directory1
           [:file1 {:content ["Item 1"]}]
@@ -870,28 +870,29 @@
                      :initial-value []
                      :visit-file-fn
                      (fn [accumulator path _]
-                       (if (= (str path) "/work/directory1/file1")
+                       (if (= (str path) "/directory1/file1")
                          {:control :skip-siblings
                           :result  (conj accumulator [:file (str path)])}
                          {:control :continue
                           :result  (conj accumulator [:file (str path)])}))
                      :pre-visit-directory-fn (->visit-fn :pre)
                      :post-visit-directory-fn (->visit-fn :post))]
-        (is (= [[:pre "/work"]
-                [:pre "/work/directory1"]
-                [:file "/work/directory1/file1"]
-                [:post "/work/directory1"]
-                [:pre "/work/directory2"]
-                [:file "/work/directory2/file3"]
-                [:post "/work/directory2"]
-                [:post "/work"]]
+        (is (= [[:pre "/"]
+                [:pre "/directory1"]
+                [:file "/directory1/file1"]
+                [:post "/directory1"]
+                [:pre "/directory2"]
+                [:file "/directory2/file3"]
+                [:post "/directory2"]
+                [:post "/"]]
               result)))))
 
   (testing "assumes continue when no control returned"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
-          root-path (p/path test-file-system "/work")]
+          root-path (p/path test-file-system "/delete-me")]
+      (f/create-directory root-path)
       (f/populate-file-tree root-path
         [[:directory1
           [:file1 {:content ["Item 1"]}]
@@ -905,39 +906,48 @@
                      :visit-file-fn delete-fn
                      :post-visit-directory-fn delete-fn)]
         (is (nil? result))
-        (is (false? (f/exists? (p/path test-file-system "/directory1"))))
-        (is (false? (f/exists? (p/path test-file-system "/directory1/file1"))))
-        (is (false? (f/exists? (p/path test-file-system "/directory1/file2"))))
-        (is (false? (f/exists? (p/path test-file-system "/directory2"))))
-        (is (false? (f/exists?
-                      (p/path test-file-system "/directory2/file3")))))))
+        (is (false?
+              (f/exists? (p/path test-file-system
+                           "/delete-me/directory1"))))
+        (is (false?
+              (f/exists? (p/path test-file-system
+                           "/delete-me/directory1/file1"))))
+        (is (false?
+              (f/exists? (p/path test-file-system
+                           "/delete-me/directory1/file2"))))
+        (is (false?
+              (f/exists? (p/path test-file-system
+                           "/delete-me/directory2"))))
+        (is (false?
+              (f/exists? (p/path test-file-system
+                           "/delete-me/directory2/file3")))))))
 
   (testing "follows symlinks when requested"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
-          root-path (p/path test-file-system "/work")]
+          root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
         [[:directory1
           [:file1 {:content ["Item 1"]}]
           [:file2 {:content ["Item 2"]}]]
-         [:directory2 {:type :symbolic-link :target "/work/directory1"}]])
+         [:directory2 {:type :symbolic-link :target "/directory1"}]])
 
       (let [->visit-fn (fn [key]
                          (fn [accumulator path _]
                            {:control :continue
                             :result  (conj accumulator [key (str path)])}))
             result (f/walk-file-tree
-                     (p/path test-file-system "/work/directory2")
+                     (p/path test-file-system "/directory2")
                      :initial-value []
                      :file-visit-options [:follow-links]
                      :visit-file-fn (->visit-fn :file)
                      :pre-visit-directory-fn (->visit-fn :pre)
                      :post-visit-directory-fn (->visit-fn :post))]
-        (is (= [[:pre "/work/directory2"]
-                [:file "/work/directory2/file1"]
-                [:file "/work/directory2/file2"]
-                [:post "/work/directory2"]]
+        (is (= [[:pre "/directory2"]
+                [:file "/directory2/file1"]
+                [:file "/directory2/file2"]
+                [:post "/directory2"]]
               result)))))
 
   ; TODO: test basic file attributes as map

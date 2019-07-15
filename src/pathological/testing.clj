@@ -1,7 +1,8 @@
 (ns pathological.testing
   (:require
     [pathological.files :as f]
-    [pathological.paths :as p])
+    [pathological.paths :as p]
+    [pathological.file-systems :as fs])
   (:import
     [com.google.common.jimfs Configuration
                              Feature
@@ -102,34 +103,46 @@
                   builder)]
     (.build builder)))
 
-(def unix-configuration
+(defn unix-configuration
+  [& {:as overrides}]
   (configuration
-    {:path-type         :unix
-     :roots             ["/"]
-     :working-directory "/"
-     :attribute-views   #{:basic :owner :posix :unix}
-     :features          #{:links
-                          :symbolic-links
-                          :secure-directory-stream
-                          :file-channel}}))
+    (merge
+      {:path-type         :unix
+       :roots             ["/"]
+       :working-directory "/"
+       :attribute-views   #{:basic :owner :posix :unix}
+       :features          #{:links
+                            :symbolic-links
+                            :secure-directory-stream
+                            :file-channel}}
+      overrides)))
 
-(def windows-configuration
+(defn windows-configuration
+  [& {:as overrides}]
   (configuration
-    {:path-type                          :windows
-     :roots                              ["C:\\"]
-     :working-directory                  "C:\\"
-     :name-canonical-normalization       #{:case-fold-ascii}
-     :path-equality-uses-canonical-form? true
-     :attribute-views                    #{:basic}
-     :features                           #{:links
-                                           :symbolic-links
-                                           :file-channel}}))
+    (merge
+      {:path-type                          :windows
+       :roots                              ["C:\\"]
+       :working-directory                  "C:\\"
+       :name-canonical-normalization       #{:case-fold-ascii}
+       :path-equality-uses-canonical-form? true
+       :attribute-views                    #{:basic}
+       :features                           #{:links
+                                             :symbolic-links
+                                             :file-channel}}
+      overrides)))
 
 (defn new-in-memory-file-system
   ([] (new-in-memory-file-system (random-file-system-name)))
-  ([name] (new-in-memory-file-system name unix-configuration))
+  ([name] (new-in-memory-file-system name (unix-configuration)))
   ([name configuration] (new-in-memory-file-system name configuration []))
   ([name configuration definition]
    (let [file-system (Jimfs/newFileSystem name configuration)]
-     (f/populate-file-tree (p/path file-system "/") definition)
+     (f/populate-file-tree
+       (first (fs/root-directories file-system))
+       definition)
+     file-system))
+  ([name configuration path definition]
+   (let [file-system (Jimfs/newFileSystem name configuration)]
+     (f/populate-file-tree path definition)
      file-system)))

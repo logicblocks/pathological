@@ -5,3 +5,7 @@
   (FileSystems/getDefault))
 
 (def ^{:dynamic true :tag FileSystem} *file-system* (default-file-system))
+
+(defn root-directories
+  [^FileSystem file-system]
+  (.getRootDirectories file-system))
