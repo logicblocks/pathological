@@ -6,7 +6,9 @@
     [hbs.core :as tpl]
     [hbs.helper :as tpl-helper]
 
-    [derivative.templating.helpers :as tpl-helper-fns]))
+    [derivative.templating.helpers :as tpl-helper-fns])
+  (:import
+    [com.github.jknack.handlebars HandlebarsException]))
 
 (def prepend
   (tpl-helper/helper [context options]
@@ -183,24 +185,129 @@
             "{{/decrement}}")))))
 
 (deftest random-password
-  (let [registry
-        (registry
-          "random_password" tpl-helper-fns/random-password
-          "prepend" prepend)
-        render (renderer registry)
+  (testing "generates passwords of specified length"
+    (let [registry
+          (registry
+            "random_password" tpl-helper-fns/random-password
+            "prepend" prepend)
+          render (renderer registry)
 
-        password-1 (render "{{random_password 64}}")
-        password-2 (render "{{random_password this 64}}")
-        password-3 (render "{{random_password 32}}")]
-    (is (= (count password-1) 64))
-    (is (= (count password-2) 64))
-    (is (= (count password-3) 32))
+          password-1 (render "{{random_password 64}}")
+          password-2 (render "{{random_password this 64}}")
+          password-3 (render "{{random_password 32}}")]
+      (is (= (count password-1) 64))
+      (is (= (count password-2) 64))
+      (is (= (count password-3) 32))
 
-    (doseq [password [password-1 password-2 password-3]]
-      (is (some? (re-find #"[a-z]" password)))
-      (is (some? (re-find #"[A-Z]" password)))
-      (is (some? (re-find #"[0-9]" password)))
+      (doseq [password [password-1 password-2 password-3]]
+        (is (some? (re-find #"[a-z]" password)))
+        (is (some? (re-find #"[A-Z]" password)))
+        (is (some? (re-find #"[0-9]" password)))
+        (is (some? (re-find #"[ !\"#$%&'()\*\+,-\./:;<=>\?@\[\\\]\^_`\{\|\}\~]"
+                     password))))
+
+      (is (not (= password-1 password-2)))))
+
+  (testing "allows symbols to be excluded"
+    (let [registry
+          (registry
+            "random_password" tpl-helper-fns/random-password
+            "prepend" prepend)
+          render (renderer registry)
+
+          password (render "{{random_password 16 symbols=false}}")]
+      (is (nil? (re-find #"[ !\"#$%&'()\*\+,-\./:;<=>\?@\[\\\]\^_`\{\|\}\~]"
+                  password)))))
+
+  (testing "allows symbols to be explicitly included"
+    (let [registry
+          (registry
+            "random_password" tpl-helper-fns/random-password
+            "prepend" prepend)
+          render (renderer registry)
+
+          password (render "{{random_password 16 symbols=true}}")]
       (is (some? (re-find #"[ !\"#$%&'()\*\+,-\./:;<=>\?@\[\\\]\^_`\{\|\}\~]"
-                   password))))
+                   password)))))
 
-    (is (not (= password-1 password-2)))))
+  (testing "allows numbers to be excluded"
+    (let [registry
+          (registry
+            "random_password" tpl-helper-fns/random-password
+            "prepend" prepend)
+          render (renderer registry)
+
+          password (render "{{random_password 16 numbers=false}}")]
+      (is (nil? (re-find #"[0-9]" password)))))
+
+  (testing "allows numbers to be explicitly included"
+    (let [registry
+          (registry
+            "random_password" tpl-helper-fns/random-password
+            "prepend" prepend)
+          render (renderer registry)
+
+          password (render "{{random_password 16 numbers=true}}")]
+      (is (some? (re-find #"[0-9]" password)))))
+
+  (testing "allows uppers to be excluded"
+    (let [registry
+          (registry
+            "random_password" tpl-helper-fns/random-password
+            "prepend" prepend)
+          render (renderer registry)
+
+          password (render "{{random_password 16 uppers=false}}")]
+      (is (nil? (re-find #"[A-Z]" password)))))
+
+  (testing "allows uppers to be explicitly included"
+    (let [registry
+          (registry
+            "random_password" tpl-helper-fns/random-password
+            "prepend" prepend)
+          render (renderer registry)
+
+          password (render "{{random_password 16 uppers=true}}")]
+      (is (some? (re-find #"[A-Z]" password)))))
+
+  (testing "allows lowers to be excluded"
+    (let [registry
+          (registry
+            "random_password" tpl-helper-fns/random-password
+            "prepend" prepend)
+          render (renderer registry)
+
+          password (render "{{random_password 16 lowers=false}}")]
+      (is (nil? (re-find #"[a-z]" password)))))
+
+  (testing "allows lowers to be explicitly included"
+    (let [registry
+          (registry
+            "random_password" tpl-helper-fns/random-password
+            "prepend" prepend)
+          render (renderer registry)
+
+          password (render "{{random_password 16 lowers=true}}")]
+      (is (some? (re-find #"[a-z]" password)))))
+
+  (testing "throws when all characters excluded"
+    (let [registry
+          (registry
+            "random_password" tpl-helper-fns/random-password
+            "prepend" prepend)
+          render (renderer registry)
+
+          exception
+          (try
+            (render
+              (str
+                "{{random_password 16 "
+                "uppers=false "
+                "lowers=false "
+                "numbers=false "
+                "symbols=false}}"))
+            (catch HandlebarsException e e))]
+      (is (instance? HandlebarsException exception))
+      (is (instance? IllegalArgumentException (ex-cause exception)))
+      (is (= "No characters included in password generation."
+            (ex-message (ex-cause exception)))))))

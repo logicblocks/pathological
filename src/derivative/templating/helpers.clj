@@ -1,4 +1,5 @@
 (ns derivative.templating.helpers
+  (:refer-clojure :exclude [hash])
   (:require
     [clojure.string :as strings]
     [clojure.edn :as edn]
@@ -6,6 +7,17 @@
     [secure-rand.core :as secure]
     [hbs.helper :as template])
   (:import [com.github.jknack.handlebars Options]))
+
+(defprotocol HandlebarsExtendedOptions
+  (param [this idx default])
+  (hash [this key default]))
+
+(extend-protocol HandlebarsExtendedOptions
+  Options
+  (param [this idx default]
+    (.param this idx default))
+  (hash [this idx default]
+    (.hash this idx default)))
 
 ; strings
 (def snake-case
@@ -91,23 +103,29 @@
 (def ^:private uppers (char-range \A \Z))
 (def ^:private numbers (char-range \0 \9))
 
-(defn- char-requirements []
-  (let [lower (secure/rand-nth lowers)
-        upper (secure/rand-nth uppers)
-        number (secure/rand-nth numbers)
-        symbol (secure/rand-nth *password-symbols*)]
-    [lower upper number symbol]))
+(defn- char-requirements [& {:as requirements}]
+  (let [lower (when (:lowers? requirements) (secure/rand-nth lowers))
+        upper (when (:uppers? requirements) (secure/rand-nth uppers))
+        number (when (:numbers? requirements) (secure/rand-nth numbers))
+        symbol (when (:symbols? requirements)
+                 (secure/rand-nth *password-symbols*))]
+    (remove nil? [lower upper number symbol])))
 
-(defn- char-extras [quantity]
-  (let [chars (concat lowers uppers numbers *password-symbols*)]
+(defn- char-extras [quantity & {:as requirements}]
+  (let [chars (remove nil?
+                (concat
+                  (when (:lowers? requirements) lowers)
+                  (when (:uppers? requirements) uppers)
+                  (when (:numbers? requirements) numbers)
+                  (when (:symbols? requirements) *password-symbols*)))]
     (take quantity (repeatedly #(secure/rand-nth chars)))))
 
 (defn- randomised-string [chars]
   (strings/join (shuffle chars)))
 
-(defn- rand-password [length]
-  (let [reqs (char-requirements)
-        rest (char-extras (- length (count reqs)))]
+(defn- rand-password [length & rest]
+  (let [reqs (apply char-requirements rest)
+        rest (apply char-extras (concat [(- length (count reqs))] rest))]
     (randomised-string (concat reqs rest))))
 
 (def random-password
@@ -116,6 +134,18 @@
           (cond
             (number? context) context
             (string? context) (read-string context)
-            :else (.param options 0 64))
-          password (rand-password length)]
-      (template/safe-str password))))
+            :else (param options 0 64))
+
+          lowers? (hash options "lowers" true)
+          uppers? (hash options "uppers" true)
+          numbers? (hash options "numbers" true)
+          symbols? (hash options "symbols" true)]
+      (when-not (or lowers? uppers? numbers? symbols?)
+        (throw (IllegalArgumentException.
+                 "No characters included in password generation.")))
+      (template/safe-str
+        (rand-password length
+          :lowers? lowers?
+          :uppers? uppers?
+          :numbers? numbers?
+          :symbols? symbols?)))))
