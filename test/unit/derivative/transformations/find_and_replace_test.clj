@@ -28,11 +28,10 @@
         {:type          :find-and-replace
          :configuration {:find    "thing"
                          :replace "other_thing"
-                         :in      "path:work/test.rb"}}
+                         :in      "file:work/test.rb"}}
 
         _ (transformations/apply-transformation transformation
-            {:file-system file-system
-             :directories {:source "." :target "."}})
+            {:file-system       file-system})
 
         final-content (f/read-all-lines (p/path file-system "work/test.rb"))]
     (is (= final-content
@@ -62,11 +61,10 @@
         {:type          :find-and-replace
          :configuration {:find    "thing"
                          :replace "other_thing"
-                         :in      "path:./work/test.rb"}}
+                         :in      "file:./work/test.rb"}}
 
         _ (transformations/apply-transformation transformation
-            {:file-system file-system
-             :directories {:source "." :target "."}})
+            {:file-system       file-system})
 
         final-content (f/read-all-lines (p/path file-system "work/test.rb"))]
     (is (= final-content
@@ -112,8 +110,7 @@
                          :in      "glob:./work/**/*"}}
 
         _ (transformations/apply-transformation transformation
-            {:file-system file-system
-             :directories {:source "." :target "."}})
+            {:file-system       file-system})
 
         final-content-1
         (f/read-all-lines (p/path file-system "work/lib/whatever.rb"))
@@ -150,11 +147,10 @@
         {:type          :find-and-replace
          :configuration {:find    #"arg(\d+)"
                          :replace "argument_{{match.$1}}"
-                         :in      "path:./work/test.rb"}}
+                         :in      "file:./work/test.rb"}}
 
         _ (transformations/apply-transformation transformation
-            {:file-system file-system
-             :directories {:source "." :target "."}})
+            {:file-system       file-system})
 
         final-content (f/read-all-lines (p/path file-system "work/test.rb"))]
     (is (= final-content
@@ -178,12 +174,11 @@
         {:type          :find-and-replace
          :configuration {:find    "thing"
                          :replace "{{var.name}}"
-                         :in      "path:./work/test.rb"}}
+                         :in      "file:./work/test.rb"}}
 
         _ (transformations/apply-transformation transformation
-            {:vars        {:name "stuff"}
-             :file-system file-system
-             :directories {:source "." :target "."}})
+            {:vars              {:name "stuff"}
+             :file-system       file-system})
 
         final-content (f/read-all-lines (p/path file-system "work/test.rb"))]
     (is (= final-content
@@ -207,12 +202,11 @@
         {:type          :find-and-replace
          :configuration {:find    "{{var.old-name}}"
                          :replace "new_name"
-                         :in      "path:./work/test.rb"}}
+                         :in      "file:./work/test.rb"}}
 
         _ (transformations/apply-transformation transformation
-            {:vars        {:old-name "old_name"}
-             :file-system file-system
-             :directories {:source "." :target "."}})
+            {:vars              {:old-name "old_name"}
+             :file-system       file-system})
 
         final-content (f/read-all-lines (p/path file-system "work/test.rb"))]
     (is (= final-content
@@ -236,12 +230,11 @@
         {:type          :find-and-replace
          :configuration {:find    #"\{\{var.arg-prefix\}\}(\d+)"
                          :replace "argument_{{match.$1}}"
-                         :in      "path:./work/test.rb"}}
+                         :in      "file:./work/test.rb"}}
 
         _ (transformations/apply-transformation transformation
-            {:vars        {:arg-prefix "arg"}
-             :file-system file-system
-             :directories {:source "." :target "."}})
+            {:vars              {:arg-prefix "arg"}
+             :file-system       file-system})
 
         final-content (f/read-all-lines (p/path file-system "work/test.rb"))]
     (is (= final-content
@@ -266,13 +259,11 @@
          :configuration
                {:find    "thing"
                 :replace "{{#snake_case}}{{var.name}}{{/snake_case}}"
-                :in      "path:./work/test.rb"}}
+                :in      "file:./work/test.rb"}}
 
         _ (transformations/apply-transformation transformation
-            {:vars        {:name "someThing"}
-             :file-system file-system
-             :directories {:source "."
-                           :target "."}})
+            {:vars              {:name "someThing"}
+             :file-system       file-system})
 
         final-content (f/read-all-lines (p/path file-system "work/test.rb"))]
     (is (= final-content
@@ -297,13 +288,11 @@
          :configuration
                {:find    "{{#snake_case}}{{var.name}}{{/snake_case}}"
                 :replace "other_thing"
-                :in      "path:./work/test.rb"}}
+                :in      "file:./work/test.rb"}}
 
         _ (transformations/apply-transformation transformation
-            {:vars        {:name "someThing"}
-             :file-system file-system
-             :directories {:source "."
-                           :target "."}})
+            {:vars              {:name "someThing"}
+             :file-system       file-system})
 
         final-content (f/read-all-lines (p/path file-system "work/test.rb"))]
     (is (= final-content

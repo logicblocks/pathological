@@ -1,13 +1,16 @@
 (ns pathological.utils
   (:import
-    [java.nio.file FileVisitOption
+    [java.nio.file CopyOption
+                   FileVisitOption
+                   FileVisitResult
                    LinkOption
                    OpenOption
-                   StandardOpenOption FileVisitResult]
+                   StandardOpenOption
+                   StandardCopyOption]
     [java.nio.file.attribute FileAttribute]
     [java.nio.charset StandardCharsets]))
 
-(def ^{:dynamic true} *charsets*
+(def ^:dynamic *charsets*
   {:us-ascii   StandardCharsets/US_ASCII
    :iso-8859-1 StandardCharsets/ISO_8859_1
    :utf-8      StandardCharsets/UTF_8
@@ -15,7 +18,7 @@
    :utf-16le   StandardCharsets/UTF_16LE
    :utf-16     StandardCharsets/UTF_16})
 
-(def ^{:dynamic true} *open-options*
+(def ^:dynamic *open-options*
   {:read              StandardOpenOption/READ
    :write             StandardOpenOption/WRITE
    :append            StandardOpenOption/APPEND
@@ -28,13 +31,19 @@
    :dsync             StandardOpenOption/DSYNC
    :no-follow-links   LinkOption/NOFOLLOW_LINKS})
 
-(def ^{:dynamic true} *link-options*
+(def ^:dynamic *copy-options*
+  {:replace-existing StandardCopyOption/REPLACE_EXISTING
+   :copy-attributes  StandardCopyOption/COPY_ATTRIBUTES
+   :atomic-move      StandardCopyOption/ATOMIC_MOVE
+   :no-follow-links  LinkOption/NOFOLLOW_LINKS})
+
+(def ^:dynamic *link-options*
   {:no-follow-links LinkOption/NOFOLLOW_LINKS})
 
-(def ^{:dynamic true} *file-visit-options*
+(def ^:dynamic *file-visit-options*
   {:follow-links FileVisitOption/FOLLOW_LINKS})
 
-(def ^{:dynamic true} *file-visit-results*
+(def ^:dynamic *file-visit-results*
   {:continue      FileVisitResult/CONTINUE
    :terminate     FileVisitResult/TERMINATE
    :skip-subtree  FileVisitResult/SKIP_SUBTREE
@@ -47,6 +56,7 @@
   (or (get *charsets* value) value))
 
 (def ->open-option (->option *open-options*))
+(def ->copy-option (->option *copy-options*))
 (def ->link-option (->option *link-options*))
 (def ->file-visit-option (->option *file-visit-options*))
 
@@ -58,6 +68,9 @@
 
 (defmacro ->open-options-array [args]
   `(->varargs-array OpenOption (map ->open-option ~args)))
+
+(defmacro ->copy-options-array [args]
+  `(->varargs-array CopyOption (map ->copy-option ~args)))
 
 (defmacro ->link-options-array [args]
   `(->varargs-array LinkOption (map ->link-option ~args)))

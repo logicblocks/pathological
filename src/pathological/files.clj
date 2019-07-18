@@ -4,6 +4,7 @@
     [pathological.paths :as p]
     [pathological.utils
      :refer [->charset
+             ->copy-options-array
              ->file-attributes-array
              ->open-options-array
              ->link-options-array
@@ -17,7 +18,8 @@
     [java.nio.charset Charset
                       StandardCharsets]
     [java.nio.file.attribute PosixFilePermissions]
-    [java.util.function BiPredicate]))
+    [java.util.function BiPredicate]
+    [java.io InputStream OutputStream]))
 
 (defn read-all-lines
   ([^Path path]
@@ -65,6 +67,29 @@
 (defn delete
   [^Path path]
   (Files/delete path))
+
+(defmulti ^:private do-copy
+  (fn [source destination _] [(type source) (type destination)]))
+
+(defmethod do-copy [Path Path]
+  [^Path source ^Path destination
+   ^"[Ljava.nio.file.CopyOption;" copy-options]
+  (Files/copy source destination copy-options))
+
+(defmethod do-copy [InputStream Path]
+  [^InputStream source ^Path destination
+   ^"[Ljava.nio.file.CopyOption;" copy-options]
+  (Files/copy source destination copy-options))
+
+(defmethod do-copy [Path OutputStream]
+  [^Path source ^OutputStream destination _]
+  (Files/copy source destination))
+
+(defn copy
+  [source destination & options]
+  (let [^"[Ljava.nio.file.CopyOption;"
+        copy-options (->copy-options-array options)]
+    (do-copy source destination copy-options)))
 
 (defn read-symbolic-link
   [^Path path]
@@ -115,12 +140,21 @@
   [^Path path-1 ^Path path-2]
   (Files/isSameFile path-1 path-2))
 
-(defn posix-file-permissions [string]
-  (PosixFilePermissions/fromString string))
+(defn posix-file-permissions
+  ([string-or-path & options]
+   (let [^"[Ljava.nio.file.LinkOption;"
+         link-options (->link-options-array options)]
+     (if (string? string-or-path)
+       (PosixFilePermissions/fromString string-or-path)
+       (Files/getPosixFilePermissions string-or-path link-options ) ))))
 
-(defn posix-file-permission-attributes [string]
+(defn posix-file-permissions-attribute [string]
   (PosixFilePermissions/asFileAttribute
     (posix-file-permissions string)))
+
+(defn posix-file-permissions-string [^Path path & options]
+  (PosixFilePermissions/toString
+    (apply posix-file-permissions (concat [path] options))))
 
 (defn- invoke-visitor-and-accumulate [visit-fn accumulator-atom path & args]
   (let [result @accumulator-atom

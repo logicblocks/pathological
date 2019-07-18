@@ -15,6 +15,7 @@
 ; write targets
 
 ; scope: file, line, word, character, ast, ...
+;   may help to optimise streaming nature
 
 ; terminology:
 ;   definition - a type of operation to be performed
@@ -39,6 +40,8 @@
 ;   looks for find, could be string or regex
 ;   replaces with replace, can interpolate match groups
 ;   limit to between points in file?
+;   allow replace to point to a file?
+;   replace in replace template?
 ; copy-files
 ;   recursively copies files from source directory to target directory
 ;   takes inclusion, exclusion paths / matchers, one or more

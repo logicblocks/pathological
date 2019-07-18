@@ -16,9 +16,9 @@
 (defn join-lines [coll]
   (string/join *line-separator* coll))
 
-(defn determine-inputs [search-path pattern]
-  (if (string/starts-with? pattern "path:")
-    [(paths/path search-path (string/replace pattern "path:" ""))]
+(defn determine-files [search-path pattern]
+  (if (string/starts-with? pattern "file:")
+    [(paths/path search-path (string/replace pattern "file:" ""))]
     (files/find search-path (fn [path _] (paths/matches? path pattern)))))
 
 (defn build-match-map [match]
@@ -29,25 +29,20 @@
 
 (defmethod apply-transformation :find-and-replace
   [{:keys [configuration]}
-   {:keys [directories vars file-system]
-    :or   {vars        {}
-           file-system (file-systems/default-file-system)}}]
+   {:keys [vars file-system working-directory]
+    :or   {vars              {}
+           file-system       (file-systems/default-file-system)
+           working-directory "."}}]
   (let [{:keys [find replace in]} configuration
-        {:keys [source target]} directories
 
-        source-directory-path (paths/path file-system source)
-        target-directory-path (paths/path file-system target)
+        working-directory-path (paths/path file-system working-directory)
 
-        input-file-paths (determine-inputs source-directory-path in)
+        file-paths (determine-files working-directory-path in)
 
         context {:var vars}]
-    (doseq [input-file-path input-file-paths]
-      (let [output-file-path
-            (paths/path target-directory-path
-              (paths/relativize source-directory-path input-file-path))
-
-            initial-content
-            (join-lines (files/read-all-lines input-file-path))
+    (doseq [file-path file-paths]
+      (let [initial-content
+            (join-lines (files/read-all-lines file-path))
 
             find-pattern
             (if (string? find)
@@ -65,7 +60,7 @@
 
             transformed-content
             (string/replace initial-content find-pattern replace-fn)]
-        (files/write-lines output-file-path
+        (files/write-lines file-path
           (string/split-lines transformed-content))))))
 
 ; Refactoring ideas:

@@ -2,6 +2,8 @@
   (:refer-clojure :exclude [find])
   (:require
     [clojure.test :refer :all]
+    [clojure.java.io :as io]
+    [clojure.string :as string]
 
     [pathological.files :as f]
     [pathological.paths :as p]
@@ -31,7 +33,7 @@
 
           path (p/path test-file-system "/some/very/nested/path/")]
       (f/create-directories path
-        (f/posix-file-permission-attributes "rwxrw-rw-"))
+        (f/posix-file-permissions-attribute "rwxrw-rw-"))
 
       (is (true? (Files/exists path (u/->link-options-array []))))
 
@@ -58,7 +60,7 @@
 
           path (p/path test-file-system "/path/")]
       (f/create-directory path
-        (f/posix-file-permission-attributes "rwxrw-rw-"))
+        (f/posix-file-permissions-attribute "rwxrw-rw-"))
 
       (is (true? (Files/exists path (u/->link-options-array []))))
 
@@ -85,7 +87,7 @@
 
           path (p/path test-file-system "/some-file")]
       (f/create-file path
-        (f/posix-file-permission-attributes "rwxrw-rw-"))
+        (f/posix-file-permissions-attribute "rwxrw-rw-"))
 
       (is (true? (Files/exists path (u/->link-options-array []))))
 
@@ -120,7 +122,7 @@
       (f/create-file target-path)
 
       (f/create-symbolic-link link-path target-path
-        (f/posix-file-permission-attributes "rwxrw-rw-"))
+        (f/posix-file-permissions-attribute "rwxrw-rw-"))
 
       (is (true? (Files/exists link-path
                    (u/->link-options-array [LinkOption/NOFOLLOW_LINKS]))))
@@ -180,6 +182,62 @@
       (f/delete path)
 
       (is (false? (f/exists? path))))))
+
+(deftest copy
+  (testing "copies a file"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          content ["Line 1" "Line 2"]
+          source-path (p/path test-file-system "/source")
+          destination-path (p/path test-file-system "/target")]
+      (f/create-file source-path)
+      (f/write-lines source-path content)
+
+      (f/copy source-path destination-path)
+
+      (is (= content (f/read-all-lines destination-path)))))
+
+  (testing "copies from an input stream"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          content ["Line 1" "Line 2"]
+          destination-path (p/path test-file-system "/target")]
+      (with-open [input-stream
+                  (io/input-stream
+                    (.getBytes (str (string/join "\n" content) "\n")))]
+        (f/copy input-stream destination-path))
+
+      (is (= content (f/read-all-lines destination-path)))))
+
+  (testing "copies to an output stream"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          content ["Line 1" "Line 2"]
+          source-path (p/path test-file-system "/source")]
+      (with-open [output-stream (java.io.ByteArrayOutputStream.)]
+        (f/create-file source-path)
+        (f/write-lines source-path content)
+
+        (f/copy source-path output-stream)
+
+        (is (= (str (string/join "\n" content) "\n")
+              (.toString output-stream))))))
+
+  (testing "copies file attributes when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          source-path (p/path test-file-system "/source")
+          target-path (p/path test-file-system "/target")]
+      (f/create-file source-path
+        (f/posix-file-permissions-attribute "rwxrw-rw-"))
+
+      (f/copy source-path target-path :copy-attributes)
+
+      (is (= "rwxrw-rw-" (f/posix-file-permissions-string target-path))))))
 
 (deftest read-symbolic-link
   (testing "returns the path of the link target"
