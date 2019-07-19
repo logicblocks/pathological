@@ -35,6 +35,9 @@
 (defn file-system [^Path path]
   (.getFileSystem path))
 
+(defn parent [^Path path]
+  (.getParent path))
+
 (defn normalize [^Path path]
   (.normalize path))
 

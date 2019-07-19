@@ -100,6 +100,15 @@
       (is (= (p/path test-file-system "directory/file.txt")
             (p/relativize base-path absolute-path))))))
 
+(deftest parent
+  (testing "gets the parent directory for the path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/some/nested/directory/file.txt")]
+      (is (= (p/path test-file-system "/some/nested/directory")
+            (p/parent path))))))
+
 (deftest matches?
   (testing "returns true if path matches pattern"
     (let [test-file-system
