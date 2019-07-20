@@ -81,8 +81,7 @@
         transformation
         {:type          :copy
          :configuration {:from "directory:source/"
-                         :to   "directory:target/"}}
-        ]
+                         :to   "directory:target/"}}]
     (transformations/apply-transformation transformation
       {:file-system file-system})
 
@@ -95,7 +94,7 @@
             "end"]
           (f/read-all-lines (p/path file-system "target/source/file2.rb"))))))
 
-(deftest copies-directory-of-files-to-directory
+(deftest allows-directories-to-be-stripped
   (let [file-system
         (new-in-memory-file-system
           (random-file-system-name)
@@ -111,21 +110,19 @@
         transformation
         {:type          :copy
          :configuration {:from "directory:source/"
-                         :to   "directory:target/"}}
-        ]
+                         :to   "directory:target/"
+                         :strip-names 1}}]
     (transformations/apply-transformation transformation
       {:file-system file-system})
 
     (is (= ["def thing_doer(arg1, arg2)"
             "  arg1 * arg2"
             "end"]
-          (f/read-all-lines (p/path file-system "target/source/file1.rb"))))
+          (f/read-all-lines (p/path file-system "target/file1.rb"))))
     (is (= ["def other_thing_doer(arg1, arg2)"
             "  arg1 + arg2"
             "end"]
-          (f/read-all-lines (p/path file-system "target/source/file2.rb"))))))
+          (f/read-all-lines (p/path file-system "target/file2.rb"))))))
 
-; :strip
 ; :transform
-
 ; validations

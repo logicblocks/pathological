@@ -6,7 +6,8 @@
     [pathological.files :as files]
     [pathological.file-systems :as file-systems]
 
-    [derivative.transformations.core :refer [apply-transformation]]))
+    [derivative.transformations.core :refer [apply-transformation]]
+    [pathological.paths :as p]))
 
 (defn pattern-type? [pattern type]
   (string/starts-with? pattern (str (name type) ":")))
@@ -44,12 +45,19 @@
     :or   {vars              {}
            file-system       (file-systems/default-file-system)
            working-directory "."}}]
-  (let [{:keys [from to]} configuration
+  (let [{:keys [from to strip-names]
+         :or   {strip-names 0}} configuration
 
         working-directory-path (paths/path file-system working-directory)
 
         from-paths (determine-from-paths working-directory-path from)]
     (doseq [from-path from-paths]
-      (let [to-path (determine-to-path working-directory-path to from-path)]
+      (let [stripped-from-path
+            (apply p/path
+              (concat [working-directory-path]
+                (drop (inc strip-names) (p/names from-path))))
+
+            to-path
+            (determine-to-path working-directory-path to stripped-from-path)]
         (files/create-directories (paths/parent to-path))
         (files/copy from-path to-path)))))
