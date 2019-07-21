@@ -1,4 +1,4 @@
-(ns derivative.transformations.copy
+(ns derivative.transformations.copy-files
   (:require
     [clojure.string :as string]
 

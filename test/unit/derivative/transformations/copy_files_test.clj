@@ -1,4 +1,4 @@
-(ns derivative.transformations.copy-test
+(ns derivative.transformations.copy-files-test
   (:require
     [clojure.test :refer :all]
 
@@ -10,7 +10,7 @@
              unix-configuration]]
 
     [derivative.transformations.core :as transformations]
-    [derivative.transformations.copy]))
+    [derivative.transformations.copy-files]))
 
 (deftest copies-one-file-to-another-file
   (let [file-system
