@@ -6,8 +6,9 @@
     [pathological.files :as files]
     [pathological.file-systems :as file-systems]
 
-    [derivative.transformations.core :refer [apply-transformation]]
-    [derivative.templating.core :as templates])
+    [derivative.path-specs :as path-specs]
+    [derivative.templating.core :as templates]
+    [derivative.transformations.core :refer [apply-transformation]])
   (:import [java.util.regex Pattern]))
 
 (def ^:dynamic *line-separator*
@@ -15,11 +16,6 @@
 
 (defn join-lines [coll]
   (string/join *line-separator* coll))
-
-(defn determine-files [search-path pattern]
-  (if (string/starts-with? pattern "file:")
-    [(paths/path search-path (string/replace pattern "file:" ""))]
-    (files/find search-path (fn [path _] (paths/matches? path pattern)))))
 
 (defn build-match-map [match]
   (into {}
@@ -37,7 +33,7 @@
 
         working-directory-path (paths/path file-system working-directory)
 
-        file-paths (determine-files working-directory-path in)
+        file-paths (path-specs/expand-paths working-directory-path in)
 
         context {:var vars}]
     (doseq [file-path file-paths]

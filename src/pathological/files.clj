@@ -146,7 +146,7 @@
          link-options (->link-options-array options)]
      (if (string? string-or-path)
        (PosixFilePermissions/fromString string-or-path)
-       (Files/getPosixFilePermissions string-or-path link-options ) ))))
+       (Files/getPosixFilePermissions string-or-path link-options)))))
 
 (defn posix-file-permissions-attribute [string]
   (PosixFilePermissions/asFileAttribute
@@ -155,6 +155,18 @@
 (defn posix-file-permissions-string [^Path path & options]
   (PosixFilePermissions/toString
     (apply posix-file-permissions (concat [path] options))))
+
+(defn walk
+  [^Path path
+   & {:keys [file-visit-options
+             maximum-depth]
+      :or   {file-visit-options []
+             maximum-depth      Integer/MAX_VALUE}}]
+  (let [^"[Ljava.nio.file.FileVisitOption;"
+        file-visit-options (->file-visit-options-array file-visit-options)]
+    (iterator-seq
+      (.iterator
+        (Files/walk path maximum-depth file-visit-options)))))
 
 (defn- invoke-visitor-and-accumulate [visit-fn accumulator-atom path & args]
   (let [result @accumulator-atom
@@ -230,7 +242,7 @@
     (condp = (:type attributes)
       :directory
       (do
-        (create-directory path)
+        (create-directories path)
         (when (seq rest)
           (populate-file-tree path rest)))
 

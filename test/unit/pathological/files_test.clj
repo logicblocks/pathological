@@ -1014,6 +1014,66 @@
   ; TODO: deal with pre-existing files and directories
   )
 
+(deftest walk
+  (testing "returns a seq over top level files"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")]
+      (f/populate-file-tree root-path
+        [[:file1 {:content ["Item 1"]}]
+         [:file2 {:content ["Item 2"]}]
+         [:file3 {:content ["Item 3"]}]])
+
+      (let [paths (f/walk root-path)]
+        (is (= [(p/path root-path)
+                (p/path root-path "file1")
+                (p/path root-path "file2")
+                (p/path root-path "file3")]
+              paths)))))
+
+  (testing "returns a seq over nested directories depth first"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")]
+      (f/populate-file-tree root-path
+        [[:directory1
+          [:file1 {:content ["Item 1"]}]
+          [:file2 {:content ["Item 2"]}]]
+         [:directory2
+          [:file3 {:content ["Item 3"]}]]])
+
+      (let [paths (f/walk root-path)]
+        (is (= [(p/path root-path)
+                (p/path root-path "directory1")
+                (p/path root-path "directory1/file1")
+                (p/path root-path "directory1/file2")
+                (p/path root-path "directory2")
+                (p/path root-path "directory2/file3")]
+              paths)))))
+
+  (testing "follows symlinks when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")]
+      (f/populate-file-tree root-path
+        [[:directory1
+          [:file1 {:content ["Item 1"]}]
+          [:file2 {:content ["Item 2"]}]]
+         [:directory2 {:type :symbolic-link :target "/directory1"}]])
+
+      (let [paths (f/walk (p/path test-file-system "/directory2")
+                     :file-visit-options [:follow-links])]
+        (is (= [(p/path root-path "/directory2")
+                (p/path root-path "/directory2/file1")
+                (p/path root-path "/directory2/file2")]
+              paths)))))
+
+  ; TODO: test maximum depth
+  )
+
 (deftest delete-recursively
   (testing "deletes all files in a directory"
     (let [test-file-system
