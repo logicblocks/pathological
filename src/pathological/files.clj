@@ -156,6 +156,18 @@
   (PosixFilePermissions/toString
     (apply posix-file-permissions (concat [path] options))))
 
+(defn new-input-stream
+  [^Path path & options]
+  (let [^"[Ljava.nio.file.OpenOption;"
+        open-options (->open-options-array options)]
+    (Files/newInputStream path open-options)))
+
+(defn new-output-stream
+  [^Path path & options]
+  (let [^"[Ljava.nio.file.OpenOption;"
+        open-options (->open-options-array options)]
+    (Files/newOutputStream path open-options)))
+
 (defn walk
   [^Path path
    & {:keys [file-visit-options

@@ -1,14 +1,17 @@
 (ns pathological.paths
   (:refer-clojure :exclude [name resolve])
   (:require
+    [clojure.java.io :as io]
+
     [pathological.utils
      :refer [->varargs-array
-             ->link-options-array]]
+             ->link-options-array
+             ->open-options-array]]
     [pathological.file-systems :refer [*file-system*]]
     [pathological.path-matchers :as pm])
   (:import
     [java.nio.file FileSystem
-                   Path]))
+                   Path Files]))
 
 (defprotocol ^:private BasePath
   (->path ^Path [this paths]))
@@ -31,6 +34,24 @@
         (str this)
         (->varargs-array String (map str paths)))
       this)))
+
+(defn- opts->open-options-array [opts]
+  (let [opts-map (when opts (apply hash-map opts))
+        open-options (if (:append opts-map) [:append] [])
+        open-options (->open-options-array open-options)]
+    open-options))
+
+(extend Path
+  io/IOFactory
+  (assoc io/default-streams-impl
+    :make-input-stream
+    (fn [^Path path opts]
+      (io/make-input-stream
+        (Files/newInputStream path (opts->open-options-array opts)) opts))
+    :make-output-stream
+    (fn [^Path path opts]
+      (io/make-output-stream
+        (Files/newOutputStream path (opts->open-options-array opts)) opts))))
 
 (defn path [& [base-path & paths]]
   (->path base-path paths))

@@ -520,6 +520,44 @@
 
       (is (= content (f/read-all-lines path :utf-16))))))
 
+(deftest new-input-stream
+  (testing "returns an input stream for the provided path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")
+          content ["Line 1" "Line 2"]]
+      (f/write-lines path content)
+
+      (is (= "Line 1\nLine 2\n"
+            (slurp (f/new-input-stream path)))))))
+
+(deftest new-output-stream
+  (testing "returns an output stream for the provided path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")
+          content "Line 1\nLine 2\n"]
+      (spit (f/new-output-stream path) content)
+
+      (is (= ["Line 1" "Line 2"]
+            (f/read-all-lines path)))))
+
+  (testing "allows open options to be provided"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")
+          original-content ["Line 1" "Line 2"]
+          new-content "Line 3\nLine 4\n"]
+      (f/write-lines path original-content)
+
+      (spit (f/new-output-stream path :append) new-content)
+
+      (is (= ["Line 1" "Line 2" "Line 3" "Line 4"]
+            (f/read-all-lines path))))))
+
 (deftest populate-file-tree
   (testing "creates top level file with contents"
     (let [test-file-system

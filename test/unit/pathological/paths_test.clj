@@ -1,5 +1,5 @@
 (ns pathological.paths-test
-  (:refer-clojure :exclude [name resolve])
+  (:refer-clojure :exclude [name resolve spit slurp])
   (:require
     [clojure.test :refer :all]
     [clojure.java.io :as io]
@@ -9,7 +9,8 @@
     [pathological.testing
      :refer [random-file-system-name
              new-in-memory-file-system
-             unix-configuration]])
+             unix-configuration]]
+    [pathological.files :as f])
   (:import
     [java.nio.file FileSystem
                    FileSystems]
@@ -90,6 +91,30 @@
           path (p/path test-file-system "/some/nested/directory/file.txt")]
       (is (= (p/path test-file-system "nested/directory")
             (p/subpath path 1 3))))))
+
+(deftest spit
+  (testing "supports spit on paths"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")
+          content "Line 1\nLine 2\n"]
+      (clojure.core/spit path content)
+
+      (is (= ["Line 1" "Line 2"]
+            (f/read-all-lines path))))))
+
+(deftest slurp
+  (testing "supports slurp on paths"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")
+          content ["Line 1" "Line 2"]]
+      (f/write-lines path content)
+
+      (is (= "Line 1\nLine 2\n"
+            (clojure.core/slurp path))))))
 
 (deftest normalize
   (testing "returns path with redundancies removed"
