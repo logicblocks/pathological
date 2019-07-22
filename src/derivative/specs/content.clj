@@ -2,4 +2,4 @@
   (:require
     [derivative.specs.core :as specs]))
 
-(defn string-syntax? [content-spec] (specs/syntax? content-spec :string))
+(def string-syntax? #(specs/syntax? % :string))

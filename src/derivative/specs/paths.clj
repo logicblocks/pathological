@@ -5,8 +5,8 @@
 
     [derivative.specs.core :as specs]))
 
-(defn file-syntax? [path-spec] (specs/syntax? path-spec :file))
-(defn directory-syntax? [path-spec] (specs/syntax? path-spec :directory))
+(def file-syntax? #(specs/syntax? % :file))
+(def directory-syntax? #(specs/syntax? % :directory))
 
 (defn resolve-path [base-path path-spec & other-paths]
   (let [file-system (paths/file-system base-path)

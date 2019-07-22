@@ -1,5 +1,5 @@
 (ns pathological.paths-test
-  (:refer-clojure :exclude [name])
+  (:refer-clojure :exclude [name resolve])
   (:require
     [clojure.test :refer :all]
     [clojure.java.io :as io]
