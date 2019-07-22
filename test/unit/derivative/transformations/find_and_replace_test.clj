@@ -26,8 +26,8 @@
 
         transformation
         {:type          :find-and-replace
-         :configuration {:find    "thing"
-                         :replace "other_thing"
+         :configuration {:find    "string:thing"
+                         :replace "string:other_thing"
                          :in      "file:work/test.rb"}}
 
         _ (transformations/apply-transformation transformation
@@ -59,8 +59,8 @@
 
         transformation
         {:type          :find-and-replace
-         :configuration {:find    "thing"
-                         :replace "other_thing"
+         :configuration {:find    "string:thing"
+                         :replace "string:other_thing"
                          :in      "file:./work/test.rb"}}
 
         _ (transformations/apply-transformation transformation
@@ -105,8 +105,8 @@
 
         transformation
         {:type          :find-and-replace
-         :configuration {:find    "thing"
-                         :replace "other_thing"
+         :configuration {:find    "string:thing"
+                         :replace "string:other_thing"
                          :in      "glob:./work/**/*"}}
 
         _ (transformations/apply-transformation transformation
@@ -146,8 +146,8 @@
 
         transformation
         {:type          :find-and-replace
-         :configuration {:find    #"arg(\d+)"
-                         :replace "argument_{{match.$1}}"
+         :configuration {:find    "regex:arg(\\d+)"
+                         :replace "string:argument_{{match.$1}}"
                          :in      "file:./work/test.rb"}}
 
         _ (transformations/apply-transformation transformation
@@ -173,8 +173,8 @@
 
         transformation
         {:type          :find-and-replace
-         :configuration {:find    "thing"
-                         :replace "{{var.name}}"
+         :configuration {:find    "string:thing"
+                         :replace "string:{{var.name}}"
                          :in      "file:./work/test.rb"}}
 
         _ (transformations/apply-transformation transformation
@@ -201,8 +201,8 @@
 
         transformation
         {:type          :find-and-replace
-         :configuration {:find    "{{var.old-name}}"
-                         :replace "new_name"
+         :configuration {:find    "string:{{var.old-name}}"
+                         :replace "string:new_name"
                          :in      "file:./work/test.rb"}}
 
         _ (transformations/apply-transformation transformation
@@ -229,8 +229,8 @@
 
         transformation
         {:type          :find-and-replace
-         :configuration {:find    #"\{\{var.arg-prefix\}\}(\d+)"
-                         :replace "argument_{{match.$1}}"
+         :configuration {:find    "regex:{{var.arg-prefix}}(\\d+)"
+                         :replace "string:argument_{{match.$1}}"
                          :in      "file:./work/test.rb"}}
 
         _ (transformations/apply-transformation transformation
@@ -258,8 +258,8 @@
         transformation
         {:type :find-and-replace
          :configuration
-               {:find    "thing"
-                :replace "{{#snake_case}}{{var.name}}{{/snake_case}}"
+               {:find    "string:thing"
+                :replace "string:{{#snake_case}}{{var.name}}{{/snake_case}}"
                 :in      "file:./work/test.rb"}}
 
         _ (transformations/apply-transformation transformation
@@ -287,8 +287,8 @@
         transformation
         {:type :find-and-replace
          :configuration
-               {:find    "{{#snake_case}}{{var.name}}{{/snake_case}}"
-                :replace "other_thing"
+               {:find    "string:{{#snake_case}}{{var.name}}{{/snake_case}}"
+                :replace "string:other_thing"
                 :in      "file:./work/test.rb"}}
 
         _ (transformations/apply-transformation transformation

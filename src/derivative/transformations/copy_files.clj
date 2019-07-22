@@ -4,7 +4,7 @@
     [pathological.files :as files]
     [pathological.file-systems :as file-systems]
 
-    [derivative.path-specs :as path-specs]
+    [derivative.specs.paths :as path-specs]
     [derivative.transformations.core :refer [apply-transformation]]))
 
 (defmethod apply-transformation :copy

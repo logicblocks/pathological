@@ -1,25 +1,16 @@
-(ns derivative.path-specs
+(ns derivative.specs.paths
   (:require
-    [clojure.string :as string]
-
     [pathological.paths :as paths]
-    [pathological.files :as files]))
+    [pathological.files :as files]
 
-(defn syntax [path-spec]
-  (keyword (first (string/split path-spec #":"))))
+    [derivative.specs.core :as specs]))
 
-(defn syntax? [path-spec syntax]
-  (string/starts-with? path-spec (str (name syntax) ":")))
-
-(defn file-syntax? [path-spec] (syntax? path-spec :file))
-(defn directory-syntax? [path-spec] (syntax? path-spec :directory))
-
-(defn strip-syntax [path-spec]
-  (string/replace path-spec #"^[-a-z]*?:" ""))
+(defn file-syntax? [path-spec] (specs/syntax? path-spec :file))
+(defn directory-syntax? [path-spec] (specs/syntax? path-spec :directory))
 
 (defn resolve-path [base-path path-spec & other-paths]
   (let [file-system (paths/file-system base-path)
-        path-pattern (strip-syntax path-spec)]
+        path-pattern (specs/strip-syntax path-spec)]
     (paths/normalize
       (cond
         (file-syntax? path-spec)
@@ -32,7 +23,7 @@
         :else
         (throw (IllegalArgumentException.
                  (str "Cannot resolve path spec with syntax: '"
-                   (name (syntax path-spec)) ":'.")))))))
+                   (name (specs/syntax path-spec)) ":'.")))))))
 
 (defn expand-paths [base-path path-spec]
   (cond

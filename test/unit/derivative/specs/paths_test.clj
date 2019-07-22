@@ -1,4 +1,4 @@
-(ns derivative.path-specs-test
+(ns derivative.specs.paths-test
   (:refer-clojure :exclude [resolve])
   (:require
     [clojure.test :refer :all]
@@ -10,37 +10,7 @@
              new-in-memory-file-system
              unix-configuration]]
 
-    [derivative.path-specs :as ps]))
-
-(deftest syntax
-  (is (= :file (ps/syntax "file:some/important/file.txt")))
-  (is (= :directory (ps/syntax "directory:/some/important/directory")))
-  (is (= :glob (ps/syntax "glob:**some/important/**file*")))
-  (is (= :regex (ps/syntax "regex:.*\\/(.*)\\.txt"))))
-
-(deftest syntax?
-  (is (true? (ps/syntax? "file:some/important/file.txt" :file)))
-  (is (true? (ps/syntax? "directory:/some/important/directory" "directory")))
-  (is (false? (ps/syntax? "file:some/important/file.txt" :glob)))
-  (is (false? (ps/syntax? "directory:/some/important/directory" "regex"))))
-
-(deftest file-syntax?
-  (is (true? (ps/file-syntax? "file:some/important/file.txt")))
-  (is (false? (ps/file-syntax? "directory:/some/important/directory"))))
-
-(deftest directory-syntax?
-  (is (true? (ps/directory-syntax? "directory:/some/important/directory")))
-  (is (false? (ps/directory-syntax? "file:some/important/file.txt"))))
-
-(deftest strip-syntax
-  (is (= "/some/important/directory"
-        (ps/strip-syntax "directory:/some/important/directory")))
-  (is (= "some/important/file.txt"
-        (ps/strip-syntax "file:some/important/file.txt")))
-  (is (= "some/things/**/*.txt"
-        (ps/strip-syntax "glob:some/things/**/*.txt")))
-  (is (= "some/things/[^/]*?/(.*).txt"
-        (ps/strip-syntax "regex:some/things/[^/]*?/(.*).txt"))))
+    [derivative.specs.paths :as ps]))
 
 (deftest resolve-path
   (testing "returns a path for the specified file when syntax is file"
