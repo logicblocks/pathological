@@ -13,12 +13,6 @@
     [derivative.transformations.core :refer [apply-transformation]])
   (:import [java.util.regex Pattern]))
 
-(def ^:dynamic *line-separator*
-  (format "%n"))
-
-(defn join-lines [coll]
-  (string/join *line-separator* coll))
-
 (defn with-match-map [context match]
   (assoc context
     :match
@@ -55,13 +49,8 @@
         context {:var vars}
         find-and-replacer (find-and-replace find replace context)]
     (doseq [file-path file-paths]
-      (let [initial-content
-            (join-lines (files/read-all-lines file-path))
+      (let [initial-content (slurp file-path)
 
             transformed-content
             (find-and-replacer initial-content)]
-        (files/write-lines file-path
-          (string/split-lines transformed-content))))))
-
-; Refactoring ideas:
-;   spit and slurp in pathological
+        (spit file-path transformed-content)))))

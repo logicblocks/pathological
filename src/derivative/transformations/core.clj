@@ -3,7 +3,7 @@
 (defmulti apply-transformation
   (fn [transformation _] (:type transformation)))
 
-(defprotocol FileSystemTransformation
+#_(defprotocol FileSystemTransformation
   (plan [this configuration options])                       ; => diffs
   (apply [this configuration options])                      ; => updates
 
