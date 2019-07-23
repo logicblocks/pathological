@@ -5,7 +5,9 @@
     [pathological.file-systems :as file-systems]
 
     [derivative.specs.paths :as path-specs]
-    [derivative.transformations.core :refer [apply-transformation]]))
+    [derivative.transformations.core :refer [apply-transformation]]
+    [derivative.transformations.path.remove-directories
+     :refer [remove-directories]]))
 
 (defmethod apply-transformation :copy
   [{:keys [configuration]}
@@ -20,13 +22,14 @@
 
         from-paths (path-specs/expand-paths working-directory-path from)]
     (doseq [from-path from-paths]
-      (let [stripped-from-path
-            (apply paths/path working-directory-path
-              (drop strip-names (paths/names from-path)))
+      (let [transformed-path
+            (remove-directories
+              working-directory-path from-path strip-names)
 
             to-path
-            (path-specs/resolve-path working-directory-path to
-              stripped-from-path)
+            (path-specs/resolve-path
+              working-directory-path to transformed-path)
+
             to-parent (paths/parent to-path)]
         (when to-parent
           (files/create-directories to-parent))
