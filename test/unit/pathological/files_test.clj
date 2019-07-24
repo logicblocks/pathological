@@ -1134,3 +1134,37 @@
       (is (false? (f/exists? (p/path root-path "/directory1/file2"))))
       (is (false? (f/exists? (p/path root-path "/directory2"))))
       (is (false? (f/exists? (p/path root-path "/directory2/file3")))))))
+
+; new-directory-stream
+; new-byte-channel
+; new-buffered-reader
+; new-buffered-writer
+
+; create-temp-file
+; create-temp-directory
+
+; file-store
+
+; delete-if-exists
+; move
+
+; move-recursively
+; copy-recursively
+
+; hidden?
+; readable?
+; writeable?
+; executable?
+
+; ->posix-file-permissions
+; ->posix-file-permissions-attribute
+; ->posix-file-permissions-string
+; read-attribute
+; read-attributes
+; set-attribute
+; read-posix-file-permissions
+; set-posix-file-permissions
+; read-owner
+; set-owner
+; read-last-modified-time
+; set-last-modified-time

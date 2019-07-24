@@ -15,14 +15,15 @@
     :or   {vars              {}
            file-system       (file-systems/default-file-system)
            working-directory "."}}]
-  (let [{:keys [find replace in]} configuration
+  (let [{:keys [in]} configuration
 
         working-directory-path (paths/path file-system working-directory)
 
         file-paths (path-specs/expand-paths working-directory-path in)
 
         context {:var vars}
-        find-and-replacer (find-and-replace find replace context)]
+        find-and-replacer (find-and-replace
+                            (assoc configuration :context context))]
     (doseq [file-path file-paths]
       (let [initial-content (slurp file-path)
 

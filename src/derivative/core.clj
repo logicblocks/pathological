@@ -57,3 +57,22 @@
 ; delete-syntax
 
 ; potentially build an overlay filesystem
+
+; overall we are transforming the file system
+; multiple ways we can do this
+;   path-transformation:
+;     creating files/directories,
+;     deleting files/directories,
+;     copying files/directories,
+;     moving files/directories
+;   content-transformation:
+;     replacing or updating the contents of files
+
+; stages:
+;   determine all paths affected by each transformation:
+;     not trivial as some transformations introduce new paths
+;     potentially each transformation can return the paths it:
+;       creates
+;       deletes
+;       modifies
+;

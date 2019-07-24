@@ -5,26 +5,48 @@
     [pathological.file-systems :as file-systems]
 
     [derivative.specs.paths :as path-specs]
+
     [derivative.transformations.core :refer [apply-transformation]]
     [derivative.transformations.path.remove-directories
-     :refer [remove-directories]]))
+     :refer [remove-directories]]
+    [derivative.transformations.path.find-and-replace
+     :refer [find-and-replace]]))
 
-(defmethod apply-transformation :copy
+(defmulti ->transformation
+  (fn [transform] (:type transform)))
+
+(defmethod ->transformation :remove-directories
+  [{:keys [configuration]}]
+  (remove-directories configuration))
+
+(defmethod ->transformation :find-and-replace
+  [{:keys [configuration]}]
+  (find-and-replace configuration))
+
+(defn with-context [context]
+  (fn [transform]
+    (update-in transform [:configuration]
+      assoc :context context)))
+
+(defmethod apply-transformation :copy-files
   [{:keys [configuration]}
    {:keys [vars file-system working-directory]
     :or   {vars              {}
            file-system       (file-systems/default-file-system)
            working-directory "."}}]
-  (let [{:keys [from to strip-names]
-         :or   {strip-names 0}} configuration
+  (let [{:keys [from to transform]
+         :or   {transform []}} configuration
 
         working-directory-path (paths/path file-system working-directory)
 
-        from-paths (path-specs/expand-paths working-directory-path from)]
+        from-paths (path-specs/expand-paths working-directory-path from)
+
+        context {:var vars}
+        transform-path
+        (apply comp
+          (map (comp ->transformation (with-context context)) transform))]
     (doseq [from-path from-paths]
-      (let [transformed-path
-            (remove-directories
-              working-directory-path from-path strip-names)
+      (let [transformed-path (transform-path from-path)
 
             to-path
             (path-specs/resolve-path
