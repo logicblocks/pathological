@@ -177,8 +177,8 @@
                {:from      "directory:directory1/"
                 :to        "directory:directory3/"
                 :transform [{:type          :find-and-replace
-                             :configuration {:find    "directory2"
-                                             :replace "directory4"}}]}}]
+                             :configuration {:find    "string:directory2"
+                                             :replace "string:directory4"}}]}}]
     (transformations/apply-transformation transformation
       {:file-system file-system})
 
@@ -194,6 +194,253 @@
           (f/read-all-lines
             (p/path file-system
               "directory3/directory1/directory4/file2.rb"))))))
+
+(deftest allows-variable-interpolation-in-path-during-copy
+  (let [file-system
+        (new-in-memory-file-system
+          (random-file-system-name)
+          (unix-configuration)
+          [[:directory1
+            [:directory2
+             [:file1.rb {:content ["def thing_doer(arg1, arg2)"
+                                   "  arg1 * arg2"
+                                   "end"]}]
+             [:file2.rb {:content ["def other_thing_doer(arg1, arg2)"
+                                   "  arg1 + arg2"
+                                   "end"]}]]]])
+
+        transformation
+        {:type :copy-files
+         :configuration
+               {:from      "directory:directory1/"
+                :to        "directory:directory3/"
+                :transform [{:type :find-and-replace
+                             :configuration
+                                   {:find    "string:directory2"
+                                    :replace "string:{{var.new_dir}}"}}]}}]
+    (transformations/apply-transformation transformation
+      {:file-system file-system
+       :vars        {:new_dir "new-directory"}})
+
+    (is (= ["def thing_doer(arg1, arg2)"
+            "  arg1 * arg2"
+            "end"]
+          (f/read-all-lines
+            (p/path file-system
+              "directory3/directory1/new-directory/file1.rb"))))
+    (is (= ["def other_thing_doer(arg1, arg2)"
+            "  arg1 + arg2"
+            "end"]
+          (f/read-all-lines
+            (p/path file-system
+              "directory3/directory1/new-directory/file2.rb"))))))
+
+(deftest allows-regular-expression-match-and-replacement-in-path-during-copy
+  (let [file-system
+        (new-in-memory-file-system
+          (random-file-system-name)
+          (unix-configuration)
+          [[:directory1
+            [:directory2
+             [:file1.rb {:content ["def thing_doer(arg1, arg2)"
+                                   "  arg1 * arg2"
+                                   "end"]}]
+             [:file2.rb {:content ["def other_thing_doer(arg1, arg2)"
+                                   "  arg1 + arg2"
+                                   "end"]}]]]])
+
+        transformation
+        {:type :copy-files
+         :configuration
+               {:from      "directory:directory1/"
+                :to        "directory:directory3/"
+                :transform [{:type :find-and-replace
+                             :configuration
+                                   {:find    "regex:file(\\d+)"
+                                    :replace "string:thing{{match.$1}}"}}]}}]
+    (transformations/apply-transformation transformation
+      {:file-system file-system})
+
+    (is (= ["def thing_doer(arg1, arg2)"
+            "  arg1 * arg2"
+            "end"]
+          (f/read-all-lines
+            (p/path file-system
+              "directory3/directory1/directory2/thing1.rb"))))
+    (is (= ["def other_thing_doer(arg1, arg2)"
+            "  arg1 + arg2"
+            "end"]
+          (f/read-all-lines
+            (p/path file-system
+              "directory3/directory1/directory2/thing2.rb"))))))
+
+(deftest allows-variables-to-be-interpolated-into-finders-for-path-when-string
+  (let [file-system
+        (new-in-memory-file-system
+          (random-file-system-name)
+          (unix-configuration)
+          [[:directory1
+            [:directory2
+             [:file1.rb {:content ["def thing_doer(arg1, arg2)"
+                                   "  arg1 * arg2"
+                                   "end"]}]
+             [:file2.rb {:content ["def other_thing_doer(arg1, arg2)"
+                                   "  arg1 + arg2"
+                                   "end"]}]]]])
+
+        transformation
+        {:type :copy-files
+         :configuration
+               {:from      "directory:directory1/"
+                :to        "directory:directory3/"
+                :transform [{:type :find-and-replace
+                             :configuration
+                                   {:find    "string:{{var.old_directory}}"
+                                    :replace "string:new-directory"}}]}}]
+    (transformations/apply-transformation transformation
+      {:file-system file-system
+       :vars        {:old_directory "directory2"}})
+
+    (is (= ["def thing_doer(arg1, arg2)"
+            "  arg1 * arg2"
+            "end"]
+          (f/read-all-lines
+            (p/path file-system
+              "directory3/directory1/new-directory/file1.rb"))))
+    (is (= ["def other_thing_doer(arg1, arg2)"
+            "  arg1 + arg2"
+            "end"]
+          (f/read-all-lines
+            (p/path file-system
+              "directory3/directory1/new-directory/file2.rb"))))))
+
+(deftest allows-variables-to-be-interpolated-into-finders-for-path-when-regex
+  (let [file-system
+        (new-in-memory-file-system
+          (random-file-system-name)
+          (unix-configuration)
+          [[:directory1
+            [:directory2
+             [:file1.rb {:content ["def thing_doer(arg1, arg2)"
+                                   "  arg1 * arg2"
+                                   "end"]}]
+             [:file2.rb {:content ["def other_thing_doer(arg1, arg2)"
+                                   "  arg1 + arg2"
+                                   "end"]}]]]])
+
+        transformation
+        {:type :copy-files
+         :configuration
+               {:from      "directory:directory1/"
+                :to        "directory:directory3/"
+                :transform [{:type :find-and-replace
+                             :configuration
+                                   {:find    "regex:{{var.old_file}}(\\d+)"
+                                    :replace "string:thing{{match.$1}}"}}]}}]
+    (transformations/apply-transformation transformation
+      {:file-system file-system
+       :vars        {:old_file "file"}})
+
+    (is (= ["def thing_doer(arg1, arg2)"
+            "  arg1 * arg2"
+            "end"]
+          (f/read-all-lines
+            (p/path file-system
+              "directory3/directory1/directory2/thing1.rb"))))
+    (is (= ["def other_thing_doer(arg1, arg2)"
+            "  arg1 + arg2"
+            "end"]
+          (f/read-all-lines
+            (p/path file-system
+              "directory3/directory1/directory2/thing2.rb"))))))
+
+(deftest provides-functions-to-manipulate-replacements-for-path
+  (let [file-system
+        (new-in-memory-file-system
+          (random-file-system-name)
+          (unix-configuration)
+          [[:directory1
+            [:directory2
+             [:file1.rb {:content ["def thing_doer(arg1, arg2)"
+                                   "  arg1 * arg2"
+                                   "end"]}]
+             [:file2.rb {:content ["def other_thing_doer(arg1, arg2)"
+                                   "  arg1 + arg2"
+                                   "end"]}]]]])
+
+        transformation
+        {:type :copy-files
+         :configuration
+               {:from "directory:directory1/"
+                :to   "directory:directory3/"
+                :transform
+                      [{:type :find-and-replace
+                        :configuration
+                              {:find    "string:file"
+                               :replace (str "string:"
+                                          "{{#snake_case}}"
+                                          "{{var.new_file}}"
+                                          "{{/snake_case}}")}}]}}]
+    (transformations/apply-transformation transformation
+      {:file-system file-system
+       :vars        {:new_file "new-file"}})
+
+    (is (= ["def thing_doer(arg1, arg2)"
+            "  arg1 * arg2"
+            "end"]
+          (f/read-all-lines
+            (p/path file-system
+              "directory3/directory1/directory2/new_file1.rb"))))
+    (is (= ["def other_thing_doer(arg1, arg2)"
+            "  arg1 + arg2"
+            "end"]
+          (f/read-all-lines
+            (p/path file-system
+              "directory3/directory1/directory2/new_file2.rb"))))))
+
+(deftest provides-functions-to-manipulate-finders-for-path
+  (let [file-system
+        (new-in-memory-file-system
+          (random-file-system-name)
+          (unix-configuration)
+          [[:directory1
+            [:directory2
+             [:old_file1.rb {:content ["def thing_doer(arg1, arg2)"
+                                       "  arg1 * arg2"
+                                       "end"]}]
+             [:old_file2.rb {:content ["def other_thing_doer(arg1, arg2)"
+                                       "  arg1 + arg2"
+                                       "end"]}]]]])
+
+        transformation
+        {:type :copy-files
+         :configuration
+               {:from "directory:directory1/"
+                :to   "directory:directory3/"
+                :transform
+                      [{:type :find-and-replace
+                        :configuration
+                              {:find    (str "string:"
+                                          "{{#snake_case}}"
+                                          "{{var.old_file}}"
+                                          "{{/snake_case}}")
+                               :replace "string:new-file"}}]}}]
+    (transformations/apply-transformation transformation
+      {:file-system file-system
+       :vars        {:old_file "old-file"}})
+
+    (is (= ["def thing_doer(arg1, arg2)"
+            "  arg1 * arg2"
+            "end"]
+          (f/read-all-lines
+            (p/path file-system
+              "directory3/directory1/directory2/new-file1.rb"))))
+    (is (= ["def other_thing_doer(arg1, arg2)"
+            "  arg1 + arg2"
+            "end"]
+          (f/read-all-lines
+            (p/path file-system
+              "directory3/directory1/directory2/new-file2.rb"))))))
 
 (deftest applies-many-path-transforms-in-order
   (let [file-system
@@ -217,8 +464,8 @@
                 :transform [{:type          :remove-directories
                              :configuration {:count 2}}
                             {:type          :find-and-replace
-                             :configuration {:find    ".rb"
-                                             :replace ".ruby"}}]}}]
+                             :configuration {:find    "string:.rb"
+                                             :replace "string:.ruby"}}]}}]
     (transformations/apply-transformation transformation
       {:file-system file-system})
 
