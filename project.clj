@@ -3,10 +3,13 @@
   :url "https://github.com/logicblocks/derivative"
   :license {:name "The MIT License"
             :url  "https://opensource.org/licenses/MIT"}
-  :dependencies [[hbs "1.0.3"]
+  :dependencies [[org.clojure/tools.cli "0.4.2"]
+                 [hbs "1.0.3"]
                  [camel-snake-kebab "672421b575737c5496b7ddcfb83cf150b0d0bc75"]
                  [com.google.jimfs/jimfs "1.1"]
-                 [secure-rand "0.1"]]
+                 [io.aviso/pretty "0.1.37"]
+                 [secure-rand "0.1"]
+                 [digest "1.4.9"]]
   :middleware [lein-git-down.plugin/inject-properties]
   :plugins [[lein-cloverage "1.0.13"]
             [lein-shell "0.5.0"]

@@ -32,9 +32,6 @@
 ;     source-directory:
 ;     target-directory:
 
-; variables
-;   should be able to provide variables for use in transformations
-
 ; find-and-replace
 ;   acts on content of matching files
 ;   looks for find, could be string or regex
@@ -75,3 +72,30 @@
 ;       creates
 ;       deletes
 ;       modifies
+
+; applying each transformation should produce a set of operations on files
+;   e.g., create, move, delete, copy, patch
+; transformations can read from the file system but shouldn't write to it,
+; they should produce data about what writes should be made
+
+; alternatively, transformations don't read from the file system and instead
+; something resolves for them; although, content transformations need to know
+; the content... don't necessarily need to load it themselves though
+
+; each affected path effectively has a sequence of transformations that must be
+; applied to it
+;   transformations can bring new paths into existence such that a pipeline
+;   applies to them after they are created
+;   transformations can remove paths from existence such that a pipeline ends
+;   early
+
+; the order of steps in the pipeline definition is important as it defines the
+; per path pipelines and the relevant paths to operate on
+
+; path transformations must run in order to determine the graph whereas content
+; transformations don't need to
+; content transformations
+
+; do path transformations need to read from the file system themselves?
+; or can they be provided with a set of inputs?
+; prefer the latter...
