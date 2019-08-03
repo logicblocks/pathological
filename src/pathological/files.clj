@@ -144,6 +144,18 @@
   [^Path path]
   (Files/isHidden path))
 
+(defn readable?
+  [^Path path]
+  (Files/isReadable path))
+
+(defn writable?
+  [^Path path]
+  (Files/isWritable path))
+
+(defn executable?
+  [^Path path]
+  (Files/isExecutable path))
+
 (defn posix-file-permissions
   ([string-or-path & options]
    (let [^"[Ljava.nio.file.LinkOption;"

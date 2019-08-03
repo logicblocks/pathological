@@ -469,6 +469,57 @@
           path (p/path test-file-system "/file.txt")]
       (is (false? (f/hidden? path))))))
 
+(deftest readable?
+  (testing "returns true when path is readable"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")]
+      (f/create-file path)
+
+      (is (true? (f/readable? path)))))
+
+  (testing "returns false when path is not readable"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")]
+      (is (false? (f/readable? path))))))
+
+(deftest writable?
+  (testing "returns true when path is writable"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")]
+      (f/create-file path)
+
+      (is (true? (f/writable? path)))))
+
+  (testing "returns false when path is not writable"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")]
+      (is (false? (f/writable? path))))))
+
+(deftest executable?
+  (testing "returns true when path is executable"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")]
+      (f/create-file path)
+
+      (is (true? (f/executable? path)))))
+
+  (testing "returns false when path is not executable"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")]
+      (is (false? (f/executable? path))))))
+
 (deftest write-lines
   (testing "writes the provided lines to the path"
     (let [test-file-system
@@ -1173,7 +1224,6 @@
 ; move-recursively
 ; copy-recursively
 
-; hidden?
 ; readable?
 ; writeable?
 ; executable?
