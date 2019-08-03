@@ -24,16 +24,82 @@
 
 ; {:operation :create
 ;  :path <path>
+;  :original <nil|
+;             string|
+;             vector of strings|
+;             input stream|
+;             reader|
+;             byte array|
+;             character array>
 ;  :modifications [
-;    {:coordinates [0,0]
-;        <string,
-;            vector of strings,
-;            input stream,
-;            reader,
-;            byte array,
-;            character array>
+;    {:coordinates [:remove [0,0] :add [1,4]]
+;     :lines [
+;       {:add ""}
+;       {:add ""}
+;       {:add ""}
+;       {:add ""}
+;     ]
+;    }
 ;  ]
-;  :mode <mode>}
-; {:operation :modify
+;  :mode <nil|mode>}
+; {:operation :delete
 ;  :path <path>
-;  :modifications
+;  :original <nil|
+;             string|
+;             vector of strings|
+;             input stream|
+;             reader|
+;             byte array|
+;             character array>
+;  :modifications [
+;    {:coordinates [:remove [1,4] :add [0,0]]
+;     :lines [
+;       {:remove ""}
+;       {:remove ""}
+;       {:remove ""}
+;       {:remove ""}
+;     ]
+;    }
+;  ]
+;  :mode <nil|mode>}
+; {:operation :modify-content
+;  :path <path>
+;  :original <nil|
+;             string|
+;             vector of strings|
+;             input stream|
+;             reader|
+;             byte array|
+;             character array>
+;  :modifications [
+;    {:coordinates [:remove [0,0] :add [1,4]]
+;     :lines [
+;       {:keep ""}
+;       {:add ""}
+;       {:remove ""}
+;       {:keep ""}
+;     ]
+;    }
+;  ]
+;  :mode <nil|mode>}
+; {:operation :modify-mode
+;  :path <path>
+;  :original <nil|
+;             string|
+;             vector of strings|
+;             input stream|
+;             reader|
+;             byte array|
+;             character array>
+;  :modifications [
+;    {:coordinates [:remove [0,0] :add [1,4]]
+;     :lines [
+;       {:keep ""}
+;       {:add ""}
+;       {:remove ""}
+;       {:keep ""}
+;     ]
+;    }
+;  ]
+;  :mode <nil|mode>}
+;
