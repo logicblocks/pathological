@@ -140,6 +140,10 @@
   [^Path path-1 ^Path path-2]
   (Files/isSameFile path-1 path-2))
 
+(defn hidden?
+  [^Path path]
+  (Files/isHidden path))
+
 (defn posix-file-permissions
   ([string-or-path & options]
    (let [^"[Ljava.nio.file.LinkOption;"

@@ -447,6 +447,28 @@
 
       (is (false? (f/same-file? path-1 path-2))))))
 
+(deftest hidden?
+  (testing "returns true when path represents hidden file"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/.file.txt")]
+      (is (true? (f/hidden? path)))))
+
+  (testing "returns true when path represents hidden directory"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/.file/")]
+      (is (true? (f/hidden? path)))))
+
+  (testing "returns false when path represents standard file"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")]
+      (is (false? (f/hidden? path))))))
+
 (deftest write-lines
   (testing "writes the provided lines to the path"
     (let [test-file-system
