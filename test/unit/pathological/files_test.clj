@@ -239,6 +239,70 @@
 
       (is (= "rwxrw-rw-" (f/posix-file-permissions-string target-path))))))
 
+(deftest move
+  (testing "moves a file"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          content ["Line 1" "Line 2"]
+          source-path (p/path test-file-system "/source")
+          destination-path (p/path test-file-system "/target")]
+      (f/create-file source-path)
+      (f/write-lines source-path content)
+
+      (f/move source-path destination-path)
+
+      (is (= content (f/read-all-lines destination-path)))
+      (is (false? (f/exists? source-path)))))
+
+  (testing "retains file attributes"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          source-path (p/path test-file-system "/source")
+          destination-path (p/path test-file-system "/target")]
+      (f/create-file source-path
+        (f/posix-file-permissions-attribute "rwxrw-rw-"))
+
+      (f/move source-path destination-path)
+
+      (is (= "rwxrw-rw-" (f/posix-file-permissions-string destination-path)))
+      (is (false? (f/exists? source-path)))))
+
+  (testing "replaces existing file when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          content ["Line 1" "Line 2"]
+          source-path (p/path test-file-system "/source")
+          destination-path (p/path test-file-system "/target")]
+      (f/create-file source-path)
+      (f/write-lines source-path content)
+
+      (f/create-file destination-path)
+
+      (f/move source-path destination-path :replace-existing)
+
+      (is (= content (f/read-all-lines destination-path)))
+      (is (false? (f/exists? source-path)))))
+
+  (testing "uses an atomic move when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          content ["Line 1" "Line 2"]
+          source-path (p/path test-file-system "/source")
+          destination-path (p/path test-file-system "/target")]
+      (f/create-file source-path)
+      (f/write-lines source-path content)
+
+      (f/move source-path destination-path :atomic-move)
+
+      (is (= content (f/read-all-lines destination-path)))
+      (is (false? (f/exists? source-path)))
+      ; TODO: work out how to test this.
+      )))
+
 (deftest read-symbolic-link
   (testing "returns the path of the link target"
     (let [test-file-system
@@ -290,7 +354,7 @@
                 [:subdirectory-2
                  [:matching-path-3 {:content ["Line 7" "Line 8"]}]
                  [:other-path-2 {:content ["Line 9" "Line 10"]}]]]
-               [:directory-2 {:type :symbolic-link
+               [:directory-2 {:type   :symbolic-link
                               :target "/directory-1/subdirectory-1"}]])
 
           matches (f/find root-path
@@ -476,7 +540,7 @@
 
           path (p/path test-file-system "/file.txt")]
       (f/create-file path)
-
+      
       (is (true? (f/readable? path)))))
 
   (testing "returns false when path is not readable"
@@ -1176,7 +1240,7 @@
          [:directory2 {:type :symbolic-link :target "/directory1"}]])
 
       (let [paths (f/walk (p/path test-file-system "/directory2")
-                     :file-visit-options [:follow-links])]
+                    :file-visit-options [:follow-links])]
         (is (= [(p/path root-path "/directory2")
                 (p/path root-path "/directory2/file1")
                 (p/path root-path "/directory2/file2")]
@@ -1219,14 +1283,9 @@
 ; file-store
 
 ; delete-if-exists
-; move
 
 ; move-recursively
 ; copy-recursively
-
-; readable?
-; writeable?
-; executable?
 
 ; ->posix-file-permissions
 ; ->posix-file-permissions-attribute

@@ -91,6 +91,12 @@
         copy-options (->copy-options-array options)]
     (do-copy source destination copy-options)))
 
+(defn move
+  [source destination & options]
+  (let [^"[Ljava.nio.file.CopyOption;"
+        copy-options (->copy-options-array options)]
+    (Files/move source destination copy-options)))
+
 (defn read-symbolic-link
   [^Path path]
   (Files/readSymbolicLink path))
