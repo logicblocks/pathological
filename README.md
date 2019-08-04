@@ -12,7 +12,7 @@ Add the following to your `project.clj` file:
 
 ## Documentation
 
-* [API Docs](http://logicblocks.github.com/pathological)
+* [API Docs](http://logicblocks.github.io/pathological)
 
 ## Usage
 
