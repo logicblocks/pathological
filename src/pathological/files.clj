@@ -321,3 +321,19 @@
       (walk-file-tree source
         :pre-visit-directory-fn create-directory-fn
         :visit-file-fn copy-fn))))
+
+(defn move-recursively
+  [^Path source ^Path destination]
+  (letfn [(rebase [path]
+            (paths/resolve destination (paths/relativize source path)))
+          (create-directory-fn [_ directory _]
+            (create-directories (rebase directory)))
+          (delete-directory-fn [_ directory _]
+            (delete directory))
+          (move-fn [_ file _]
+            (move file (rebase file)))]
+    (if (exists? source)
+      (walk-file-tree source
+        :pre-visit-directory-fn create-directory-fn
+        :visit-file-fn move-fn
+        :post-visit-directory-fn delete-directory-fn))))
