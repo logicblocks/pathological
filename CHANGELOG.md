@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+
+## [0.1.1] — 2019-08-04
 ### Fixed
 - Documentation source URI now points to correct repository.
 
@@ -22,4 +24,5 @@ and this project adheres to
 
 [0.0.1]: https://github.com/logicblocks/derivative/compare/0.0.1...0.0.1
 [0.1.0]: https://github.com/logicblocks/derivative/compare/0.0.1...0.1.0
-[Unreleased]: https://github.com/logicblocks/derivative/compare/0.1.0...HEAD
+[0.1.1]: https://github.com/logicblocks/derivative/compare/0.1.0...0.1.1
+[Unreleased]: https://github.com/logicblocks/derivative/compare/0.1.1...HEAD
