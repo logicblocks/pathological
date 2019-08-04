@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Added
+- `delete-if-exists` method.
 
 ## [0.1.1] — 2019-08-04
 ### Fixed
