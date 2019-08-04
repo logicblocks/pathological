@@ -181,7 +181,43 @@
 
       (f/delete path)
 
-      (is (false? (f/exists? path))))))
+      (is (false? (f/exists? path)))))
+
+  (testing "throws if a path does not exist"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file")]
+      (is (thrown? NoSuchFileException
+            (f/delete path))))))
+
+(deftest delete-if-exists
+  (testing "deletes a file when it exists and returns true"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file")]
+      (f/create-file path)
+
+      (is (true? (f/delete-if-exists path)))
+      (is (false? (f/exists? path)))))
+
+  (testing "deletes an empty directory when it exists and returns true"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file")]
+      (f/create-directory path)
+
+      (is (true? (f/delete-if-exists path)))
+      (is (false? (f/exists? path)))))
+
+  (testing "returns false when path does not exist"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file")]
+      (is (false? (f/delete-if-exists path))))))
 
 (deftest copy
   (testing "copies a file"
@@ -1374,8 +1410,6 @@
 ; create-temp-directory
 
 ; file-store
-
-; delete-if-exists
 
 ; ->posix-file-permissions
 ; ->posix-file-permissions-attribute

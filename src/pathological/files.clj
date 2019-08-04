@@ -69,6 +69,10 @@
   [^Path path]
   (Files/delete path))
 
+(defn delete-if-exists
+  [^Path path]
+  (Files/deleteIfExists path))
+
 (defmulti ^:private do-copy
   (fn [source destination _] [(type source) (type destination)]))
 
