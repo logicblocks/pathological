@@ -540,7 +540,7 @@
 
           path (p/path test-file-system "/file.txt")]
       (f/create-file path)
-      
+
       (is (true? (f/readable? path)))))
 
   (testing "returns false when path is not readable"
@@ -1270,7 +1270,49 @@
       (is (false? (f/exists? (p/path root-path "/directory1/file1"))))
       (is (false? (f/exists? (p/path root-path "/directory1/file2"))))
       (is (false? (f/exists? (p/path root-path "/directory2"))))
-      (is (false? (f/exists? (p/path root-path "/directory2/file3")))))))
+      (is (false? (f/exists? (p/path root-path "/directory2/file3"))))))
+
+  ; TODO: what should happen when one delete fails?
+  )
+
+(deftest copy-recursively
+  (testing "deletes all files in a directory"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/root")
+          source-path (p/path root-path "source")
+          target-path (p/path root-path "target")]
+      (f/create-directory root-path)
+      (f/populate-file-tree root-path
+        [[:source
+          [:directory1
+           [:file1 {:content ["Item 1"]}]
+           [:file2 {:content ["Item 2"]}]]
+          [:directory2
+           [:file3 {:content ["Item 3"]}]]]])
+
+      (f/copy-recursively source-path target-path)
+
+      (is (true? (f/exists? source-path)))
+      (is (true? (f/exists? (p/path source-path "/directory1"))))
+      (is (true? (f/exists? (p/path source-path "/directory1/file1"))))
+      (is (true? (f/exists? (p/path source-path "/directory1/file2"))))
+      (is (true? (f/exists? (p/path source-path "/directory2"))))
+      (is (true? (f/exists? (p/path source-path "/directory2/file3"))))
+
+      (is (true? (f/exists? target-path)))
+      (is (true? (f/exists? (p/path target-path "/directory1"))))
+      (is (true? (f/exists? (p/path target-path "/directory1/file1"))))
+      (is (true? (f/exists? (p/path target-path "/directory1/file2"))))
+      (is (true? (f/exists? (p/path target-path "/directory2"))))
+      (is (true? (f/exists? (p/path target-path "/directory2/file3"))))
+      (is (= ["Item 1"]
+            (f/read-all-lines (p/path target-path "/directory1/file1"))))
+      (is (= ["Item 2"]
+            (f/read-all-lines (p/path target-path "/directory1/file2"))))
+      (is (= ["Item 3"]
+            (f/read-all-lines (p/path target-path "/directory2/file3")))))))
 
 ; new-directory-stream
 ; new-byte-channel
@@ -1285,7 +1327,6 @@
 ; delete-if-exists
 
 ; move-recursively
-; copy-recursively
 
 ; ->posix-file-permissions
 ; ->posix-file-permissions-attribute

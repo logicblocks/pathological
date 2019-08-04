@@ -10,7 +10,8 @@
              ->link-options-array
              ->file-visit-options-array
              ->file-visit-options-set
-             ->file-visit-result]])
+             ->file-visit-result]]
+    [pathological.paths :as paths])
   (:import
     [java.nio.file Files
                    FileVisitor
@@ -307,3 +308,16 @@
       (walk-file-tree path
         :visit-file-fn delete-fn
         :post-visit-directory-fn delete-fn))))
+
+(defn copy-recursively
+  [^Path source ^Path destination]
+  (letfn [(rebase [path]
+            (paths/resolve destination (paths/relativize source path)))
+          (create-directory-fn [_ directory _]
+            (create-directories (rebase directory)))
+          (copy-fn [_ file _]
+            (copy file (rebase file)))]
+    (if (exists? source)
+      (walk-file-tree source
+        :pre-visit-directory-fn create-directory-fn
+        :visit-file-fn copy-fn))))
