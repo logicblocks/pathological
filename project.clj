@@ -38,8 +38,10 @@
   :release-tasks
   [["shell" "git" "diff" "--exit-code"]
    ["change" "version" "leiningen.release/bump-version" "release"]
-   ["changelog" "release"]
    ["codox"]
+   ["shell" "git" "add" "."]
+   ["vcs" "commit" "Prepare docs for version %s"]
+   ["changelog" "release"]
    ["vcs" "commit"]
    ["vcs" "tag"]
    ["deploy"]
