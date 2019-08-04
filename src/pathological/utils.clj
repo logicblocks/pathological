@@ -1,12 +1,12 @@
 (ns pathological.utils
   (:import
     [java.nio.file CopyOption
-                   FileVisitOption
-                   FileVisitResult
-                   LinkOption
-                   OpenOption
-                   StandardOpenOption
-                   StandardCopyOption]
+     FileVisitOption
+     FileVisitResult
+     LinkOption
+     OpenOption
+     StandardOpenOption
+     StandardCopyOption]
     [java.nio.file.attribute FileAttribute]
     [java.nio.charset StandardCharsets]))
 

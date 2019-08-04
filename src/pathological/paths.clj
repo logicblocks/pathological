@@ -11,7 +11,7 @@
     [pathological.path-matchers :as pm])
   (:import
     [java.nio.file FileSystem
-                   Path Files]))
+     Path Files]))
 
 (defprotocol ^:private BasePath
   (->path ^Path [this paths]))

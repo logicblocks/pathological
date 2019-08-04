@@ -13,7 +13,8 @@
             [lein-ancient "0.6.15"]
             [lein-changelog "0.3.2"]
             [lein-eftest "0.5.8"]
-            [lein-codox "0.10.7"]]
+            [lein-codox "0.10.7"]
+            [lein-cljfmt "0.6.4"]]
 
   :profiles
   {:shared {:dependencies   [[org.clojure/clojure "1.10.1"]
@@ -30,6 +31,8 @@
   {:namespaces  [#"^pathological\."]
    :output-path "docs"
    :source-uri  "https://github.com/logicblocks/derivative/blob/{version}/{filepath}#L{line}"}
+
+  :cljfmt {:indents ^:replace {#".*" [[:inner 0]]}}
 
   :deploy-repositories
   {"releases" {:url "https://repo.clojars.org" :creds :gpg}}
