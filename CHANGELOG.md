@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
+### Added
+- Documentation is now generated into `docs` on release.
 
 ## [0.0.1] — 2019-08-04
 ### Changed
