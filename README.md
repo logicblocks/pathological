@@ -1,9 +1,9 @@
-# derivative
+# pathological
 
-General purpose in place scaffolding and source code rewrite tool.
+A complete wrapper of Java NIO2 for Clojure.
 
 ```clj
-[io.logicblocks/derivative "0.0.0"]
+[io.logicblocks/pathological "0.0.1"]
 ```
 
 ## Usage
@@ -12,7 +12,7 @@ FIXME
 
 ## License
 
-Copyright © 2019 FIXME
+Copyright &copy; 2019 LogicBlocks Maintainers
 
 Distributed under the terms of the 
 [MIT License](http://opensource.org/licenses/MIT).
