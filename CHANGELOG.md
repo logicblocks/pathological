@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Fixed
+- Documentation source URI now points to correct repository.
 
 ## [0.1.0] — 2019-08-04
 ### Added
