@@ -17,12 +17,10 @@
             [lein-cljfmt "0.6.4"]]
 
   :profiles
-  {:shared {:dependencies   [[org.clojure/clojure "1.10.1"]
-                             [eftest "0.5.8"]]
-            :resource-paths ["test_resources"]}
+  {:shared {:dependencies [[org.clojure/clojure "1.10.1"]
+                           [eftest "0.5.8"]]}
    :dev    [:shared {:source-paths ["dev"]}]
-   :test   [:shared {:test-paths ^:replace ["test/unit"]
-                     :eftest     {:multithread? false}}]}
+   :test   [:shared]}
 
   :cloverage
   {:ns-exclude-regex [#"^user"]}
