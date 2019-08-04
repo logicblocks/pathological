@@ -13,6 +13,7 @@
             [lein-ancient "0.6.15"]
             [lein-changelog "0.3.2"]
             [lein-eftest "0.5.3"]
+            [lein-codox "0.10.7"]
             [reifyhealth/lein-git-down "0.3.5"]]
   :profiles {:shared      {:dependencies   [[org.clojure/clojure "1.10.0"]
                                             [eftest "0.5.3"]]
@@ -23,6 +24,9 @@
              :integration [:shared {:test-paths ^:replace ["test/integration"]
                                     :eftest     {:multithread? false}}]}
   :eftest {:multithread? false}
+  :codox {:namespaces [#"^pathological\."]
+          :output-path "docs"
+          :source-uri "https://github.com/logicblocks/derivative/blob/{version}/{filepath}#L{line}"}
   :test-paths ["test/unit" "test/integration"]
   :deploy-repositories {"releases" {:url   "https://repo.clojars.org"
                                     :creds :gpg}}
