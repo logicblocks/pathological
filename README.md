@@ -2,9 +2,17 @@
 
 A complete wrapper of Java NIO2 for Clojure.
 
+## Install
+
+Add the following to your `project.clj` file:
+
 ```clj
-[io.logicblocks/pathological "0.0.1"]
+[io.logicblocks/pathological "0.1.1"]
 ```
+
+## Documentation
+
+* [API Docs](http://logicblocks.github.com/pathological)
 
 ## Usage
 
