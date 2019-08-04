@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
+
+## [0.0.1] — 2019-08-04
 ### Changed
 - Preparing for initial release.
 
@@ -14,4 +16,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 Initial version.
 
 
+[0.0.1]: https://github.com/logicblocks/derivative/compare/0.0.1...0.0.1
 [Unreleased]: https://github.com/logicblocks/derivative/compare/0.0.1...HEAD
