@@ -28,7 +28,7 @@
   :codox
   {:namespaces  [#"^pathological\."]
    :output-path "docs"
-   :source-uri  "https://github.com/logicblocks/derivative/blob/{version}/{filepath}#L{line}"}
+   :source-uri  "https://github.com/logicblocks/pathological/blob/{version}/{filepath}#L{line}"}
 
   :cljfmt {:indents ^:replace {#".*" [[:inner 0]]}}
 
