@@ -33,7 +33,7 @@
 
           path (p/path test-file-system "/some/very/nested/path/")]
       (f/create-directories path
-        (f/posix-file-permissions-attribute "rwxrw-rw-"))
+        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
 
       (is (true? (Files/exists path (u/->link-options-array []))))
 
@@ -60,7 +60,7 @@
 
           path (p/path test-file-system "/path/")]
       (f/create-directory path
-        (f/posix-file-permissions-attribute "rwxrw-rw-"))
+        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
 
       (is (true? (Files/exists path (u/->link-options-array []))))
 
@@ -87,7 +87,7 @@
 
           path (p/path test-file-system "/some-file")]
       (f/create-file path
-        (f/posix-file-permissions-attribute "rwxrw-rw-"))
+        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
 
       (is (true? (Files/exists path (u/->link-options-array []))))
 
@@ -122,7 +122,7 @@
       (f/create-file target-path)
 
       (f/create-symbolic-link link-path target-path
-        (f/posix-file-permissions-attribute "rwxrw-rw-"))
+        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
 
       (is (true? (Files/exists link-path
                    (u/->link-options-array [LinkOption/NOFOLLOW_LINKS]))))
@@ -269,11 +269,12 @@
           source-path (p/path test-file-system "/source")
           target-path (p/path test-file-system "/target")]
       (f/create-file source-path
-        (f/posix-file-permissions-attribute "rwxrw-rw-"))
+        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
 
       (f/copy source-path target-path :copy-attributes)
 
-      (is (= "rwxrw-rw-" (f/posix-file-permissions-string target-path))))))
+      (is (= "rwxrw-rw-" (f/->posix-file-permissions-string
+                           (f/read-posix-file-permissions target-path)))))))
 
 (deftest move
   (testing "moves a file"
@@ -298,11 +299,12 @@
           source-path (p/path test-file-system "/source")
           destination-path (p/path test-file-system "/target")]
       (f/create-file source-path
-        (f/posix-file-permissions-attribute "rwxrw-rw-"))
+        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
 
       (f/move source-path destination-path)
 
-      (is (= "rwxrw-rw-" (f/posix-file-permissions-string destination-path)))
+      (is (= "rwxrw-rw-" (f/->posix-file-permissions-string
+                           (f/read-posix-file-permissions destination-path))))
       (is (false? (f/exists? source-path)))))
 
   (testing "replaces existing file when requested"
@@ -1414,11 +1416,12 @@
 ; ->posix-file-permissions
 ; ->posix-file-permissions-attribute
 ; ->posix-file-permissions-string
+; read-posix-file-permissions
+; set-posix-file-permissions
+
 ; read-attribute
 ; read-attributes
 ; set-attribute
-; read-posix-file-permissions
-; set-posix-file-permissions
 ; read-owner
 ; set-owner
 ; read-last-modified-time

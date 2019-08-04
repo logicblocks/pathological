@@ -14,13 +14,14 @@
     [pathological.paths :as paths])
   (:import
     [java.nio.file Files
-     FileVisitor
-     Path]
+                   FileVisitor
+                   Path]
     [java.nio.charset Charset
-     StandardCharsets]
+                      StandardCharsets]
     [java.nio.file.attribute PosixFilePermissions]
     [java.util.function BiPredicate]
-    [java.io InputStream OutputStream]))
+    [java.io InputStream OutputStream]
+    [java.util Set]))
 
 (defn read-all-lines
   ([^Path path]
@@ -167,21 +168,22 @@
   [^Path path]
   (Files/isExecutable path))
 
-(defn posix-file-permissions
-  ([string-or-path & options]
-    (let [^"[Ljava.nio.file.LinkOption;"
-          link-options (->link-options-array options)]
-      (if (string? string-or-path)
-        (PosixFilePermissions/fromString string-or-path)
-        (Files/getPosixFilePermissions string-or-path link-options)))))
+(defn read-posix-file-permissions [string-or-path & options]
+  (let [^"[Ljava.nio.file.LinkOption;"
+        link-options (->link-options-array options)]
+    (Files/getPosixFilePermissions string-or-path link-options)))
 
-(defn posix-file-permissions-attribute [string]
-  (PosixFilePermissions/asFileAttribute
-    (posix-file-permissions string)))
+(defn ->posix-file-permissions
+  [string]
+  (PosixFilePermissions/fromString string))
 
-(defn posix-file-permissions-string [^Path path & options]
+(defn ->posix-file-permissions-string [permissions]
   (PosixFilePermissions/toString
-    (apply posix-file-permissions (concat [path] options))))
+    permissions))
+
+(defn ->posix-file-permissions-attribute [string]
+  (PosixFilePermissions/asFileAttribute
+    (->posix-file-permissions string)))
 
 (defn new-input-stream
   [^Path path & options]
