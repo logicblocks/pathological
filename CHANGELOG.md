@@ -22,7 +22,7 @@ and this project adheres to
 - Preparing for initial release.
 
 
-[0.0.1]: https://github.com/logicblocks/derivative/compare/0.0.1...0.0.1
-[0.1.0]: https://github.com/logicblocks/derivative/compare/0.0.1...0.1.0
-[0.1.1]: https://github.com/logicblocks/derivative/compare/0.1.0...0.1.1
-[Unreleased]: https://github.com/logicblocks/derivative/compare/0.1.1...HEAD
+[0.0.1]: https://github.com/logicblocks/pathological/compare/0.0.1...0.0.1
+[0.1.0]: https://github.com/logicblocks/pathological/compare/0.0.1...0.1.0
+[0.1.1]: https://github.com/logicblocks/pathological/compare/0.1.0...0.1.1
+[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.1...HEAD
