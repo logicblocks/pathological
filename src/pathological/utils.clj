@@ -1,13 +1,15 @@
 (ns pathological.utils
+  (:require
+    [clojure.set :refer [map-invert]])
   (:import
     [java.nio.file CopyOption
-     FileVisitOption
-     FileVisitResult
-     LinkOption
-     OpenOption
-     StandardOpenOption
-     StandardCopyOption]
-    [java.nio.file.attribute FileAttribute]
+                   FileVisitOption
+                   FileVisitResult
+                   LinkOption
+                   OpenOption
+                   StandardOpenOption
+                   StandardCopyOption]
+    [java.nio.file.attribute FileAttribute PosixFilePermission]
     [java.nio.charset StandardCharsets]))
 
 (def ^:dynamic *charsets*
@@ -48,6 +50,23 @@
    :terminate     FileVisitResult/TERMINATE
    :skip-subtree  FileVisitResult/SKIP_SUBTREE
    :skip-siblings FileVisitResult/SKIP_SIBLINGS})
+
+(def posix-file-permissions
+  {:owner-read     PosixFilePermission/OWNER_READ
+   :owner-write    PosixFilePermission/OWNER_WRITE
+   :owner-execute  PosixFilePermission/OWNER_EXECUTE
+   :group-read     PosixFilePermission/GROUP_READ
+   :group-write    PosixFilePermission/GROUP_WRITE
+   :group-execute  PosixFilePermission/GROUP_EXECUTE
+   :others-read    PosixFilePermission/OTHERS_READ
+   :others-write   PosixFilePermission/OTHERS_WRITE
+   :others-execute PosixFilePermission/OTHERS_EXECUTE})
+
+(defn ->posix-file-permission [value]
+  (get posix-file-permissions value))
+
+(defn <-posix-file-permission [value]
+  (get (map-invert posix-file-permissions) value))
 
 (defn ->option [var]
   (fn [value] (or (get var value) value)))

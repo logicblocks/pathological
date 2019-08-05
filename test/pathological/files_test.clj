@@ -13,6 +13,7 @@
      :refer [random-file-system-name
              new-in-memory-file-system]])
   (:import
+    [java.io ByteArrayOutputStream]
     [java.nio.file Files Path LinkOption NoSuchFileException]
     [java.nio.file.attribute PosixFilePermissions]
     [java.nio.charset StandardCharsets]))
@@ -160,6 +161,143 @@
       (is (thrown? NoSuchFileException
             (f/create-link link-path target-path))))))
 
+(deftest find
+  (testing "returns a seq of matching paths"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          _ (f/populate-file-tree root-path
+              [[:directory-1
+                [:matching-path-1 {:content ["Line 1" "Line 2"]}]
+                [:matching-path-2 {:content ["Line 3" "Line 4"]}]
+                [:other-path-1 {:content ["Line 5" "Line 6"]}]]
+               [:directory-2
+                [:matching-path-3 {:content ["Line 7" "Line 8"]}]
+                [:other-path-2 {:content ["Line 9" "Line 10"]}]]])
+
+          matches (f/find root-path
+                    (fn [path _] (p/matches? path "glob:**/matching-*")))]
+      (is (seq? matches))
+      (is (= [(p/path test-file-system "/directory-1/matching-path-1")
+              (p/path test-file-system "/directory-1/matching-path-2")
+              (p/path test-file-system "/directory-2/matching-path-3")]
+            matches))))
+
+  (testing "honours file visit options when supplied"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          _ (f/populate-file-tree root-path
+              [[:directory-1
+                [:subdirectory-1
+                 [:matching-path-1 {:content ["Line 1" "Line 2"]}]
+                 [:matching-path-2 {:content ["Line 3" "Line 4"]}]
+                 [:other-path-1 {:content ["Line 5" "Line 6"]}]]
+                [:subdirectory-2
+                 [:matching-path-3 {:content ["Line 7" "Line 8"]}]
+                 [:other-path-2 {:content ["Line 9" "Line 10"]}]]]
+               [:directory-2 {:type   :symbolic-link
+                              :target "/directory-1/subdirectory-1"}]])
+
+          matches (f/find root-path
+                    (fn [path _] (p/matches? path "glob:**/matching-*"))
+                    :file-visit-options #{:follow-links})]
+      (is (= [(p/path test-file-system
+                "/directory-1/subdirectory-1/matching-path-1")
+              (p/path test-file-system
+                "/directory-1/subdirectory-1/matching-path-2")
+              (p/path test-file-system
+                "/directory-1/subdirectory-2/matching-path-3")
+              (p/path test-file-system
+                "/directory-2/matching-path-1")
+              (p/path test-file-system
+                "/directory-2/matching-path-2")]
+            matches))))
+
+  (testing "honours maximum depth option when supplied"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          _ (f/populate-file-tree root-path
+              [[:directory-1
+                [:matching-path-1 {:content ["Line 1" "Line 2"]}]
+                [:matching-path-2 {:content ["Line 3" "Line 4"]}]
+                [:other-path-1 {:content ["Line 5" "Line 6"]}]
+                [:subdirectory-1
+                 [:matching-path-3 {:content ["Line 7" "Line 8"]}]
+                 [:other-path-2 {:content ["Line 9" "Line 10"]}]]]])
+
+          matches (f/find root-path
+                    (fn [path _] (p/matches? path "glob:**/matching-*"))
+                    :maximum-depth 2)]
+      (is (= [(p/path test-file-system
+                "/directory-1/matching-path-1")
+              (p/path test-file-system
+                "/directory-1/matching-path-2")]
+            matches)))))
+
+(deftest read-posix-file-attributes
+  (testing "returns the posix file attributes on the provided path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file")]
+      (f/create-file path
+        (f/->posix-file-permissions-attribute "rwxr--r--"))
+
+      (is (= (f/->posix-file-permissions "rwxr--r--")
+            (f/read-posix-file-permissions path)))))
+
+  (testing "follows symbolic links by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")]
+      (f/create-symbolic-link link target
+        (f/->posix-file-permissions-attribute "r--------"))
+      (f/create-file target
+        (f/->posix-file-permissions-attribute "rwxr--r--"))
+
+      (is (= #{:owner-read
+               :owner-write
+               :owner-execute
+               :group-read
+               :others-read}
+            (f/read-posix-file-permissions link)))))
+
+  (testing "does not follow symbolic links when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")]
+      (f/create-symbolic-link link target
+        (f/->posix-file-permissions-attribute "r--------"))
+      (f/create-file target
+        (f/->posix-file-permissions-attribute "rwxr--r--"))
+
+      (is (= (f/->posix-file-permissions "r--------")
+            (f/read-posix-file-permissions link :no-follow-links))))))
+
+(deftest read-symbolic-link
+  (testing "returns the path of the link target"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          target-path (p/path test-file-system "/target")
+          link-path (p/path test-file-system "/link")]
+      (f/create-file target-path)
+      (f/create-symbolic-link link-path target-path)
+
+      (is (= target-path (f/read-symbolic-link link-path))))))
+
 (deftest delete
   (testing "deletes a file"
     (let [test-file-system
@@ -253,7 +391,7 @@
 
           content ["Line 1" "Line 2"]
           source-path (p/path test-file-system "/source")]
-      (with-open [output-stream (java.io.ByteArrayOutputStream.)]
+      (with-open [output-stream (ByteArrayOutputStream.)]
         (f/create-file source-path)
         (f/write-lines source-path content)
 
@@ -340,99 +478,6 @@
       (is (false? (f/exists? source-path)))
       ; TODO: work out how to test this.
       )))
-
-(deftest read-symbolic-link
-  (testing "returns the path of the link target"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          target-path (p/path test-file-system "/target")
-          link-path (p/path test-file-system "/link")]
-      (f/create-file target-path)
-      (f/create-symbolic-link link-path target-path)
-
-      (is (= target-path (f/read-symbolic-link link-path))))))
-
-(deftest find
-  (testing "returns a seq of matching paths"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")
-
-          _ (f/populate-file-tree root-path
-              [[:directory-1
-                [:matching-path-1 {:content ["Line 1" "Line 2"]}]
-                [:matching-path-2 {:content ["Line 3" "Line 4"]}]
-                [:other-path-1 {:content ["Line 5" "Line 6"]}]]
-               [:directory-2
-                [:matching-path-3 {:content ["Line 7" "Line 8"]}]
-                [:other-path-2 {:content ["Line 9" "Line 10"]}]]])
-
-          matches (f/find root-path
-                    (fn [path _] (p/matches? path "glob:**/matching-*")))]
-      (is (seq? matches))
-      (is (= [(p/path test-file-system "/directory-1/matching-path-1")
-              (p/path test-file-system "/directory-1/matching-path-2")
-              (p/path test-file-system "/directory-2/matching-path-3")]
-            matches))))
-
-  (testing "honours file visit options when supplied"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")
-
-          _ (f/populate-file-tree root-path
-              [[:directory-1
-                [:subdirectory-1
-                 [:matching-path-1 {:content ["Line 1" "Line 2"]}]
-                 [:matching-path-2 {:content ["Line 3" "Line 4"]}]
-                 [:other-path-1 {:content ["Line 5" "Line 6"]}]]
-                [:subdirectory-2
-                 [:matching-path-3 {:content ["Line 7" "Line 8"]}]
-                 [:other-path-2 {:content ["Line 9" "Line 10"]}]]]
-               [:directory-2 {:type   :symbolic-link
-                              :target "/directory-1/subdirectory-1"}]])
-
-          matches (f/find root-path
-                    (fn [path _] (p/matches? path "glob:**/matching-*"))
-                    :file-visit-options #{:follow-links})]
-      (is (= [(p/path test-file-system
-                "/directory-1/subdirectory-1/matching-path-1")
-              (p/path test-file-system
-                "/directory-1/subdirectory-1/matching-path-2")
-              (p/path test-file-system
-                "/directory-1/subdirectory-2/matching-path-3")
-              (p/path test-file-system
-                "/directory-2/matching-path-1")
-              (p/path test-file-system
-                "/directory-2/matching-path-2")]
-            matches))))
-
-  (testing "honours maximum depth option when supplied"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")
-
-          _ (f/populate-file-tree root-path
-              [[:directory-1
-                [:matching-path-1 {:content ["Line 1" "Line 2"]}]
-                [:matching-path-2 {:content ["Line 3" "Line 4"]}]
-                [:other-path-1 {:content ["Line 5" "Line 6"]}]
-                [:subdirectory-1
-                 [:matching-path-3 {:content ["Line 7" "Line 8"]}]
-                 [:other-path-2 {:content ["Line 9" "Line 10"]}]]]])
-
-          matches (f/find root-path
-                    (fn [path _] (p/matches? path "glob:**/matching-*"))
-                    :maximum-depth 2)]
-      (is (= [(p/path test-file-system
-                "/directory-1/matching-path-1")
-              (p/path test-file-system
-                "/directory-1/matching-path-2")]
-            matches)))))
 
 (deftest exists?
   ; TODO: test for symbolic link handling
@@ -1416,7 +1461,6 @@
 ; ->posix-file-permissions
 ; ->posix-file-permissions-attribute
 ; ->posix-file-permissions-string
-; read-posix-file-permissions
 ; set-posix-file-permissions
 
 ; read-attribute

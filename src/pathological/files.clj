@@ -10,7 +10,9 @@
              ->link-options-array
              ->file-visit-options-array
              ->file-visit-options-set
-             ->file-visit-result]]
+             ->file-visit-result
+             <-posix-file-permission
+             ->posix-file-permission]]
     [pathological.paths :as paths])
   (:import
     [java.nio.file Files
@@ -25,18 +27,18 @@
 
 (defn read-all-lines
   ([^Path path]
-    (read-all-lines path StandardCharsets/UTF_8))
+   (read-all-lines path StandardCharsets/UTF_8))
   ([^Path path ^Charset charset]
-    (Files/readAllLines path (->charset charset))))
+   (Files/readAllLines path (->charset charset))))
 
 (defn write-lines
   ([^Path path ^Iterable lines]
-    (write-lines path lines :utf-8))
+   (write-lines path lines :utf-8))
   ([^Path path ^Iterable lines charset & options]
-    (let [^Charset charset (->charset charset)
-          ^"[Ljava.nio.file.OpenOption;"
-          open-options (->open-options-array options)]
-      (Files/write path lines charset open-options))))
+   (let [^Charset charset (->charset charset)
+         ^"[Ljava.nio.file.OpenOption;"
+         open-options (->open-options-array options)]
+     (Files/write path lines charset open-options))))
 
 (defn create-directories
   [^Path path & options]
@@ -108,7 +110,7 @@
   (Files/readSymbolicLink path))
 
 (deftype FnBackedBiPredicate
-         [predicate-fn]
+  [predicate-fn]
 
   BiPredicate
   (test [_ path basic-file-attributes]
@@ -168,22 +170,29 @@
   [^Path path]
   (Files/isExecutable path))
 
-(defn read-posix-file-permissions [string-or-path & options]
+(defn read-posix-file-permissions [path & options]
   (let [^"[Ljava.nio.file.LinkOption;"
         link-options (->link-options-array options)]
-    (Files/getPosixFilePermissions string-or-path link-options)))
+    (into #{}
+      (map <-posix-file-permission
+        (Files/getPosixFilePermissions path link-options)))))
 
 (defn ->posix-file-permissions
   [string]
-  (PosixFilePermissions/fromString string))
+  (into #{}
+    (map <-posix-file-permission
+      (PosixFilePermissions/fromString string))))
 
 (defn ->posix-file-permissions-string [permissions]
   (PosixFilePermissions/toString
-    permissions))
+    (into #{}
+      (map ->posix-file-permission permissions))))
 
 (defn ->posix-file-permissions-attribute [string]
   (PosixFilePermissions/asFileAttribute
-    (->posix-file-permissions string)))
+    (into #{}
+      (map ->posix-file-permission
+        (->posix-file-permissions string)))))
 
 (defn new-input-stream
   [^Path path & options]
@@ -219,11 +228,11 @@
     (->file-visit-result control)))
 
 (deftype FnBackedFileVisitor
-         [pre-visit-directory-fn
-          post-visit-directory-fn
-          visit-file-fn
-          visit-file-failed-fn
-          accumulator-atom]
+  [pre-visit-directory-fn
+   post-visit-directory-fn
+   visit-file-fn
+   visit-file-failed-fn
+   accumulator-atom]
 
   FileVisitor
   (preVisitDirectory [_ directory basic-file-attributes]
