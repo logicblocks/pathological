@@ -170,13 +170,6 @@
   [^Path path]
   (Files/isExecutable path))
 
-(defn read-posix-file-permissions [path & options]
-  (let [^"[Ljava.nio.file.LinkOption;"
-        link-options (->link-options-array options)]
-    (into #{}
-      (map <-posix-file-permission
-        (Files/getPosixFilePermissions path link-options)))))
-
 (defn ->posix-file-permissions
   [string]
   (into #{}
@@ -193,6 +186,13 @@
     (into #{}
       (map ->posix-file-permission
         (->posix-file-permissions string)))))
+
+(defn read-posix-file-permissions [path & options]
+  (let [^"[Ljava.nio.file.LinkOption;"
+        link-options (->link-options-array options)]
+    (into #{}
+      (map <-posix-file-permission
+        (Files/getPosixFilePermissions path link-options)))))
 
 (defn new-input-stream
   [^Path path & options]

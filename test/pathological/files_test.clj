@@ -15,7 +15,7 @@
   (:import
     [java.io ByteArrayOutputStream]
     [java.nio.file Files Path LinkOption NoSuchFileException]
-    [java.nio.file.attribute PosixFilePermissions]
+    [java.nio.file.attribute PosixFilePermissions PosixFilePermission]
     [java.nio.charset StandardCharsets]))
 
 (deftest create-directories
@@ -242,8 +242,73 @@
                 "/directory-1/matching-path-2")]
             matches)))))
 
-(deftest read-posix-file-attributes
-  (testing "returns the posix file attributes on the provided path"
+(deftest ->posix-file-permissions
+  (testing "returns posix file permission set for provided string"
+    (is (= #{} (f/->posix-file-permissions "---------")))
+    (is (= #{:owner-read
+             :owner-write
+             :owner-execute
+             :group-read
+             :others-read}
+          (f/->posix-file-permissions "rwxr--r--")))
+    (is (= #{:owner-read
+             :owner-write
+             :owner-execute
+             :group-read
+             :group-write
+             :group-execute
+             :others-read
+             :others-write
+             :others-execute}
+          (f/->posix-file-permissions "rwxrwxrwx")))))
+
+(deftest ->posix-file-permissions-string
+  (testing "returns posix file permissions string for provided set"
+    (is (= "---------" (f/->posix-file-permissions-string #{})))
+    (is (= "rwxr--r--"
+          (f/->posix-file-permissions-string
+            #{:owner-read
+              :owner-write
+              :owner-execute
+              :group-read
+              :others-read})))
+    (is (= "rwxrwxrwx"
+          (f/->posix-file-permissions-string
+            #{:owner-read
+              :owner-write
+              :owner-execute
+              :group-read
+              :group-write
+              :group-execute
+              :others-read
+              :others-write
+              :others-execute})))))
+
+(deftest ->posix-file-permissions-attributes
+  (testing "returns posix file permissions string for provided set"
+    (is (= (.value (PosixFilePermissions/asFileAttribute #{}))
+          (.value (f/->posix-file-permissions-attribute "---------"))))
+    (is (= (.value (PosixFilePermissions/asFileAttribute
+                     #{PosixFilePermission/OWNER_READ
+                       PosixFilePermission/OWNER_WRITE
+                       PosixFilePermission/OWNER_EXECUTE
+                       PosixFilePermission/GROUP_READ
+                       PosixFilePermission/OTHERS_READ}))
+          (.value (f/->posix-file-permissions-attribute "rwxr--r--"))))
+    (is (= (.value (PosixFilePermissions/asFileAttribute
+                     #{PosixFilePermission/OWNER_READ
+                       PosixFilePermission/OWNER_WRITE
+                       PosixFilePermission/OWNER_EXECUTE
+                       PosixFilePermission/GROUP_READ
+                       PosixFilePermission/GROUP_WRITE
+                       PosixFilePermission/GROUP_EXECUTE
+                       PosixFilePermission/OTHERS_READ
+                       PosixFilePermission/OTHERS_WRITE
+                       PosixFilePermission/OTHERS_EXECUTE}))
+          (.value (f/->posix-file-permissions-attribute "rwxrwxrwx"))))))
+
+(deftest read-posix-file-permissions
+  (testing "returns the posix file permissions on the provided path"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -1458,9 +1523,6 @@
 
 ; file-store
 
-; ->posix-file-permissions
-; ->posix-file-permissions-attribute
-; ->posix-file-permissions-string
 ; set-posix-file-permissions
 
 ; read-attribute
