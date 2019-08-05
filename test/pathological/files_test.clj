@@ -1574,8 +1574,6 @@
 
 ; file-store
 
-; set-posix-file-permissions
-
 ; read-attribute
 ; read-attributes
 ; set-attribute
