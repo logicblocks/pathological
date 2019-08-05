@@ -7,7 +7,7 @@ A complete wrapper of Java NIO2 for Clojure.
 Add the following to your `project.clj` file:
 
 ```clj
-[io.logicblocks/pathological "0.1.1"]
+[io.logicblocks/pathological "0.1.2"]
 ```
 
 ## Documentation

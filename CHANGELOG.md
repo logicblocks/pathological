@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+
+## [0.1.2] — 2019-08-05
 ### Added
 - `delete-if-exists` method.
 - `read-posix-file-permissions` method.
@@ -33,4 +35,5 @@ and this project adheres to
 [0.0.1]: https://github.com/logicblocks/pathological/compare/0.0.1...0.0.1
 [0.1.0]: https://github.com/logicblocks/pathological/compare/0.0.1...0.1.0
 [0.1.1]: https://github.com/logicblocks/pathological/compare/0.1.0...0.1.1
-[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.1...HEAD
+[0.1.2]: https://github.com/logicblocks/pathological/compare/0.1.1...0.1.2
+[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.2...HEAD
