@@ -198,6 +198,11 @@
       (map <-posix-file-permission
         (Files/getPosixFilePermissions path link-options)))))
 
+(defn set-posix-file-permissions [path permissions]
+  (let [permission-set
+        (into #{} (map ->posix-file-permission permissions))]
+    (Files/setPosixFilePermissions path permission-set)))
+
 (defn new-input-stream
   [^Path path & options]
   (let [^"[Ljava.nio.file.OpenOption;"

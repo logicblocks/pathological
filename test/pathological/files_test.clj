@@ -387,6 +387,21 @@
       (is (= (f/->posix-file-permissions "r--------")
             (f/read-posix-file-permissions link :no-follow-links))))))
 
+(deftest set-posix-file-permissions
+  (testing "sets posix file permissions on path using permissions set"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file")]
+      (f/create-file path
+        (f/->posix-file-permissions-attribute #{:owner-read}))
+
+      (f/set-posix-file-permissions path
+        #{:owner-read :owner-write :owner-execute})
+
+      (is (= #{:owner-read :owner-write :owner-execute}
+            (f/read-posix-file-permissions path))))))
+
 (deftest read-symbolic-link
   (testing "returns the path of the link target"
     (let [test-file-system
