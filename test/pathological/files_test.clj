@@ -598,7 +598,7 @@
 (deftest exists?
   ; TODO: test for symbolic link handling
 
-  (testing "returns true when the file exists"
+  (testing "returns true when the path exists"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -612,7 +612,78 @@
           (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/some-file")]
-      (is (false? (f/exists? path))))))
+      (is (false? (f/exists? path)))))
+
+  (testing "follows symbolic links by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          link1 (p/path test-file-system "/link1")
+          link2 (p/path test-file-system "/link2")
+          target1 (p/path test-file-system "/target1")
+          target2 (p/path test-file-system "/target2")]
+      (f/create-file target1)
+      (f/create-symbolic-link link1 target1)
+      (f/create-symbolic-link link2 target2)
+
+      (is (true? (f/exists? link1)))
+      (is (false? (f/exists? link2)))))
+
+  (testing "does not follow symbolic links when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          link1 (p/path test-file-system "/link1")
+          link2 (p/path test-file-system "/link2")
+          target1 (p/path test-file-system "/target1")]
+      (f/create-symbolic-link link1 target1)
+
+      (is (true? (f/exists? link1 :no-follow-links)))
+      (is (false? (f/exists? link2 :no-follow-links))))))
+
+(deftest not-exists?
+  (testing "returns true when the path does not exist"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/some-file")]
+      (is (true? (f/not-exists? path)))))
+
+  (testing "returns false when the path exists"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/some-file")]
+      (f/create-file path)
+
+      (is (false? (f/not-exists? path)))))
+
+  (testing "follows symbolic links by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          link1 (p/path test-file-system "/link1")
+          link2 (p/path test-file-system "/link2")
+          target1 (p/path test-file-system "/target1")
+          target2 (p/path test-file-system "/target2")]
+      (f/create-file target1)
+      (f/create-symbolic-link link1 target1)
+      (f/create-symbolic-link link2 target2)
+
+      (is (false? (f/not-exists? link1)))
+      (is (true? (f/not-exists? link2)))))
+
+  (testing "does not follow symbolic links when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          link1 (p/path test-file-system "/link1")
+          link2 (p/path test-file-system "/link2")
+          target1 (p/path test-file-system "/target1")]
+      (f/create-symbolic-link link1 target1)
+
+      (is (false? (f/not-exists? link1 :no-follow-links)))
+      (is (true? (f/not-exists? link2 :no-follow-links))))))
 
 (deftest regular-file?
   ; TODO: test for symbolic link handling
@@ -1572,8 +1643,16 @@
 ; create-temp-file
 ; create-temp-directory
 
+; read-all-bytes
+; lines
+; size
+; list
+
+; probe-content-type
+
 ; file-store
 
+; read-file-attribute-view
 ; read-attribute
 ; read-attributes
 ; set-attribute

@@ -134,6 +134,12 @@
         link-options (->link-options-array options)]
     (Files/exists path link-options)))
 
+(defn not-exists?
+  [^Path path & options]
+  (let [^"[Ljava.nio.file.LinkOption;"
+        link-options (->link-options-array options)]
+    (Files/notExists path link-options)))
+
 (defn regular-file?
   [^Path path & options]
   (let [^"[Ljava.nio.file.LinkOption;"
