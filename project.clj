@@ -40,6 +40,7 @@
    ["change" "version" "leiningen.release/bump-version" "release"]
    ["codox"]
    ["changelog" "release"]
+   ["shell" "sed" "-E" "-i" "" "s/\"[0-9]+\\.[0-9]+\\.[0-9]+\"/\"${:version}\"/g" "README.md"]
    ["shell" "git" "add" "."]
    ["vcs" "commit"]
    ["vcs" "tag"]
