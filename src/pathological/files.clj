@@ -181,11 +181,15 @@
     (into #{}
       (map ->posix-file-permission permissions))))
 
-(defn ->posix-file-permissions-attribute [string]
-  (PosixFilePermissions/asFileAttribute
-    (into #{}
-      (map ->posix-file-permission
-        (->posix-file-permissions string)))))
+(defn ->posix-file-permissions-attribute [string-or-set]
+  (let [keyword-set
+        (if (string? string-or-set)
+          (->posix-file-permissions string-or-set)
+          string-or-set)
+
+        posix-file-permission-set
+        (into #{} (map ->posix-file-permission keyword-set))]
+    (PosixFilePermissions/asFileAttribute posix-file-permission-set)))
 
 (defn read-posix-file-permissions [path & options]
   (let [^"[Ljava.nio.file.LinkOption;"

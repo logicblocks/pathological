@@ -285,7 +285,7 @@
               :others-execute})))))
 
 (deftest ->posix-file-permissions-attributes
-  (testing "returns posix file permissions string for provided set"
+  (testing "returns posix file permissions attribute for provided string"
     (is (= (.value (PosixFilePermissions/asFileAttribute #{}))
           (.value (f/->posix-file-permissions-attribute "---------"))))
     (is (= (.value (PosixFilePermissions/asFileAttribute
@@ -305,7 +305,43 @@
                        PosixFilePermission/OTHERS_READ
                        PosixFilePermission/OTHERS_WRITE
                        PosixFilePermission/OTHERS_EXECUTE}))
-          (.value (f/->posix-file-permissions-attribute "rwxrwxrwx"))))))
+          (.value (f/->posix-file-permissions-attribute "rwxrwxrwx")))))
+
+  (testing "returns posix file permissions attribute for provided set"
+    (is (= (.value (PosixFilePermissions/asFileAttribute #{}))
+          (.value (f/->posix-file-permissions-attribute #{}))))
+    (is (= (.value (PosixFilePermissions/asFileAttribute
+                     #{PosixFilePermission/OWNER_READ
+                       PosixFilePermission/OWNER_WRITE
+                       PosixFilePermission/OWNER_EXECUTE
+                       PosixFilePermission/GROUP_READ
+                       PosixFilePermission/OTHERS_READ}))
+          (.value (f/->posix-file-permissions-attribute
+                    #{:owner-read
+                      :owner-write
+                      :owner-execute
+                      :group-read
+                      :others-read}))))
+    (is (= (.value (PosixFilePermissions/asFileAttribute
+                     #{PosixFilePermission/OWNER_READ
+                       PosixFilePermission/OWNER_WRITE
+                       PosixFilePermission/OWNER_EXECUTE
+                       PosixFilePermission/GROUP_READ
+                       PosixFilePermission/GROUP_WRITE
+                       PosixFilePermission/GROUP_EXECUTE
+                       PosixFilePermission/OTHERS_READ
+                       PosixFilePermission/OTHERS_WRITE
+                       PosixFilePermission/OTHERS_EXECUTE}))
+          (.value (f/->posix-file-permissions-attribute
+                    #{:owner-read
+                      :owner-write
+                      :owner-execute
+                      :group-read
+                      :group-write
+                      :group-execute
+                      :others-read
+                      :others-write
+                      :others-execute}))))))
 
 (deftest read-posix-file-permissions
   (testing "returns the posix file permissions on the provided path"
