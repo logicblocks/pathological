@@ -10,6 +10,12 @@ and this project adheres to
 ## [Unreleased]
 ### Added
 - `delete-if-exists` method.
+- `read-posix-file-permissions` method.
+- `set-posix-file-permissions` method.
+
+### Changed
+- `->posix-file-permissions`, `->posix-file-permissions-string` and 
+  `->posix-file-permissions-attribute` now deal in sets of keywords.
 
 ## [0.1.1] — 2019-08-04
 ### Fixed
