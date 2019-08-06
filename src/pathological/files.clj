@@ -228,6 +228,10 @@
         user-principle (Files/getOwner path link-options)]
     (->BasicUserPrincipal (.getName user-principle) user-principle)))
 
+(defn set-owner
+  [^Path path user-principal]
+  (Files/setOwner path user-principal))
+
 (defn new-input-stream
   [^Path path & options]
   (let [^"[Ljava.nio.file.OpenOption;"

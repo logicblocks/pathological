@@ -441,6 +441,32 @@
 
       (is (= "user" (:name (f/read-owner link :no-follow-links)))))))
 
+(deftest set-owner
+  (testing "sets the owner of the path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file")]
+      (f/create-file path)
+
+      (f/set-owner path (f/->user-principal test-file-system "other"))
+
+      (is (= "other" (:name (f/read-owner path))))))
+
+  (testing "follows symbolic links"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")]
+      (f/create-file target)
+      (f/create-symbolic-link link target)
+
+      (f/set-owner link (f/->user-principal test-file-system "other"))
+
+      (is (= "user" (:name (f/read-owner link :no-follow-links))))
+      (is (= "other" (:name (f/read-owner link)))))))
+
 (deftest read-symbolic-link
   (testing "returns the path of the link target"
     (let [test-file-system
@@ -1695,7 +1721,5 @@
 ; read-attribute
 ; read-attributes
 ; set-attribute
-; read-owner
-; set-owner
 ; read-last-modified-time
 ; set-last-modified-time
