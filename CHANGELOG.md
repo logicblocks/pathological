@@ -8,6 +8,10 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Added
+- `not-exists?` method.
+- `read-owner` method.
+- `set-owner` method.
 
 ## [0.1.2] — 2019-08-05
 ### Added
