@@ -402,6 +402,45 @@
       (is (= #{:owner-read :owner-write :owner-execute}
             (f/read-posix-file-permissions path))))))
 
+(deftest read-owner
+  (testing "reads the owner of the path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file")]
+      (f/create-file path)
+
+      (let [user-principal (f/read-owner path)]
+        (is (= "user" (:name user-principal)))
+        (is (= (Files/getOwner path (u/->link-options-array []))
+              (:underlying user-principal))))))
+
+  (testing "follows symbolic links by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")]
+      (f/create-file target)
+      (f/create-symbolic-link link target)
+
+      (Files/setOwner target (f/->user-principal "other"))
+
+      (is (= "other" (:name (f/read-owner link))))))
+
+  (testing "does not follow symbolic links when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")]
+      (f/create-file target)
+      (f/create-symbolic-link link target)
+
+      (Files/setOwner target (f/->user-principal "other"))
+
+      (is (= "user" (:name (f/read-owner link :no-follow-links)))))))
+
 (deftest read-symbolic-link
   (testing "returns the path of the link target"
     (let [test-file-system

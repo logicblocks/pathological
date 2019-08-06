@@ -20,10 +20,9 @@
                    Path]
     [java.nio.charset Charset
                       StandardCharsets]
-    [java.nio.file.attribute PosixFilePermissions]
+    [java.nio.file.attribute PosixFilePermissions UserPrincipal]
     [java.util.function BiPredicate]
-    [java.io InputStream OutputStream]
-    [java.util Set]))
+    [java.io InputStream OutputStream]))
 
 (defn read-all-lines
   ([^Path path]
@@ -208,6 +207,21 @@
   (let [permission-set
         (into #{} (map ->posix-file-permission permissions))]
     (Files/setPosixFilePermissions path permission-set)))
+
+(defrecord BasicUserPrincipal [name underlying]
+  UserPrincipal
+  (getName [_] name))
+
+(defn ->user-principal
+  ([name] (map->BasicUserPrincipal {:name name}))
+  ([name underlying] (->BasicUserPrincipal name underlying)))
+
+(defn read-owner
+  [^Path path & options]
+  (let [^"[Ljava.nio.file.LinkOption;"
+        link-options (->link-options-array options)
+        user-principle (Files/getOwner path link-options)]
+    (->user-principal (.getName user-principle) user-principle)))
 
 (defn new-input-stream
   [^Path path & options]
