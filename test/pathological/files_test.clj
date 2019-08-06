@@ -424,7 +424,7 @@
       (f/create-file target)
       (f/create-symbolic-link link target)
 
-      (Files/setOwner target (f/->user-principal "other"))
+      (Files/setOwner target (f/->user-principal test-file-system "other"))
 
       (is (= "other" (:name (f/read-owner link))))))
 
@@ -437,7 +437,7 @@
       (f/create-file target)
       (f/create-symbolic-link link target)
 
-      (Files/setOwner target (f/->user-principal "other"))
+      (Files/setOwner target (f/->user-principal test-file-system "other"))
 
       (is (= "user" (:name (f/read-owner link :no-follow-links)))))))
 

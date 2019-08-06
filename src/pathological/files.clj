@@ -13,7 +13,9 @@
              ->file-visit-result
              <-posix-file-permission
              ->posix-file-permission]]
-    [pathological.paths :as paths])
+    [pathological.paths :as paths]
+    [pathological.file-systems :as file-systems]
+    [pathological.principals :as principals])
   (:import
     [java.nio.file Files
                    FileVisitor
@@ -213,15 +215,18 @@
   (getName [_] name))
 
 (defn ->user-principal
-  ([name] (map->BasicUserPrincipal {:name name}))
-  ([name underlying] (->BasicUserPrincipal name underlying)))
+  ([name] (->user-principal file-systems/*file-system* name))
+  ([file-system name]
+   (let [underlying
+         (principals/lookup-principal-by-name file-system name)]
+     (->BasicUserPrincipal name underlying))))
 
 (defn read-owner
   [^Path path & options]
   (let [^"[Ljava.nio.file.LinkOption;"
         link-options (->link-options-array options)
         user-principle (Files/getOwner path link-options)]
-    (->user-principal (.getName user-principle) user-principle)))
+    (->BasicUserPrincipal (.getName user-principle) user-principle)))
 
 (defn new-input-stream
   [^Path path & options]
