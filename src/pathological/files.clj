@@ -12,7 +12,8 @@
              ->file-visit-options-set
              ->file-visit-result
              <-posix-file-permission
-             ->posix-file-permission]]
+             ->posix-file-permission
+             ->file-time]]
     [pathological.paths :as paths]
     [pathological.file-systems :as file-systems]
     [pathological.principals :as principals])
@@ -240,6 +241,10 @@
   (let [^"[Ljava.nio.file.LinkOption;"
         link-options (->link-options-array options)]
     (.toString (Files/getLastModifiedTime path link-options))))
+
+(defn set-last-modified-time
+  [^Path path last-modified]
+  (Files/setLastModifiedTime path (->file-time last-modified)))
 
 (defn new-input-stream
   [^Path path & options]

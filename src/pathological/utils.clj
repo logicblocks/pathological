@@ -9,8 +9,11 @@
                    OpenOption
                    StandardOpenOption
                    StandardCopyOption]
-    [java.nio.file.attribute FileAttribute PosixFilePermission]
-    [java.nio.charset StandardCharsets]))
+    [java.nio.file.attribute FileAttribute
+                             FileTime
+                             PosixFilePermission]
+    [java.nio.charset StandardCharsets]
+    [java.time Instant]))
 
 (def ^:dynamic *charsets*
   {:us-ascii   StandardCharsets/US_ASCII
@@ -67,6 +70,9 @@
 
 (defn <-posix-file-permission [value]
   (get (map-invert posix-file-permissions) value))
+
+(defn ->file-time [value]
+  (FileTime/from (Instant/parse value)))
 
 (defn ->lookup-fn [var]
   (fn [value] (or (get var value) value)))

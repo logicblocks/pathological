@@ -532,6 +532,19 @@
             (or (.equals last-modified-instant after-instant)
               (.isBefore last-modified-instant after-instant)))))))
 
+(deftest set-last-modified-time
+  (testing "sets the last modified time of the path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file")
+          last-modified "2019-05-04T22:10:10Z"]
+      (f/create-file path)
+      (f/set-last-modified-time path last-modified)
+
+      (is (= last-modified
+            (f/read-last-modified-time path))))))
+
 (deftest read-symbolic-link
   (testing "returns the path of the link target"
     (let [test-file-system
@@ -1786,5 +1799,3 @@
 ; read-attribute
 ; read-attributes
 ; set-attribute
-; read-last-modified-time
-; set-last-modified-time
