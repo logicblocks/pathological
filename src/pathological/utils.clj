@@ -68,16 +68,16 @@
 (defn <-posix-file-permission [value]
   (get (map-invert posix-file-permissions) value))
 
-(defn ->option [var]
+(defn ->lookup-fn [var]
   (fn [value] (or (get var value) value)))
 
 (defn ->charset [value]
   (or (get *charsets* value) value))
 
-(def ->open-option (->option *open-options*))
-(def ->copy-option (->option *copy-options*))
-(def ->link-option (->option *link-options*))
-(def ->file-visit-option (->option *file-visit-options*))
+(def ->open-option (->lookup-fn *open-options*))
+(def ->copy-option (->lookup-fn *copy-options*))
+(def ->link-option (->lookup-fn *link-options*))
+(def ->file-visit-option (->lookup-fn *file-visit-options*))
 
 (defmacro ->varargs-array [type args]
   `(into-array ~type (or ~args [])))

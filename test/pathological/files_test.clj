@@ -15,8 +15,10 @@
   (:import
     [java.io ByteArrayOutputStream]
     [java.nio.file Files Path LinkOption NoSuchFileException]
-    [java.nio.file.attribute PosixFilePermissions PosixFilePermission]
-    [java.nio.charset StandardCharsets]))
+    [java.nio.file.attribute PosixFilePermissions PosixFilePermission FileTime]
+    [java.nio.charset StandardCharsets]
+    [java.time Instant]
+    [java.time.temporal TemporalUnit ChronoUnit]))
 
 (deftest create-directories
   (testing "creates all directories in path"
@@ -466,6 +468,53 @@
 
       (is (= "user" (:name (f/read-owner link :no-follow-links))))
       (is (= "other" (:name (f/read-owner link)))))))
+
+(deftest read-last-modified-time
+  (testing "returns the last modified time of the path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file")
+
+          ^Instant before (.minus (Instant/now) 1 ChronoUnit/SECONDS)
+          _ (f/create-file path)
+          ^FileTime last-modified (f/read-last-modified-time path)
+          ^Instant after (.plus (Instant/now) 1 ChronoUnit/SECONDS)]
+      (is (true? (.isAfter (.toInstant last-modified) before)))
+      (is (true? (.isBefore (.toInstant last-modified) after)))))
+
+  (testing "follows symbolic links by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")
+
+          _ (f/create-symbolic-link link target)
+
+          ^Instant before (.minus (Instant/now) 1 ChronoUnit/SECONDS)
+          _ (f/create-file target)
+          ^FileTime last-modified (f/read-last-modified-time link)
+          ^Instant after (.plus (Instant/now) 1 ChronoUnit/SECONDS)]
+      (is (true? (.isAfter (.toInstant last-modified) before)))
+      (is (true? (.isBefore (.toInstant last-modified) after)))))
+
+  (testing "does not follow symbolic links when required"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")
+
+          ^Instant before (.minus (Instant/now) 1 ChronoUnit/SECONDS)
+          _ (f/create-symbolic-link link target)
+          ^Instant after (.plus (Instant/now) 1 ChronoUnit/SECONDS)
+
+          _ (f/create-file target)
+          ^FileTime last-modified
+          (f/read-last-modified-time link :no-follow-links)]
+      (is (true? (.isAfter (.toInstant last-modified) before)))
+      (is (true? (.isBefore (.toInstant last-modified) after))))))
 
 (deftest read-symbolic-link
   (testing "returns the path of the link target"
