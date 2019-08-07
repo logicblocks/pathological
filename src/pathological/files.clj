@@ -235,15 +235,11 @@
   [^Path path user-principal]
   (Files/setOwner path user-principal))
 
-(defn ->file-time
-  [date-time]
-  (FileTime/from (Instant/parse date-time)))
-
 (defn read-last-modified-time
   [^Path path & options]
   (let [^"[Ljava.nio.file.LinkOption;"
         link-options (->link-options-array options)]
-    (Files/getLastModifiedTime path link-options)))
+    (.toString (Files/getLastModifiedTime path link-options))))
 
 (defn new-input-stream
   [^Path path & options]

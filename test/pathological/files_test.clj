@@ -476,12 +476,18 @@
 
           path (p/path test-file-system "/file")
 
-          ^Instant before (.minus (Instant/now) 1 ChronoUnit/SECONDS)
+          before-instant (Instant/now)
           _ (f/create-file path)
-          ^FileTime last-modified (f/read-last-modified-time path)
-          ^Instant after (.plus (Instant/now) 1 ChronoUnit/SECONDS)]
-      (is (true? (.isAfter (.toInstant last-modified) before)))
-      (is (true? (.isBefore (.toInstant last-modified) after)))))
+          last-modified (f/read-last-modified-time path)
+          after-instant (Instant/now)
+
+          last-modified-instant (Instant/parse last-modified)]
+      (is (true?
+            (or (.equals last-modified-instant before-instant)
+              (.isAfter last-modified-instant before-instant))))
+      (is (true?
+            (or (.equals last-modified-instant after-instant)
+              (.isBefore last-modified-instant after-instant))))))
 
   (testing "follows symbolic links by default"
     (let [test-file-system
@@ -492,12 +498,18 @@
 
           _ (f/create-symbolic-link link target)
 
-          ^Instant before (.minus (Instant/now) 1 ChronoUnit/SECONDS)
+          before-instant (Instant/now)
           _ (f/create-file target)
-          ^FileTime last-modified (f/read-last-modified-time link)
-          ^Instant after (.plus (Instant/now) 1 ChronoUnit/SECONDS)]
-      (is (true? (.isAfter (.toInstant last-modified) before)))
-      (is (true? (.isBefore (.toInstant last-modified) after)))))
+          last-modified (f/read-last-modified-time link)
+          after-instant (Instant/now)
+
+          last-modified-instant (Instant/parse last-modified)]
+      (is (true?
+            (or (.equals last-modified-instant before-instant)
+              (.isAfter last-modified-instant before-instant))))
+      (is (true?
+            (or (.equals last-modified-instant after-instant)
+              (.isBefore last-modified-instant after-instant))))))
 
   (testing "does not follow symbolic links when required"
     (let [test-file-system
@@ -506,15 +518,19 @@
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")
 
-          ^Instant before (.minus (Instant/now) 1 ChronoUnit/SECONDS)
+          before-instant (Instant/now)
           _ (f/create-symbolic-link link target)
-          ^Instant after (.plus (Instant/now) 1 ChronoUnit/SECONDS)
+          after-instant (Instant/now)
 
           _ (f/create-file target)
-          ^FileTime last-modified
-          (f/read-last-modified-time link :no-follow-links)]
-      (is (true? (.isAfter (.toInstant last-modified) before)))
-      (is (true? (.isBefore (.toInstant last-modified) after))))))
+          last-modified (f/read-last-modified-time link :no-follow-links)
+          last-modified-instant (Instant/parse last-modified)]
+      (is (true?
+            (or (.equals last-modified-instant before-instant)
+              (.isAfter last-modified-instant before-instant))))
+      (is (true?
+            (or (.equals last-modified-instant after-instant)
+              (.isBefore last-modified-instant after-instant)))))))
 
 (deftest read-symbolic-link
   (testing "returns the path of the link target"
