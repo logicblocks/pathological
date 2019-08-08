@@ -3,7 +3,8 @@
   (:require
     [pathological.paths :as p]
     [pathological.utils
-     :refer [->charset
+     :refer [charset?
+             ->charset
              ->copy-options-array
              ->file-attributes-array
              ->open-options-array
@@ -23,12 +24,10 @@
                    Path]
     [java.nio.charset Charset
                       StandardCharsets]
-    [java.nio.file.attribute FileTime
-                             PosixFilePermissions
+    [java.nio.file.attribute PosixFilePermissions
                              UserPrincipal]
     [java.util.function BiPredicate]
-    [java.io InputStream OutputStream]
-    [java.time Instant]))
+    [java.io InputStream OutputStream]))
 
 (defn read-all-lines
   ([^Path path]
@@ -262,6 +261,15 @@
   ([^Path path] (new-buffered-reader path :utf-8))
   ([^Path path charset]
    (Files/newBufferedReader path (->charset charset))))
+
+(defn new-buffered-writer
+  ([^Path path & others]
+   (let [[first & rest] others
+         charset (->charset (if (charset? first) first :utf-8))
+         ^"[Ljava.nio.file.OpenOption;"
+         open-options (->open-options-array
+                        (if (charset? first) rest others))]
+     (Files/newBufferedWriter path charset open-options))))
 
 (defn walk
   [^Path path

@@ -12,7 +12,7 @@
     [java.nio.file.attribute FileAttribute
                              FileTime
                              PosixFilePermission]
-    [java.nio.charset StandardCharsets]
+    [java.nio.charset StandardCharsets Charset]
     [java.time Instant]))
 
 (def ^:dynamic *charsets*
@@ -79,6 +79,11 @@
 
 (defn ->charset [value]
   (or (get *charsets* value) value))
+
+(defn charset? [value]
+  (and value
+    (or (instance? Charset value)
+      (contains? *charsets* value))))
 
 (def ->open-option (->lookup-fn *open-options*))
 (def ->copy-option (->lookup-fn *copy-options*))

@@ -13,7 +13,7 @@
      :refer [random-file-system-name
              new-in-memory-file-system]])
   (:import
-    [java.io ByteArrayOutputStream BufferedReader]
+    [java.io ByteArrayOutputStream BufferedReader BufferedWriter]
     [java.nio.file Files Path LinkOption NoSuchFileException]
     [java.nio.file.attribute PosixFilePermissions PosixFilePermission]
     [java.nio.charset StandardCharsets]
@@ -1142,6 +1142,72 @@
       (with-open [reader (f/new-buffered-reader path :utf-16be)]
         (is (= "\u4839\n\u3284\n" (slurp reader)))))))
 
+(deftest new-buffered-writer
+  (testing "returns a new buffered writer over the path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")
+          content "Line 1\nLine 2\n"]
+      (with-open [writer (f/new-buffered-writer path)]
+        (is (instance? BufferedWriter writer))
+        (spit writer content))
+
+      (is (= ["Line 1" "Line 2"]
+            (f/read-all-lines path)))))
+
+  (testing "uses charset of UTF-8 by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")
+          content "Line 1\nLine 2\n"]
+      (with-open [writer (f/new-buffered-writer path)]
+        (spit writer content))
+
+      (is (= ["Line 1" "Line 2"]
+            (f/read-all-lines path :utf-8)))))
+
+  (testing "uses provided charset when specified"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")
+          content "Line 1\nLine 2\n"]
+      (with-open [writer (f/new-buffered-writer path :utf-16be)]
+        (spit writer content))
+
+      (is (= ["Line 1" "Line 2"]
+            (f/read-all-lines path :utf-16be)))))
+
+  (testing "supports open options"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")
+          initial-content ["Line 1" "Line 2"]
+          additional-content "Line 3\nLine 4\n"]
+      (f/write-lines path initial-content)
+      (with-open [writer (f/new-buffered-writer path :append)]
+        (spit writer additional-content))
+
+      (is (= ["Line 1" "Line 2" "Line 3" "Line 4"]
+            (f/read-all-lines path)))))
+
+  (testing "supports charset and open options"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")
+          initial-content ["Line 1" "Line 2"]
+          additional-content "Line 3\nLine 4\n"]
+      (f/write-lines path initial-content :utf-16be)
+      (with-open [writer (f/new-buffered-writer path :utf-16be :append)]
+        (spit writer additional-content))
+
+      (is (= ["Line 1" "Line 2" "Line 3" "Line 4"]
+            (f/read-all-lines path :utf-16be))))))
+
 (deftest populate-file-tree
   (testing "creates top level file with contents"
     (let [test-file-system
@@ -1814,8 +1880,6 @@
 
 ; new-directory-stream
 ; new-byte-channel
-; new-buffered-reader
-; new-buffered-writer
 
 ; create-temp-file
 ; create-temp-directory
