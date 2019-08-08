@@ -1,5 +1,5 @@
 (defproject io.logicblocks/pathological "0.1.3-SNAPSHOT"
-  :description "A complete wrapper of Java NIO2 for Clojure."
+  :description "A thin but complete wrapper of Java NIO2 for Clojure."
   :url "https://github.com/logicblocks/pathological"
 
   :license {:name "The MIT License"
