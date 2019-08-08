@@ -35,6 +35,10 @@
   ([^Path path ^Charset charset]
    (Files/readAllLines path (->charset charset))))
 
+(defn read-all-bytes
+  [^Path path]
+  (Files/readAllBytes path))
+
 (defn write-lines
   ([^Path path ^Iterable lines]
    (write-lines path lines :utf-8))

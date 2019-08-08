@@ -243,6 +243,20 @@
                 "/directory-1/matching-path-2")]
             matches)))))
 
+; TODO: add tests for read-all-lines
+
+(deftest read-all-bytes
+  (testing "reads all bytes from the file"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/path")
+          content ["Line 1" "Line 2"]]
+      (f/write-lines path content)
+
+      (is (= "Line 1\nLine 2\n"
+            (String. ^bytes (f/read-all-bytes path)))))))
+
 (deftest ->posix-file-permissions
   (testing "returns posix file permission set for provided string"
     (is (= #{} (f/->posix-file-permissions "---------")))
@@ -1884,7 +1898,6 @@
 ; create-temp-file
 ; create-temp-directory
 
-; read-all-bytes
 ; lines
 ; size
 ; list
