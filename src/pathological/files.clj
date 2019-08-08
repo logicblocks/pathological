@@ -258,6 +258,11 @@
         open-options (->open-options-array options)]
     (Files/newOutputStream path open-options)))
 
+(defn new-buffered-reader
+  ([^Path path] (new-buffered-reader path :utf-8))
+  ([^Path path charset]
+   (Files/newBufferedReader path (->charset charset))))
+
 (defn walk
   [^Path path
    & {:keys [file-visit-options

@@ -13,12 +13,11 @@
      :refer [random-file-system-name
              new-in-memory-file-system]])
   (:import
-    [java.io ByteArrayOutputStream]
+    [java.io ByteArrayOutputStream BufferedReader]
     [java.nio.file Files Path LinkOption NoSuchFileException]
-    [java.nio.file.attribute PosixFilePermissions PosixFilePermission FileTime]
+    [java.nio.file.attribute PosixFilePermissions PosixFilePermission]
     [java.nio.charset StandardCharsets]
-    [java.time Instant]
-    [java.time.temporal TemporalUnit ChronoUnit]))
+    [java.time Instant]))
 
 (deftest create-directories
   (testing "creates all directories in path"
@@ -1107,6 +1106,41 @@
 
       (is (= ["Line 1" "Line 2" "Line 3" "Line 4"]
             (f/read-all-lines path))))))
+
+(deftest new-buffered-reader
+  (testing "returns a new buffered reader over the path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")
+          content "Line 1\nLine 2\n"]
+      (spit path content)
+
+      (with-open [reader (f/new-buffered-reader path)]
+        (is (instance? BufferedReader reader))
+        (is (= content (slurp reader))))))
+
+  (testing "uses charset of UTF-8 by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")
+          content ["\u4839" "\u3284"]]
+      (f/write-lines path content :utf-8)
+
+      (with-open [reader (f/new-buffered-reader path)]
+        (is (= "\u4839\n\u3284\n" (slurp reader))))))
+
+  (testing "uses provided charset when specified"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")
+          content ["\u4839" "\u3284"]]
+      (f/write-lines path content :utf-16be)
+
+      (with-open [reader (f/new-buffered-reader path :utf-16be)]
+        (is (= "\u4839\n\u3284\n" (slurp reader)))))))
 
 (deftest populate-file-tree
   (testing "creates top level file with contents"
