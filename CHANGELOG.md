@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+
+## [0.1.3] — 2019-08-08
 ### Added
 - `not-exists?` method.
 - `read-owner` method.
@@ -44,4 +46,5 @@ and this project adheres to
 [0.1.0]: https://github.com/logicblocks/pathological/compare/0.0.1...0.1.0
 [0.1.1]: https://github.com/logicblocks/pathological/compare/0.1.0...0.1.1
 [0.1.2]: https://github.com/logicblocks/pathological/compare/0.1.1...0.1.2
-[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.2...HEAD
+[0.1.3]: https://github.com/logicblocks/pathological/compare/0.1.2...0.1.3
+[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.3...HEAD
