@@ -12,6 +12,10 @@ and this project adheres to
 - `not-exists?` method.
 - `read-owner` method.
 - `set-owner` method.
+- `read-last-modified-time` method.
+- `set-last-modified-time` method.
+- `new-buffered-reader` method.
+- `new-buffered-writer` method.
 
 ## [0.1.2] — 2019-08-05
 ### Added
