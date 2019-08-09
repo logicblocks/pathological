@@ -136,8 +136,8 @@
   (.isAbsolute path))
 
 (defn matches?
-  [^Path path pattern]
-  (pm/matches? (pm/path-matcher pattern) path))
+  [^Path path syntax-and-pattern]
+  (pm/matches? (pm/path-matcher syntax-and-pattern) path))
 
 (defn ->absolute-path
   [^Path path]

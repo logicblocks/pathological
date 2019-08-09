@@ -76,6 +76,26 @@
   [^Path link ^Path target]
   (Files/createLink link target))
 
+(defmulti ^:private do-create-temp-file
+  (fn [first second & _]
+    [(type first) (type second)]))
+
+(defmethod ^:private do-create-temp-file [Path String]
+  [^Path path prefix suffix & options]
+  (let [^"[Ljava.nio.file.attribute.FileAttribute;"
+        file-attributes (->file-attributes-array options)]
+    (Files/createTempFile path prefix suffix file-attributes)))
+
+(defmethod ^:private do-create-temp-file [String String]
+  [prefix suffix & options]
+  (let [^"[Ljava.nio.file.attribute.FileAttribute;"
+        file-attributes (->file-attributes-array options)]
+    (Files/createTempFile prefix suffix file-attributes)))
+
+(defn create-temp-file
+  [& args]
+  (apply do-create-temp-file args))
+
 (defn delete
   [^Path path]
   (Files/delete path))
@@ -87,17 +107,17 @@
 (defmulti ^:private do-copy
   (fn [source destination _] [(type source) (type destination)]))
 
-(defmethod do-copy [Path Path]
+(defmethod ^:private do-copy [Path Path]
   [^Path source ^Path destination
    ^"[Ljava.nio.file.CopyOption;" copy-options]
   (Files/copy source destination copy-options))
 
-(defmethod do-copy [InputStream Path]
+(defmethod ^:private do-copy [InputStream Path]
   [^InputStream source ^Path destination
    ^"[Ljava.nio.file.CopyOption;" copy-options]
   (Files/copy source destination copy-options))
 
-(defmethod do-copy [Path OutputStream]
+(defmethod ^:private do-copy [Path OutputStream]
   [^Path source ^OutputStream destination _]
   (Files/copy source destination))
 
@@ -267,12 +287,12 @@
    (Files/newBufferedReader path (->charset charset))))
 
 (defn new-buffered-writer
-  ([^Path path & others]
-   (let [[first & rest] others
+  ([^Path path & args]
+   (let [[first & rest] args
          charset (->charset (if (charset? first) first :utf-8))
          ^"[Ljava.nio.file.OpenOption;"
          open-options (->open-options-array
-                        (if (charset? first) rest others))]
+                        (if (charset? first) rest args))]
      (Files/newBufferedWriter path charset open-options))))
 
 (defn walk

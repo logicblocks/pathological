@@ -11,7 +11,8 @@
 
     [pathological.testing
      :refer [random-file-system-name
-             new-in-memory-file-system]])
+             new-in-memory-file-system
+             unix-configuration]])
   (:import
     [java.io ByteArrayOutputStream BufferedReader BufferedWriter]
     [java.nio.file Files Path LinkOption NoSuchFileException]
@@ -161,6 +162,68 @@
           link-path (p/path test-file-system "/link")]
       (is (thrown? NoSuchFileException
             (f/create-link link-path target-path))))))
+
+(deftest create-temp-file
+  (testing "creates a temporary file in the specified path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name)
+            (unix-configuration)
+            [[:temporary {:type :directory}]])
+
+          prefix "pre-"
+          suffix "-post"
+
+          path (p/path test-file-system "/temporary")
+
+          temp-path-1 (f/create-temp-file path prefix suffix)
+          temp-path-2 (f/create-temp-file path prefix suffix)]
+      (is (true? (f/exists? temp-path-1)))
+      (is (true? (string/starts-with? (str (p/file-name temp-path-1)) prefix)))
+      (is (true? (string/ends-with? (str (p/file-name temp-path-1)) suffix)))
+
+      (is (true? (f/exists? temp-path-2)))
+      (is (true? (string/starts-with? (str (p/file-name temp-path-2)) prefix)))
+      (is (true? (string/ends-with? (str (p/file-name temp-path-2)) suffix)))
+
+      (is (not= temp-path-1 temp-path-2))))
+
+  (testing "applies the provided file attributes when using a path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name)
+            (unix-configuration)
+            [[:temporary {:type :directory}]])
+
+          prefix "pre-"
+          suffix "-post"
+
+          path (p/path test-file-system "/temporary")
+
+          temp-path (f/create-temp-file path prefix suffix
+                      (f/->posix-file-permissions-attribute "rwxr--r--"))]
+      (is (=
+            #{:owner-read :owner-write :owner-execute :group-read :others-read}
+            (f/read-posix-file-permissions temp-path)))))
+
+  (testing
+    "creates a temporary file in the default file system default location"
+    (let [prefix "pre-"
+          suffix "-post"
+
+          temp-path-1 (f/create-temp-file prefix suffix)
+          temp-path-2 (f/create-temp-file prefix suffix)]
+      (is (true? (f/exists? temp-path-1)))
+      (is (true? (string/starts-with? (str (p/file-name temp-path-1)) prefix)))
+      (is (true? (string/ends-with? (str (p/file-name temp-path-2)) suffix)))))
+
+  (testing "applies the provided file attributes when using default file system"
+    (let [prefix "pre-"
+          suffix "-post"
+
+          temp-path (f/create-temp-file prefix suffix
+                      (f/->posix-file-permissions-attribute "rwxr--r--"))]
+      (is (=
+            #{:owner-read :owner-write :owner-execute :group-read :others-read}
+            (f/read-posix-file-permissions temp-path))))))
 
 (deftest find
   (testing "returns a seq of matching paths"
@@ -735,6 +798,8 @@
       (is (false? (f/exists? source-path)))))
 
   (testing "uses an atomic move when requested"
+    ; TODO: work out how to test this.
+
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -747,9 +812,7 @@
       (f/move source-path destination-path :atomic-move)
 
       (is (= content (f/read-all-lines destination-path)))
-      (is (false? (f/exists? source-path)))
-      ; TODO: work out how to test this.
-      )))
+      (is (false? (f/exists? source-path))))))
 
 (deftest exists?
   ; TODO: test for symbolic link handling
@@ -1496,6 +1559,11 @@
       (is (true? (f/same-file? file-2-path link-2-path))))))
 
 (deftest walk-file-tree
+  ; TODO: test basic file attributes as map
+  ; TODO: exception cases, visit file failed
+  ; TODO: test maximum depth
+  ; TODO: deal with pre-existing files and directories
+
   (testing "walks top level files and returns accumulated result"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
@@ -1708,15 +1776,11 @@
                 [:file "/directory2/file1"]
                 [:file "/directory2/file2"]
                 [:post "/directory2"]]
-              result)))))
-
-  ; TODO: test basic file attributes as map
-  ; TODO: exception cases, visit file failed
-  ; TODO: test maximum depth
-  ; TODO: deal with pre-existing files and directories
-  )
+              result))))))
 
 (deftest walk
+  ; TODO: test maximum depth
+
   (testing "returns a seq over top level files"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
@@ -1771,12 +1835,11 @@
         (is (= [(p/path root-path "/directory2")
                 (p/path root-path "/directory2/file1")
                 (p/path root-path "/directory2/file2")]
-              paths)))))
-
-  ; TODO: test maximum depth
-  )
+              paths))))))
 
 (deftest delete-recursively
+  ; TODO: what should happen when one delete fails?
+
   (testing "recursively deletes all files/directories in a path"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
@@ -1797,12 +1860,12 @@
       (is (false? (f/exists? (p/path root-path "/directory1/file1"))))
       (is (false? (f/exists? (p/path root-path "/directory1/file2"))))
       (is (false? (f/exists? (p/path root-path "/directory2"))))
-      (is (false? (f/exists? (p/path root-path "/directory2/file3"))))))
-
-  ; TODO: what should happen when one delete fails?
-  )
+      (is (false? (f/exists? (p/path root-path "/directory2/file3")))))))
 
 (deftest copy-recursively
+  ; TODO: What should happen when one copy fails?
+  ; TODO: Test copy options
+
   (testing (str
              "recursively copies all files/directories in a source path to a "
              "destination path")
@@ -1841,13 +1904,12 @@
       (is (= ["Item 2"]
             (f/read-all-lines (p/path target-path "/directory1/file2"))))
       (is (= ["Item 3"]
-            (f/read-all-lines (p/path target-path "/directory2/file3"))))))
-
-  ; TODO: What should happen when one copy fails?
-  ; TODO: Test copy options
-  )
+            (f/read-all-lines (p/path target-path "/directory2/file3")))))))
 
 (deftest move-recursively
+  ; TODO: What should happen when one move fails?
+  ; TODO: Test copy options
+
   (testing (str
              "recursively moves all files/directories in a source path to "
              "a destination path")
@@ -1886,16 +1948,11 @@
       (is (= ["Item 2"]
             (f/read-all-lines (p/path target-path "/directory1/file2"))))
       (is (= ["Item 3"]
-            (f/read-all-lines (p/path target-path "/directory2/file3"))))))
-
-  ; TODO: What should happen when one move fails?
-  ; TODO: Test copy options
-  )
+            (f/read-all-lines (p/path target-path "/directory2/file3")))))))
 
 ; new-directory-stream
 ; new-byte-channel
 
-; create-temp-file
 ; create-temp-directory
 
 ; lines
