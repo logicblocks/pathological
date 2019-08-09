@@ -29,25 +29,6 @@
     [java.util.function BiPredicate]
     [java.io InputStream OutputStream]))
 
-(defn read-all-lines
-  ([^Path path]
-   (read-all-lines path StandardCharsets/UTF_8))
-  ([^Path path ^Charset charset]
-   (Files/readAllLines path (->charset charset))))
-
-(defn read-all-bytes
-  [^Path path]
-  (Files/readAllBytes path))
-
-(defn write-lines
-  ([^Path path ^Iterable lines]
-   (write-lines path lines :utf-8))
-  ([^Path path ^Iterable lines charset & options]
-   (let [^Charset charset (->charset charset)
-         ^"[Ljava.nio.file.OpenOption;"
-         open-options (->open-options-array options)]
-     (Files/write path lines charset open-options))))
-
 (defn create-directories
   [^Path path & options]
   (let [^"[Ljava.nio.file.attribute.FileAttribute;"
@@ -115,6 +96,48 @@
   [& args]
   (apply do-create-temp-directory args))
 
+(defn write-lines
+  ([^Path path ^Iterable lines]
+   (write-lines path lines :utf-8))
+  ([^Path path ^Iterable lines charset & options]
+   (let [^Charset charset (->charset charset)
+         ^"[Ljava.nio.file.OpenOption;"
+         open-options (->open-options-array options)]
+     (Files/write path lines charset open-options))))
+
+(defn read-all-lines
+  ([^Path path]
+   (read-all-lines path StandardCharsets/UTF_8))
+  ([^Path path ^Charset charset]
+   (Files/readAllLines path (->charset charset))))
+
+(defn read-all-bytes
+  [^Path path]
+  (Files/readAllBytes path))
+
+(defn read-symbolic-link
+  [^Path path]
+  (Files/readSymbolicLink path))
+
+(deftype FnBackedBiPredicate
+  [predicate-fn]
+
+  BiPredicate
+  (test [_ path basic-file-attributes]
+    (predicate-fn path basic-file-attributes)))
+
+(defn find
+  [^Path path matcher
+   & {:keys [file-visit-options
+             maximum-depth]
+      :or   {file-visit-options []
+             maximum-depth      Integer/MAX_VALUE}}]
+  (let [file-visit-options (->file-visit-options-array file-visit-options)
+        matcher (->FnBackedBiPredicate matcher)]
+    (iterator-seq
+      (.iterator
+        (Files/find path maximum-depth matcher file-visit-options)))))
+
 (defn delete
   [^Path path]
   (Files/delete path))
@@ -151,77 +174,6 @@
   (let [^"[Ljava.nio.file.CopyOption;"
         copy-options (->copy-options-array options)]
     (Files/move source destination copy-options)))
-
-(defn read-symbolic-link
-  [^Path path]
-  (Files/readSymbolicLink path))
-
-(deftype FnBackedBiPredicate
-  [predicate-fn]
-
-  BiPredicate
-  (test [_ path basic-file-attributes]
-    (predicate-fn path basic-file-attributes)))
-
-(defn find
-  [^Path path matcher
-   & {:keys [file-visit-options
-             maximum-depth]
-      :or   {file-visit-options []
-             maximum-depth      Integer/MAX_VALUE}}]
-  (let [file-visit-options (->file-visit-options-array file-visit-options)
-        matcher (->FnBackedBiPredicate matcher)]
-    (iterator-seq
-      (.iterator
-        (Files/find path maximum-depth matcher file-visit-options)))))
-
-(defn exists?
-  [^Path path & options]
-  (let [^"[Ljava.nio.file.LinkOption;"
-        link-options (->link-options-array options)]
-    (Files/exists path link-options)))
-
-(defn not-exists?
-  [^Path path & options]
-  (let [^"[Ljava.nio.file.LinkOption;"
-        link-options (->link-options-array options)]
-    (Files/notExists path link-options)))
-
-(defn regular-file?
-  [^Path path & options]
-  (let [^"[Ljava.nio.file.LinkOption;"
-        link-options (->link-options-array options)]
-    (Files/isRegularFile path link-options)))
-
-(defn directory?
-  [^Path path & options]
-  (let [^"[Ljava.nio.file.LinkOption;"
-        link-options (->link-options-array options)]
-    (Files/isDirectory path link-options)))
-
-(defn symbolic-link?
-  [^Path path]
-  (Files/isSymbolicLink path))
-
-(defn same-file?
-  [^Path path-1 ^Path path-2]
-  (Files/isSameFile path-1 path-2))
-
-(defn hidden?
-  [^Path path]
-  (Files/isHidden path))
-
-(defn readable?
-  [^Path path]
-  (Files/isReadable path))
-
-(defn writable?
-  [^Path path]
-  (Files/isWritable path))
-
-(defn executable?
-  [^Path path]
-  (Files/isExecutable path))
 
 (defn ->posix-file-permissions
   [string]
@@ -287,6 +239,54 @@
 (defn set-last-modified-time
   [^Path path last-modified]
   (Files/setLastModifiedTime path (->file-time last-modified)))
+
+(defn exists?
+  [^Path path & options]
+  (let [^"[Ljava.nio.file.LinkOption;"
+        link-options (->link-options-array options)]
+    (Files/exists path link-options)))
+
+(defn not-exists?
+  [^Path path & options]
+  (let [^"[Ljava.nio.file.LinkOption;"
+        link-options (->link-options-array options)]
+    (Files/notExists path link-options)))
+
+(defn regular-file?
+  [^Path path & options]
+  (let [^"[Ljava.nio.file.LinkOption;"
+        link-options (->link-options-array options)]
+    (Files/isRegularFile path link-options)))
+
+(defn directory?
+  [^Path path & options]
+  (let [^"[Ljava.nio.file.LinkOption;"
+        link-options (->link-options-array options)]
+    (Files/isDirectory path link-options)))
+
+(defn symbolic-link?
+  [^Path path]
+  (Files/isSymbolicLink path))
+
+(defn same-file?
+  [^Path path-1 ^Path path-2]
+  (Files/isSameFile path-1 path-2))
+
+(defn hidden?
+  [^Path path]
+  (Files/isHidden path))
+
+(defn readable?
+  [^Path path]
+  (Files/isReadable path))
+
+(defn writable?
+  [^Path path]
+  (Files/isWritable path))
+
+(defn executable?
+  [^Path path]
+  (Files/isExecutable path))
 
 (defn new-input-stream
   [^Path path & options]

@@ -291,6 +291,105 @@
             #{:owner-read :owner-write :owner-execute :group-read :others-read}
             (f/read-posix-file-permissions temp-path))))))
 
+(deftest write-lines
+  (testing "writes the provided lines to the path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/path/to/file")
+          content ["line 1" "line 2" "line 3"]]
+      (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
+
+      (f/write-lines path content)
+
+      (is (= content (Files/readAllLines path)))))
+
+  (testing "uses the provided charset when writing"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/path/to/file")
+          content ["line 1" "line 2" "line 3"]]
+      (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
+
+      (f/write-lines path content :utf-16)
+
+      (is (= content (Files/readAllLines path (StandardCharsets/UTF_16))))))
+
+  (testing "uses the provided file options when writing"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          ^Path path (p/path test-file-system "/path/to/file")
+
+          initial-content ["initial 1" "initial 2"]
+          additional-content ["additional 1" "additional 2" "additional 3"]
+
+          ^"[Ljava.nio.file.OpenOption;"
+          default-options (u/->open-options-array [])]
+      (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
+      (Files/write path initial-content default-options)
+
+      (f/write-lines path additional-content :utf-8 :write :append)
+
+      (is (= (concat initial-content additional-content)
+            (Files/readAllLines path))))))
+
+; TODO: add tests for read-all-lines
+
+(deftest read-all-bytes
+  (testing "reads all bytes from the file"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/path")
+          content ["Line 1" "Line 2"]]
+      (f/write-lines path content)
+
+      (is (= "Line 1\nLine 2\n"
+            (String. ^bytes (f/read-all-bytes path)))))))
+
+(deftest read-lines
+  (testing "reads all lines from the path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          ^Path path (p/path test-file-system "/path/to/file")
+          content ["line 1" "line 2" "line 3"]
+
+          ^"[Ljava.nio.file.OpenOption;"
+          default-options (u/->open-options-array [])]
+      (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
+      (Files/write path content default-options)
+
+      (is (= content (f/read-all-lines path)))))
+
+  (testing "reads using the supplied charset"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          ^Path path (p/path test-file-system "/path/to/file")
+          content ["line 1" "line 2" "line 3"]
+
+          ^"[Ljava.nio.file.OpenOption;"
+          default-options (u/->open-options-array [])]
+      (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
+      (Files/write path content StandardCharsets/UTF_16 default-options)
+
+      (is (= content (f/read-all-lines path :utf-16))))))
+
+(deftest read-symbolic-link
+  (testing "returns the path of the link target"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          target-path (p/path test-file-system "/target")
+          link-path (p/path test-file-system "/link")]
+      (f/create-file target-path)
+      (f/create-symbolic-link link-path target-path)
+
+      (is (= target-path (f/read-symbolic-link link-path))))))
+
 (deftest find
   (testing "returns a seq of matching paths"
     (let [test-file-system
@@ -372,19 +471,186 @@
                 "/directory-1/matching-path-2")]
             matches)))))
 
-; TODO: add tests for read-all-lines
-
-(deftest read-all-bytes
-  (testing "reads all bytes from the file"
+(deftest delete
+  (testing "deletes a file"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
-          path (p/path test-file-system "/path")
-          content ["Line 1" "Line 2"]]
-      (f/write-lines path content)
+          path (p/path test-file-system "/file")]
+      (f/create-file path)
 
-      (is (= "Line 1\nLine 2\n"
-            (String. ^bytes (f/read-all-bytes path)))))))
+      (f/delete path)
+
+      (is (false? (f/exists? path)))))
+
+  (testing "deletes an empty directory"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/directory")]
+      (f/create-directory path)
+
+      (f/delete path)
+
+      (is (false? (f/exists? path)))))
+
+  (testing "throws if a path does not exist"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file")]
+      (is (thrown? NoSuchFileException
+            (f/delete path))))))
+
+(deftest delete-if-exists
+  (testing "deletes a file when it exists and returns true"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file")]
+      (f/create-file path)
+
+      (is (true? (f/delete-if-exists path)))
+      (is (false? (f/exists? path)))))
+
+  (testing "deletes an empty directory when it exists and returns true"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file")]
+      (f/create-directory path)
+
+      (is (true? (f/delete-if-exists path)))
+      (is (false? (f/exists? path)))))
+
+  (testing "returns false when path does not exist"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file")]
+      (is (false? (f/delete-if-exists path))))))
+
+(deftest copy
+  (testing "copies a file"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          content ["Line 1" "Line 2"]
+          source-path (p/path test-file-system "/source")
+          destination-path (p/path test-file-system "/target")]
+      (f/create-file source-path)
+      (f/write-lines source-path content)
+
+      (f/copy source-path destination-path)
+
+      (is (= content (f/read-all-lines destination-path)))))
+
+  (testing "copies from an input stream"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          content ["Line 1" "Line 2"]
+          destination-path (p/path test-file-system "/target")]
+      (with-open [input-stream
+                  (io/input-stream
+                    (.getBytes (str (string/join "\n" content) "\n")))]
+        (f/copy input-stream destination-path))
+
+      (is (= content (f/read-all-lines destination-path)))))
+
+  (testing "copies to an output stream"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          content ["Line 1" "Line 2"]
+          source-path (p/path test-file-system "/source")]
+      (with-open [output-stream (ByteArrayOutputStream.)]
+        (f/create-file source-path)
+        (f/write-lines source-path content)
+
+        (f/copy source-path output-stream)
+
+        (is (= (str (string/join "\n" content) "\n")
+              (.toString output-stream))))))
+
+  (testing "copies file attributes when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          source-path (p/path test-file-system "/source")
+          target-path (p/path test-file-system "/target")]
+      (f/create-file source-path
+        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
+
+      (f/copy source-path target-path :copy-attributes)
+
+      (is (= "rwxrw-rw-" (f/->posix-file-permissions-string
+                           (f/read-posix-file-permissions target-path)))))))
+
+(deftest move
+  (testing "moves a file"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          content ["Line 1" "Line 2"]
+          source-path (p/path test-file-system "/source")
+          destination-path (p/path test-file-system "/target")]
+      (f/create-file source-path)
+      (f/write-lines source-path content)
+
+      (f/move source-path destination-path)
+
+      (is (= content (f/read-all-lines destination-path)))
+      (is (false? (f/exists? source-path)))))
+
+  (testing "retains file attributes"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          source-path (p/path test-file-system "/source")
+          destination-path (p/path test-file-system "/target")]
+      (f/create-file source-path
+        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
+
+      (f/move source-path destination-path)
+
+      (is (= "rwxrw-rw-" (f/->posix-file-permissions-string
+                           (f/read-posix-file-permissions destination-path))))
+      (is (false? (f/exists? source-path)))))
+
+  (testing "replaces existing file when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          content ["Line 1" "Line 2"]
+          source-path (p/path test-file-system "/source")
+          destination-path (p/path test-file-system "/target")]
+      (f/create-file source-path)
+      (f/write-lines source-path content)
+
+      (f/create-file destination-path)
+
+      (f/move source-path destination-path :replace-existing)
+
+      (is (= content (f/read-all-lines destination-path)))
+      (is (false? (f/exists? source-path)))))
+
+  (testing "uses an atomic move when requested"
+    ; TODO: work out how to test this.
+
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          content ["Line 1" "Line 2"]
+          source-path (p/path test-file-system "/source")
+          destination-path (p/path test-file-system "/target")]
+      (f/create-file source-path)
+      (f/write-lines source-path content)
+
+      (f/move source-path destination-path :atomic-move)
+
+      (is (= content (f/read-all-lines destination-path)))
+      (is (false? (f/exists? source-path))))))
 
 (deftest ->posix-file-permissions
   (testing "returns posix file permission set for provided string"
@@ -687,199 +953,6 @@
       (is (= last-modified
             (f/read-last-modified-time path))))))
 
-(deftest read-symbolic-link
-  (testing "returns the path of the link target"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          target-path (p/path test-file-system "/target")
-          link-path (p/path test-file-system "/link")]
-      (f/create-file target-path)
-      (f/create-symbolic-link link-path target-path)
-
-      (is (= target-path (f/read-symbolic-link link-path))))))
-
-(deftest delete
-  (testing "deletes a file"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          path (p/path test-file-system "/file")]
-      (f/create-file path)
-
-      (f/delete path)
-
-      (is (false? (f/exists? path)))))
-
-  (testing "deletes an empty directory"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          path (p/path test-file-system "/directory")]
-      (f/create-directory path)
-
-      (f/delete path)
-
-      (is (false? (f/exists? path)))))
-
-  (testing "throws if a path does not exist"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          path (p/path test-file-system "/file")]
-      (is (thrown? NoSuchFileException
-            (f/delete path))))))
-
-(deftest delete-if-exists
-  (testing "deletes a file when it exists and returns true"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          path (p/path test-file-system "/file")]
-      (f/create-file path)
-
-      (is (true? (f/delete-if-exists path)))
-      (is (false? (f/exists? path)))))
-
-  (testing "deletes an empty directory when it exists and returns true"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          path (p/path test-file-system "/file")]
-      (f/create-directory path)
-
-      (is (true? (f/delete-if-exists path)))
-      (is (false? (f/exists? path)))))
-
-  (testing "returns false when path does not exist"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          path (p/path test-file-system "/file")]
-      (is (false? (f/delete-if-exists path))))))
-
-(deftest copy
-  (testing "copies a file"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          content ["Line 1" "Line 2"]
-          source-path (p/path test-file-system "/source")
-          destination-path (p/path test-file-system "/target")]
-      (f/create-file source-path)
-      (f/write-lines source-path content)
-
-      (f/copy source-path destination-path)
-
-      (is (= content (f/read-all-lines destination-path)))))
-
-  (testing "copies from an input stream"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          content ["Line 1" "Line 2"]
-          destination-path (p/path test-file-system "/target")]
-      (with-open [input-stream
-                  (io/input-stream
-                    (.getBytes (str (string/join "\n" content) "\n")))]
-        (f/copy input-stream destination-path))
-
-      (is (= content (f/read-all-lines destination-path)))))
-
-  (testing "copies to an output stream"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          content ["Line 1" "Line 2"]
-          source-path (p/path test-file-system "/source")]
-      (with-open [output-stream (ByteArrayOutputStream.)]
-        (f/create-file source-path)
-        (f/write-lines source-path content)
-
-        (f/copy source-path output-stream)
-
-        (is (= (str (string/join "\n" content) "\n")
-              (.toString output-stream))))))
-
-  (testing "copies file attributes when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          source-path (p/path test-file-system "/source")
-          target-path (p/path test-file-system "/target")]
-      (f/create-file source-path
-        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
-
-      (f/copy source-path target-path :copy-attributes)
-
-      (is (= "rwxrw-rw-" (f/->posix-file-permissions-string
-                           (f/read-posix-file-permissions target-path)))))))
-
-(deftest move
-  (testing "moves a file"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          content ["Line 1" "Line 2"]
-          source-path (p/path test-file-system "/source")
-          destination-path (p/path test-file-system "/target")]
-      (f/create-file source-path)
-      (f/write-lines source-path content)
-
-      (f/move source-path destination-path)
-
-      (is (= content (f/read-all-lines destination-path)))
-      (is (false? (f/exists? source-path)))))
-
-  (testing "retains file attributes"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          source-path (p/path test-file-system "/source")
-          destination-path (p/path test-file-system "/target")]
-      (f/create-file source-path
-        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
-
-      (f/move source-path destination-path)
-
-      (is (= "rwxrw-rw-" (f/->posix-file-permissions-string
-                           (f/read-posix-file-permissions destination-path))))
-      (is (false? (f/exists? source-path)))))
-
-  (testing "replaces existing file when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          content ["Line 1" "Line 2"]
-          source-path (p/path test-file-system "/source")
-          destination-path (p/path test-file-system "/target")]
-      (f/create-file source-path)
-      (f/write-lines source-path content)
-
-      (f/create-file destination-path)
-
-      (f/move source-path destination-path :replace-existing)
-
-      (is (= content (f/read-all-lines destination-path)))
-      (is (false? (f/exists? source-path)))))
-
-  (testing "uses an atomic move when requested"
-    ; TODO: work out how to test this.
-
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          content ["Line 1" "Line 2"]
-          source-path (p/path test-file-system "/source")
-          destination-path (p/path test-file-system "/target")]
-      (f/create-file source-path)
-      (f/write-lines source-path content)
-
-      (f/move source-path destination-path :atomic-move)
-
-      (is (= content (f/read-all-lines destination-path)))
-      (is (false? (f/exists? source-path))))))
-
 (deftest exists?
   ; TODO: test for symbolic link handling
 
@@ -1139,79 +1212,6 @@
           path (p/path test-file-system "/file.txt")]
       (is (false? (f/executable? path))))))
 
-(deftest write-lines
-  (testing "writes the provided lines to the path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          path (p/path test-file-system "/path/to/file")
-          content ["line 1" "line 2" "line 3"]]
-      (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
-
-      (f/write-lines path content)
-
-      (is (= content (Files/readAllLines path)))))
-
-  (testing "uses the provided charset when writing"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          path (p/path test-file-system "/path/to/file")
-          content ["line 1" "line 2" "line 3"]]
-      (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
-
-      (f/write-lines path content :utf-16)
-
-      (is (= content (Files/readAllLines path (StandardCharsets/UTF_16))))))
-
-  (testing "uses the provided file options when writing"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          ^Path path (p/path test-file-system "/path/to/file")
-
-          initial-content ["initial 1" "initial 2"]
-          additional-content ["additional 1" "additional 2" "additional 3"]
-
-          ^"[Ljava.nio.file.OpenOption;"
-          default-options (u/->open-options-array [])]
-      (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
-      (Files/write path initial-content default-options)
-
-      (f/write-lines path additional-content :utf-8 :write :append)
-
-      (is (= (concat initial-content additional-content)
-            (Files/readAllLines path))))))
-
-(deftest read-lines
-  (testing "reads all lines from the path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          ^Path path (p/path test-file-system "/path/to/file")
-          content ["line 1" "line 2" "line 3"]
-
-          ^"[Ljava.nio.file.OpenOption;"
-          default-options (u/->open-options-array [])]
-      (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
-      (Files/write path content default-options)
-
-      (is (= content (f/read-all-lines path)))))
-
-  (testing "reads using the supplied charset"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          ^Path path (p/path test-file-system "/path/to/file")
-          content ["line 1" "line 2" "line 3"]
-
-          ^"[Ljava.nio.file.OpenOption;"
-          default-options (u/->open-options-array [])]
-      (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
-      (Files/write path content StandardCharsets/UTF_16 default-options)
-
-      (is (= content (f/read-all-lines path :utf-16))))))
-
 (deftest new-input-stream
   (testing "returns an input stream for the provided path"
     (let [test-file-system
@@ -1350,6 +1350,285 @@
 
       (is (= ["Line 1" "Line 2" "Line 3" "Line 4"]
             (f/read-all-lines path :utf-16be))))))
+
+(deftest walk
+  ; TODO: test maximum depth
+
+  (testing "returns a seq over top level files"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")]
+      (f/populate-file-tree root-path
+        [[:file1 {:content ["Item 1"]}]
+         [:file2 {:content ["Item 2"]}]
+         [:file3 {:content ["Item 3"]}]])
+
+      (let [paths (f/walk root-path)]
+        (is (= [(p/path root-path)
+                (p/path root-path "file1")
+                (p/path root-path "file2")
+                (p/path root-path "file3")]
+              paths)))))
+
+  (testing "returns a seq over nested directories depth first"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")]
+      (f/populate-file-tree root-path
+        [[:directory1
+          [:file1 {:content ["Item 1"]}]
+          [:file2 {:content ["Item 2"]}]]
+         [:directory2
+          [:file3 {:content ["Item 3"]}]]])
+
+      (let [paths (f/walk root-path)]
+        (is (= [(p/path root-path)
+                (p/path root-path "directory1")
+                (p/path root-path "directory1/file1")
+                (p/path root-path "directory1/file2")
+                (p/path root-path "directory2")
+                (p/path root-path "directory2/file3")]
+              paths)))))
+
+  (testing "follows symlinks when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")]
+      (f/populate-file-tree root-path
+        [[:directory1
+          [:file1 {:content ["Item 1"]}]
+          [:file2 {:content ["Item 2"]}]]
+         [:directory2 {:type :symbolic-link :target "/directory1"}]])
+
+      (let [paths (f/walk (p/path test-file-system "/directory2")
+                    :file-visit-options [:follow-links])]
+        (is (= [(p/path root-path "/directory2")
+                (p/path root-path "/directory2/file1")
+                (p/path root-path "/directory2/file2")]
+              paths))))))
+
+(deftest walk-file-tree
+  ; TODO: test basic file attributes as map
+  ; TODO: exception cases, visit file failed
+  ; TODO: test maximum depth
+  ; TODO: deal with pre-existing files and directories
+
+  (testing "walks top level files and returns accumulated result"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")]
+      (f/populate-file-tree root-path
+        [[:file1 {:content ["Item 1"]}]
+         [:file2 {:content ["Item 2"]}]
+         [:file3 {:content ["Item 3"]}]])
+
+      (let [result (f/walk-file-tree root-path
+                     :visit-file-fn
+                     (fn [accumulator path _]
+                       {:control :continue
+                        :result  (assoc accumulator
+                                   (str path) (f/read-all-lines path))}))]
+        (is (= {"/file1" ["Item 1"]
+                "/file2" ["Item 2"]
+                "/file3" ["Item 3"]}
+              result)))))
+
+  (testing "walks directories depth first"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")]
+      (f/populate-file-tree root-path
+        [[:directory1
+          [:file1 {:content ["Item 1"]}]
+          [:file2 {:content ["Item 2"]}]]
+         [:directory2
+          [:file3 {:content ["Item 3"]}]]])
+
+      (let [->visit-fn (fn [key]
+                         (fn [accumulator path _]
+                           {:control :continue
+                            :result  (conj accumulator [key (str path)])}))
+            result (f/walk-file-tree root-path
+                     :initial-value []
+                     :visit-file-fn (->visit-fn :file)
+                     :pre-visit-directory-fn (->visit-fn :pre)
+                     :post-visit-directory-fn (->visit-fn :post))]
+        (is (= [[:pre "/"]
+                [:pre "/directory1"]
+                [:file "/directory1/file1"]
+                [:file "/directory1/file2"]
+                [:post "/directory1"]
+                [:pre "/directory2"]
+                [:file "/directory2/file3"]
+                [:post "/directory2"]
+                [:post "/"]]
+              result)))))
+
+  (testing "terminates when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")]
+      (f/populate-file-tree root-path
+        [[:directory1
+          [:file1 {:content ["Item 1"]}]
+          [:file2 {:content ["Item 2"]}]]
+         [:directory2
+          [:file3 {:content ["Item 3"]}]]])
+
+      (let [->visit-fn (fn [key]
+                         (fn [accumulator path _]
+                           {:control :continue
+                            :result  (conj accumulator [key (str path)])}))
+            result (f/walk-file-tree root-path
+                     :initial-value []
+                     :visit-file-fn (->visit-fn :file)
+                     :pre-visit-directory-fn (->visit-fn :pre)
+                     :post-visit-directory-fn
+                     (fn [_ _ _] {:control :terminate}))]
+        (is (= [[:pre "/"]
+                [:pre "/directory1"]
+                [:file "/directory1/file1"]
+                [:file "/directory1/file2"]]
+              result)))))
+
+  (testing "skips entire subtree when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")]
+      (f/populate-file-tree root-path
+        [[:directory1
+          [:file1 {:content ["Item 1"]}]
+          [:file2 {:content ["Item 2"]}]]
+         [:directory2
+          [:file3 {:content ["Item 3"]}]]])
+
+      (let [->visit-fn (fn [key]
+                         (fn [accumulator path _]
+                           {:control :continue
+                            :result  (conj accumulator [key (str path)])}))
+            result (f/walk-file-tree root-path
+                     :initial-value []
+                     :visit-file-fn (->visit-fn :file)
+                     :pre-visit-directory-fn
+                     (fn [accumulator path _]
+                       (if (= (str path) "/directory1")
+                         {:control :skip-subtree}
+                         {:control :continue
+                          :result  (conj accumulator [:pre (str path)])}))
+                     :post-visit-directory-fn (->visit-fn :post))]
+        (is (= [[:pre "/"]
+                [:pre "/directory2"]
+                [:file "/directory2/file3"]
+                [:post "/directory2"]
+                [:post "/"]]
+              result)))))
+
+  (testing "skips all siblings when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")]
+      (f/populate-file-tree root-path
+        [[:directory1
+          [:file1 {:content ["Item 1"]}]
+          [:file2 {:content ["Item 2"]}]]
+         [:directory2
+          [:file3 {:content ["Item 3"]}]]])
+
+      (let [->visit-fn (fn [key]
+                         (fn [accumulator path _]
+                           {:control :continue
+                            :result  (conj accumulator [key (str path)])}))
+            result (f/walk-file-tree root-path
+                     :initial-value []
+                     :visit-file-fn
+                     (fn [accumulator path _]
+                       (if (= (str path) "/directory1/file1")
+                         {:control :skip-siblings
+                          :result  (conj accumulator [:file (str path)])}
+                         {:control :continue
+                          :result  (conj accumulator [:file (str path)])}))
+                     :pre-visit-directory-fn (->visit-fn :pre)
+                     :post-visit-directory-fn (->visit-fn :post))]
+        (is (= [[:pre "/"]
+                [:pre "/directory1"]
+                [:file "/directory1/file1"]
+                [:post "/directory1"]
+                [:pre "/directory2"]
+                [:file "/directory2/file3"]
+                [:post "/directory2"]
+                [:post "/"]]
+              result)))))
+
+  (testing "assumes continue when no control returned"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/delete-me")]
+      (f/create-directory root-path)
+      (f/populate-file-tree root-path
+        [[:directory1
+          [:file1 {:content ["Item 1"]}]
+          [:file2 {:content ["Item 2"]}]]
+         [:directory2
+          [:file3 {:content ["Item 3"]}]]])
+
+      (let [delete-fn (fn [_ path _]
+                        (f/delete path))
+            result (f/walk-file-tree root-path
+                     :visit-file-fn delete-fn
+                     :post-visit-directory-fn delete-fn)]
+        (is (nil? result))
+        (is (false?
+              (f/exists? (p/path test-file-system
+                           "/delete-me/directory1"))))
+        (is (false?
+              (f/exists? (p/path test-file-system
+                           "/delete-me/directory1/file1"))))
+        (is (false?
+              (f/exists? (p/path test-file-system
+                           "/delete-me/directory1/file2"))))
+        (is (false?
+              (f/exists? (p/path test-file-system
+                           "/delete-me/directory2"))))
+        (is (false?
+              (f/exists? (p/path test-file-system
+                           "/delete-me/directory2/file3")))))))
+
+  (testing "follows symlinks when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")]
+      (f/populate-file-tree root-path
+        [[:directory1
+          [:file1 {:content ["Item 1"]}]
+          [:file2 {:content ["Item 2"]}]]
+         [:directory2 {:type :symbolic-link :target "/directory1"}]])
+
+      (let [->visit-fn (fn [key]
+                         (fn [accumulator path _]
+                           {:control :continue
+                            :result  (conj accumulator [key (str path)])}))
+            result (f/walk-file-tree
+                     (p/path test-file-system "/directory2")
+                     :initial-value []
+                     :file-visit-options [:follow-links]
+                     :visit-file-fn (->visit-fn :file)
+                     :pre-visit-directory-fn (->visit-fn :pre)
+                     :post-visit-directory-fn (->visit-fn :post))]
+        (is (= [[:pre "/directory2"]
+                [:file "/directory2/file1"]
+                [:file "/directory2/file2"]
+                [:post "/directory2"]]
+              result))))))
 
 (deftest populate-file-tree
   (testing "creates top level file with contents"
@@ -1623,285 +1902,6 @@
       (is (true? (f/same-file? file-1-path link-1-path)))
       (is (true? (f/exists? link-2-path)))
       (is (true? (f/same-file? file-2-path link-2-path))))))
-
-(deftest walk-file-tree
-  ; TODO: test basic file attributes as map
-  ; TODO: exception cases, visit file failed
-  ; TODO: test maximum depth
-  ; TODO: deal with pre-existing files and directories
-
-  (testing "walks top level files and returns accumulated result"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")]
-      (f/populate-file-tree root-path
-        [[:file1 {:content ["Item 1"]}]
-         [:file2 {:content ["Item 2"]}]
-         [:file3 {:content ["Item 3"]}]])
-
-      (let [result (f/walk-file-tree root-path
-                     :visit-file-fn
-                     (fn [accumulator path _]
-                       {:control :continue
-                        :result  (assoc accumulator
-                                   (str path) (f/read-all-lines path))}))]
-        (is (= {"/file1" ["Item 1"]
-                "/file2" ["Item 2"]
-                "/file3" ["Item 3"]}
-              result)))))
-
-  (testing "walks directories depth first"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")]
-      (f/populate-file-tree root-path
-        [[:directory1
-          [:file1 {:content ["Item 1"]}]
-          [:file2 {:content ["Item 2"]}]]
-         [:directory2
-          [:file3 {:content ["Item 3"]}]]])
-
-      (let [->visit-fn (fn [key]
-                         (fn [accumulator path _]
-                           {:control :continue
-                            :result  (conj accumulator [key (str path)])}))
-            result (f/walk-file-tree root-path
-                     :initial-value []
-                     :visit-file-fn (->visit-fn :file)
-                     :pre-visit-directory-fn (->visit-fn :pre)
-                     :post-visit-directory-fn (->visit-fn :post))]
-        (is (= [[:pre "/"]
-                [:pre "/directory1"]
-                [:file "/directory1/file1"]
-                [:file "/directory1/file2"]
-                [:post "/directory1"]
-                [:pre "/directory2"]
-                [:file "/directory2/file3"]
-                [:post "/directory2"]
-                [:post "/"]]
-              result)))))
-
-  (testing "terminates when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")]
-      (f/populate-file-tree root-path
-        [[:directory1
-          [:file1 {:content ["Item 1"]}]
-          [:file2 {:content ["Item 2"]}]]
-         [:directory2
-          [:file3 {:content ["Item 3"]}]]])
-
-      (let [->visit-fn (fn [key]
-                         (fn [accumulator path _]
-                           {:control :continue
-                            :result  (conj accumulator [key (str path)])}))
-            result (f/walk-file-tree root-path
-                     :initial-value []
-                     :visit-file-fn (->visit-fn :file)
-                     :pre-visit-directory-fn (->visit-fn :pre)
-                     :post-visit-directory-fn
-                     (fn [_ _ _] {:control :terminate}))]
-        (is (= [[:pre "/"]
-                [:pre "/directory1"]
-                [:file "/directory1/file1"]
-                [:file "/directory1/file2"]]
-              result)))))
-
-  (testing "skips entire subtree when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")]
-      (f/populate-file-tree root-path
-        [[:directory1
-          [:file1 {:content ["Item 1"]}]
-          [:file2 {:content ["Item 2"]}]]
-         [:directory2
-          [:file3 {:content ["Item 3"]}]]])
-
-      (let [->visit-fn (fn [key]
-                         (fn [accumulator path _]
-                           {:control :continue
-                            :result  (conj accumulator [key (str path)])}))
-            result (f/walk-file-tree root-path
-                     :initial-value []
-                     :visit-file-fn (->visit-fn :file)
-                     :pre-visit-directory-fn
-                     (fn [accumulator path _]
-                       (if (= (str path) "/directory1")
-                         {:control :skip-subtree}
-                         {:control :continue
-                          :result  (conj accumulator [:pre (str path)])}))
-                     :post-visit-directory-fn (->visit-fn :post))]
-        (is (= [[:pre "/"]
-                [:pre "/directory2"]
-                [:file "/directory2/file3"]
-                [:post "/directory2"]
-                [:post "/"]]
-              result)))))
-
-  (testing "skips all siblings when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")]
-      (f/populate-file-tree root-path
-        [[:directory1
-          [:file1 {:content ["Item 1"]}]
-          [:file2 {:content ["Item 2"]}]]
-         [:directory2
-          [:file3 {:content ["Item 3"]}]]])
-
-      (let [->visit-fn (fn [key]
-                         (fn [accumulator path _]
-                           {:control :continue
-                            :result  (conj accumulator [key (str path)])}))
-            result (f/walk-file-tree root-path
-                     :initial-value []
-                     :visit-file-fn
-                     (fn [accumulator path _]
-                       (if (= (str path) "/directory1/file1")
-                         {:control :skip-siblings
-                          :result  (conj accumulator [:file (str path)])}
-                         {:control :continue
-                          :result  (conj accumulator [:file (str path)])}))
-                     :pre-visit-directory-fn (->visit-fn :pre)
-                     :post-visit-directory-fn (->visit-fn :post))]
-        (is (= [[:pre "/"]
-                [:pre "/directory1"]
-                [:file "/directory1/file1"]
-                [:post "/directory1"]
-                [:pre "/directory2"]
-                [:file "/directory2/file3"]
-                [:post "/directory2"]
-                [:post "/"]]
-              result)))))
-
-  (testing "assumes continue when no control returned"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/delete-me")]
-      (f/create-directory root-path)
-      (f/populate-file-tree root-path
-        [[:directory1
-          [:file1 {:content ["Item 1"]}]
-          [:file2 {:content ["Item 2"]}]]
-         [:directory2
-          [:file3 {:content ["Item 3"]}]]])
-
-      (let [delete-fn (fn [_ path _]
-                        (f/delete path))
-            result (f/walk-file-tree root-path
-                     :visit-file-fn delete-fn
-                     :post-visit-directory-fn delete-fn)]
-        (is (nil? result))
-        (is (false?
-              (f/exists? (p/path test-file-system
-                           "/delete-me/directory1"))))
-        (is (false?
-              (f/exists? (p/path test-file-system
-                           "/delete-me/directory1/file1"))))
-        (is (false?
-              (f/exists? (p/path test-file-system
-                           "/delete-me/directory1/file2"))))
-        (is (false?
-              (f/exists? (p/path test-file-system
-                           "/delete-me/directory2"))))
-        (is (false?
-              (f/exists? (p/path test-file-system
-                           "/delete-me/directory2/file3")))))))
-
-  (testing "follows symlinks when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")]
-      (f/populate-file-tree root-path
-        [[:directory1
-          [:file1 {:content ["Item 1"]}]
-          [:file2 {:content ["Item 2"]}]]
-         [:directory2 {:type :symbolic-link :target "/directory1"}]])
-
-      (let [->visit-fn (fn [key]
-                         (fn [accumulator path _]
-                           {:control :continue
-                            :result  (conj accumulator [key (str path)])}))
-            result (f/walk-file-tree
-                     (p/path test-file-system "/directory2")
-                     :initial-value []
-                     :file-visit-options [:follow-links]
-                     :visit-file-fn (->visit-fn :file)
-                     :pre-visit-directory-fn (->visit-fn :pre)
-                     :post-visit-directory-fn (->visit-fn :post))]
-        (is (= [[:pre "/directory2"]
-                [:file "/directory2/file1"]
-                [:file "/directory2/file2"]
-                [:post "/directory2"]]
-              result))))))
-
-(deftest walk
-  ; TODO: test maximum depth
-
-  (testing "returns a seq over top level files"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")]
-      (f/populate-file-tree root-path
-        [[:file1 {:content ["Item 1"]}]
-         [:file2 {:content ["Item 2"]}]
-         [:file3 {:content ["Item 3"]}]])
-
-      (let [paths (f/walk root-path)]
-        (is (= [(p/path root-path)
-                (p/path root-path "file1")
-                (p/path root-path "file2")
-                (p/path root-path "file3")]
-              paths)))))
-
-  (testing "returns a seq over nested directories depth first"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")]
-      (f/populate-file-tree root-path
-        [[:directory1
-          [:file1 {:content ["Item 1"]}]
-          [:file2 {:content ["Item 2"]}]]
-         [:directory2
-          [:file3 {:content ["Item 3"]}]]])
-
-      (let [paths (f/walk root-path)]
-        (is (= [(p/path root-path)
-                (p/path root-path "directory1")
-                (p/path root-path "directory1/file1")
-                (p/path root-path "directory1/file2")
-                (p/path root-path "directory2")
-                (p/path root-path "directory2/file3")]
-              paths)))))
-
-  (testing "follows symlinks when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")]
-      (f/populate-file-tree root-path
-        [[:directory1
-          [:file1 {:content ["Item 1"]}]
-          [:file2 {:content ["Item 2"]}]]
-         [:directory2 {:type :symbolic-link :target "/directory1"}]])
-
-      (let [paths (f/walk (p/path test-file-system "/directory2")
-                    :file-visit-options [:follow-links])]
-        (is (= [(p/path root-path "/directory2")
-                (p/path root-path "/directory2/file1")
-                (p/path root-path "/directory2/file2")]
-              paths))))))
 
 (deftest delete-recursively
   ; TODO: what should happen when one delete fails?
