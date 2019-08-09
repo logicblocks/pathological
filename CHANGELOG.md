@@ -8,6 +8,10 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Added
+- `read-all-bytes` method.
+- `create-temp-file` method.
+- `create-temp-directory ` method.
 
 ## [0.1.3] — 2019-08-08
 ### Added

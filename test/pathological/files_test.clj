@@ -213,13 +213,79 @@
           temp-path-2 (f/create-temp-file prefix suffix)]
       (is (true? (f/exists? temp-path-1)))
       (is (true? (string/starts-with? (str (p/file-name temp-path-1)) prefix)))
-      (is (true? (string/ends-with? (str (p/file-name temp-path-2)) suffix)))))
+      (is (true? (string/ends-with? (str (p/file-name temp-path-1)) suffix)))
+
+      (is (true? (f/exists? temp-path-2)))
+      (is (true? (string/starts-with? (str (p/file-name temp-path-2)) prefix)))
+      (is (true? (string/ends-with? (str (p/file-name temp-path-2)) suffix)))
+
+      (is (not= temp-path-1 temp-path-2))))
 
   (testing "applies the provided file attributes when using default file system"
     (let [prefix "pre-"
           suffix "-post"
 
           temp-path (f/create-temp-file prefix suffix
+                      (f/->posix-file-permissions-attribute "rwxr--r--"))]
+      (is (=
+            #{:owner-read :owner-write :owner-execute :group-read :others-read}
+            (f/read-posix-file-permissions temp-path))))))
+
+(deftest create-temp-directory
+  (testing "creates a temporary directory in the specified path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name)
+            (unix-configuration)
+            [[:temporary {:type :directory}]])
+
+          prefix "pre-"
+
+          path (p/path test-file-system "/temporary")
+
+          temp-path-1 (f/create-temp-directory path prefix)
+          temp-path-2 (f/create-temp-directory path prefix)]
+      (is (true? (f/exists? temp-path-1)))
+      (is (true? (string/starts-with? (str (p/file-name temp-path-1)) prefix)))
+
+      (is (true? (f/exists? temp-path-2)))
+      (is (true? (string/starts-with? (str (p/file-name temp-path-2)) prefix)))
+
+      (is (not= temp-path-1 temp-path-2))))
+
+  (testing "applies the provided file attributes when using a path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name)
+            (unix-configuration)
+            [[:temporary {:type :directory}]])
+
+          prefix "pre-"
+
+          path (p/path test-file-system "/temporary")
+
+          temp-path (f/create-temp-directory path prefix
+                      (f/->posix-file-permissions-attribute "rwxr--r--"))]
+      (is (=
+            #{:owner-read :owner-write :owner-execute :group-read :others-read}
+            (f/read-posix-file-permissions temp-path)))))
+
+  (testing
+    "creates a temporary directory in the default file system default location"
+    (let [prefix "pre-"
+
+          temp-path-1 (f/create-temp-directory prefix)
+          temp-path-2 (f/create-temp-directory prefix)]
+      (is (true? (f/exists? temp-path-1)))
+      (is (true? (string/starts-with? (str (p/file-name temp-path-1)) prefix)))
+
+      (is (true? (f/exists? temp-path-2)))
+      (is (true? (string/starts-with? (str (p/file-name temp-path-2)) prefix)))
+
+      (is (not= temp-path-1 temp-path-2))))
+
+  (testing "applies the provided file attributes when using default file system"
+    (let [prefix "pre-"
+
+          temp-path (f/create-temp-directory prefix
                       (f/->posix-file-permissions-attribute "rwxr--r--"))]
       (is (=
             #{:owner-read :owner-write :owner-execute :group-read :others-read}
@@ -1952,8 +2018,6 @@
 
 ; new-directory-stream
 ; new-byte-channel
-
-; create-temp-directory
 
 ; lines
 ; size

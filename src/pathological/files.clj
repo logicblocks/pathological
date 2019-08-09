@@ -96,6 +96,25 @@
   [& args]
   (apply do-create-temp-file args))
 
+(defmulti ^:private do-create-temp-directory
+  (fn [first & _] (type first)))
+
+(defmethod ^:private do-create-temp-directory Path
+  [^Path path prefix & options]
+  (let [^"[Ljava.nio.file.attribute.FileAttribute;"
+        file-attributes (->file-attributes-array options)]
+    (Files/createTempDirectory path prefix file-attributes)))
+
+(defmethod ^:private do-create-temp-directory String
+  [prefix & options]
+  (let [^"[Ljava.nio.file.attribute.FileAttribute;"
+        file-attributes (->file-attributes-array options)]
+    (Files/createTempDirectory prefix file-attributes)))
+
+(defn create-temp-directory
+  [& args]
+  (apply do-create-temp-directory args))
+
 (defn delete
   [^Path path]
   (Files/delete path))
