@@ -175,6 +175,10 @@
         copy-options (->copy-options-array options)]
     (Files/move source destination copy-options)))
 
+(defn size
+  [^Path path]
+  (Files/size path))
+
 (defn ->posix-file-permissions
   [string]
   (into #{}

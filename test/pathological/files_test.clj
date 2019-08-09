@@ -652,6 +652,17 @@
       (is (= content (f/read-all-lines destination-path)))
       (is (false? (f/exists? source-path))))))
 
+(deftest size
+  (testing "returns the size of the path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file")
+          content ["Line 1" "Line 2"]]
+      (f/write-lines path content)
+
+      (is (= 14 (f/size path))))))
+
 (deftest ->posix-file-permissions
   (testing "returns posix file permission set for provided string"
     (is (= #{} (f/->posix-file-permissions "---------")))
@@ -2020,7 +2031,6 @@
 ; new-byte-channel
 
 ; lines
-; size
 ; list
 
 ; probe-content-type

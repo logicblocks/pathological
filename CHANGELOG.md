@@ -12,6 +12,7 @@ and this project adheres to
 - `read-all-bytes` method.
 - `create-temp-file` method.
 - `create-temp-directory ` method.
+- `size` method.
 
 ## [0.1.3] — 2019-08-08
 ### Added
