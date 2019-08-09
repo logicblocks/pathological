@@ -74,6 +74,9 @@
 (defn ->file-time [value]
   (FileTime/from (Instant/parse value)))
 
+(defn stream-seq [stream]
+  (iterator-seq (.iterator stream)))
+
 (defn ->lookup-fn [var]
   (fn [value] (or (get var value) value)))
 

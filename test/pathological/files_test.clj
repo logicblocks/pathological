@@ -1,5 +1,5 @@
 (ns pathological.files-test
-  (:refer-clojure :exclude [find])
+  (:refer-clojure :exclude [find list])
   (:require
     [clojure.test :refer :all]
     [clojure.java.io :as io]
@@ -470,6 +470,35 @@
               (p/path test-file-system
                 "/directory-1/matching-path-2")]
             matches)))))
+
+(deftest list
+  (testing "returns a seq over all entries in a directory"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+          directory-path (p/path test-file-system "/directory-1")
+
+          _ (f/populate-file-tree root-path
+              [[:directory-1
+                [:path-1 {:content ["Line 1" "Line 2"]}]
+                [:path-2 {:content ["Line 3" "Line 4"]}]
+                [:path-3 {:content ["Line 5" "Line 6"]}]
+                [:subdirectory-1
+                 [:path-4 {:content ["Line 7" "Line 8"]}]
+                 [:path-5 {:content ["Line 9" "Line 10"]}]]]])
+
+          results (f/list directory-path)]
+      (is (seq? results))
+      (is (= [(p/path test-file-system
+                "/directory-1/path-1")
+              (p/path test-file-system
+                "/directory-1/path-2")
+              (p/path test-file-system
+                "/directory-1/path-3")
+              (p/path test-file-system
+                "/directory-1/subdirectory-1")]
+            results)))))
 
 (deftest delete
   (testing "deletes a file"
@@ -2027,11 +2056,12 @@
       (is (= ["Item 3"]
             (f/read-all-lines (p/path target-path "/directory2/file3")))))))
 
+; list
 ; new-directory-stream
+
 ; new-byte-channel
 
 ; lines
-; list
 
 ; probe-content-type
 

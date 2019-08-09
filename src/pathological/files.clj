@@ -1,5 +1,5 @@
 (ns pathological.files
-  (:refer-clojure :exclude [find])
+  (:refer-clojure :exclude [find list])
   (:require
     [pathological.paths :as p]
     [pathological.utils
@@ -14,7 +14,8 @@
              ->file-visit-result
              <-posix-file-permission
              ->posix-file-permission
-             ->file-time]]
+             ->file-time
+             stream-seq]]
     [pathological.paths :as paths]
     [pathological.file-systems :as file-systems]
     [pathological.principals :as principals])
@@ -126,7 +127,7 @@
   (test [_ path basic-file-attributes]
     (predicate-fn path basic-file-attributes)))
 
-(defn find
+(defn find-stream
   [^Path path matcher
    & {:keys [file-visit-options
              maximum-depth]
@@ -134,9 +135,19 @@
              maximum-depth      Integer/MAX_VALUE}}]
   (let [file-visit-options (->file-visit-options-array file-visit-options)
         matcher (->FnBackedBiPredicate matcher)]
-    (iterator-seq
-      (.iterator
-        (Files/find path maximum-depth matcher file-visit-options)))))
+    (Files/find path maximum-depth matcher file-visit-options)))
+
+(defn find
+  [^Path path matcher & options]
+  (stream-seq (apply find-stream path matcher options)))
+
+(defn list-stream
+  [^Path path]
+  (Files/list path))
+
+(defn list
+  [^Path path]
+  (stream-seq (list-stream path)))
 
 (defn delete
   [^Path path]
@@ -318,7 +329,7 @@
                         (if (charset? first) rest args))]
      (Files/newBufferedWriter path charset open-options))))
 
-(defn walk
+(defn walk-stream
   [^Path path
    & {:keys [file-visit-options
              maximum-depth]
@@ -326,9 +337,11 @@
              maximum-depth      Integer/MAX_VALUE}}]
   (let [^"[Ljava.nio.file.FileVisitOption;"
         file-visit-options (->file-visit-options-array file-visit-options)]
-    (iterator-seq
-      (.iterator
-        (Files/walk path maximum-depth file-visit-options)))))
+    (Files/walk path maximum-depth file-visit-options)))
+
+(defn walk
+  [^Path path & options]
+  (stream-seq (apply walk-stream path options)))
 
 (defn- invoke-visitor-and-accumulate [visit-fn accumulator-atom path & args]
   (let [result @accumulator-atom

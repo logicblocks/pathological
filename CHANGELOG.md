@@ -13,6 +13,10 @@ and this project adheres to
 - `create-temp-file` method.
 - `create-temp-directory ` method.
 - `size` method.
+- `list` method.
+- `find-stream` method.
+- `walk-stream` method.
+- `list-stream` method.
 
 ## [0.1.3] — 2019-08-08
 ### Added
