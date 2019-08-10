@@ -292,6 +292,18 @@
             #{:owner-read :owner-write :owner-execute :group-read :others-read}
             (f/read-posix-file-permissions temp-path))))))
 
+(deftest read-symbolic-link
+  (testing "returns the path of the link target"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          target-path (p/path test-file-system "/target")
+          link-path (p/path test-file-system "/link")]
+      (f/create-file target-path)
+      (f/create-symbolic-link link-path target-path)
+
+      (is (= target-path (f/read-symbolic-link link-path))))))
+
 (deftest write-lines
   (testing "writes the provided lines to the path"
     (let [test-file-system
@@ -336,8 +348,6 @@
       (is (= (concat initial-content additional-content)
             (Files/readAllLines path))))))
 
-; TODO: add tests for read-all-lines
-
 (deftest read-all-bytes
   (testing "reads all bytes from the file"
     (let [test-file-system
@@ -350,7 +360,7 @@
       (is (= "Line 1\nLine 2\n"
             (String. ^bytes (f/read-all-bytes path)))))))
 
-(deftest read-lines
+(deftest read-all-lines
   (testing "reads all lines from the path"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
@@ -379,17 +389,38 @@
 
       (is (= content (f/read-all-lines path :utf-16))))))
 
-(deftest read-symbolic-link
-  (testing "returns the path of the link target"
+(deftest lines
+  (testing "returns a seq over all lines from path"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
-          target-path (p/path test-file-system "/target")
-          link-path (p/path test-file-system "/link")]
-      (f/create-file target-path)
-      (f/create-symbolic-link link-path target-path)
+          path (p/path test-file-system "/file.txt")
+          content ["Line 1" "Line 2" "Line 3"]]
+      (f/write-lines path content)
 
-      (is (= target-path (f/read-symbolic-link link-path))))))
+      (let [result (f/lines path)]
+        (is (seq? result))
+        (is (= ["Line 1" "Line 2" "Line 3"] result)))))
+
+  (testing "uses charset of UTF-8 by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")
+          content ["\u4839" "\u3284"]]
+      (f/write-lines path content :utf-8)
+
+      (is (= ["\u4839" "\u3284"] (f/lines path)))))
+
+  (testing "uses provided charset when specified"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.txt")
+          content ["\u4839" "\u3284"]]
+      (f/write-lines path content :utf-16be)
+
+      (is (= ["\u4839" "\u3284"] (f/lines path :utf-16be))))))
 
 (deftest find
   (testing "returns a seq of matching paths"
@@ -2145,8 +2176,6 @@
             (f/read-all-lines (p/path target-path "/directory2/file3")))))))
 
 ; new-byte-channel
-
-; lines
 
 ; file-store -> paths
 

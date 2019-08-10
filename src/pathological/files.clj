@@ -98,6 +98,10 @@
   [& args]
   (apply do-create-temp-directory args))
 
+(defn read-symbolic-link
+  [^Path path]
+  (Files/readSymbolicLink path))
+
 (defn write-lines
   ([^Path path ^Iterable lines]
    (write-lines path lines :utf-8))
@@ -107,19 +111,27 @@
          open-options (->open-options-array options)]
      (Files/write path lines charset open-options))))
 
+(defn read-all-bytes
+  [^Path path]
+  (Files/readAllBytes path))
+
 (defn read-all-lines
   ([^Path path]
    (read-all-lines path StandardCharsets/UTF_8))
   ([^Path path ^Charset charset]
    (Files/readAllLines path (->charset charset))))
 
-(defn read-all-bytes
-  [^Path path]
-  (Files/readAllBytes path))
+(defn lines-stream
+  ([^Path path]
+   (Files/lines path))
+  ([^Path path charset]
+   (Files/lines path (->charset charset))))
 
-(defn read-symbolic-link
-  [^Path path]
-  (Files/readSymbolicLink path))
+(defn lines
+  ([^Path path]
+   (stream-seq (lines-stream path)))
+  ([^Path path charset]
+   (stream-seq (lines-stream path charset))))
 
 (deftype FnBackedBiPredicate
   [predicate-fn]
