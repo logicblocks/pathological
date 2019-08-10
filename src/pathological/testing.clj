@@ -5,10 +5,10 @@
     [pathological.file-systems :as fs])
   (:import
     [com.google.common.jimfs Configuration
-     Feature
-     Jimfs
-     PathNormalization
-     PathType]
+                             Feature
+                             Jimfs
+                             PathNormalization
+                             PathType]
     [java.util UUID]))
 
 (def ^:dynamic *features*
@@ -137,12 +137,12 @@
   ([name] (new-in-memory-file-system name (unix-configuration)))
   ([name configuration] (new-in-memory-file-system name configuration []))
   ([name configuration definition]
-    (let [file-system (Jimfs/newFileSystem name configuration)]
-      (f/populate-file-tree
-        (first (fs/root-directories file-system))
-        definition)
-      file-system))
+   (let [file-system (Jimfs/newFileSystem name configuration)]
+     (f/populate-file-tree
+       (first (fs/root-directories file-system))
+       definition)
+     file-system))
   ([name configuration path definition]
-    (let [file-system (Jimfs/newFileSystem name configuration)]
-      (f/populate-file-tree path definition)
-      file-system)))
+   (let [file-system (Jimfs/newFileSystem name configuration)]
+     (f/populate-file-tree path definition)
+     file-system)))

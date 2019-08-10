@@ -5,15 +5,16 @@
     [clojure.java.io :as io]
 
     [pathological.paths :as p]
+    [pathological.files :as f]
+    [pathological.file-systems :as fs]
 
     [pathological.testing
      :refer [random-file-system-name
              new-in-memory-file-system
-             unix-configuration]]
-    [pathological.files :as f])
+             unix-configuration]])
   (:import
     [java.nio.file FileSystem
-     FileSystems]
+                   FileSystems]
     [java.net URI]))
 
 (defn empty-string-array []
@@ -91,6 +92,27 @@
           path (p/path test-file-system "/some/nested/directory/file.txt")]
       (is (= (p/path test-file-system "nested/directory")
             (p/subpath path 1 3))))))
+
+(deftest file-system
+  (testing "returns the file system of the path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/some/path")]
+      (is (= test-file-system
+            (p/file-system path))))))
+
+(deftest file-store
+  (testing "returns the file store of the path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          file-store
+          (first (fs/file-stores test-file-system))
+
+          path (p/path test-file-system "/some/path")]
+      (is (= file-store
+            (p/file-store path))))))
 
 (deftest spit
   (testing "supports spit on paths"

@@ -62,6 +62,9 @@
 (defn file-system [^Path path]
   (.getFileSystem path))
 
+(defn file-store [^Path path]
+  (Files/getFileStore path))
+
 (defn root [^Path path]
   (.getRoot path))
 

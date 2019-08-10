@@ -11,7 +11,8 @@
              unix-configuration
              windows-configuration]])
   (:import
-    [java.nio.file FileSystems]))
+    [java.nio.file FileSystems]
+    [com.google.common.jimfs JimfsFileSystem]))
 
 (deftest default-file-system
   (testing "returns default file system"
@@ -22,6 +23,16 @@
   (testing "uses default file system by default"
     (is (= (FileSystems/getDefault)
           fs/*file-system*))))
+
+(deftest file-stores
+  (testing "returns the file stores of the provided file system"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          file-stores
+          (.getFileStores ^JimfsFileSystem test-file-system)]
+      (is (= file-stores
+            (fs/file-stores test-file-system))))))
 
 (deftest root-directories
   (testing "returns the only root directory when only one"
