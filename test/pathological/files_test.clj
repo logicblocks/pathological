@@ -2177,8 +2177,6 @@
 
 ; new-byte-channel
 
-; file-store -> paths
-
 ; read-file-attribute-view
 ; read-attribute
 ; read-attributes
