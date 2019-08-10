@@ -11,8 +11,7 @@
              unix-configuration
              windows-configuration]])
   (:import
-    [java.nio.file FileSystems]
-    [com.google.common.jimfs JimfsFileSystem]))
+    [java.nio.file FileSystems FileSystem]))
 
 (deftest default-file-system
   (testing "returns default file system"
@@ -30,7 +29,7 @@
           (new-in-memory-file-system (random-file-system-name))
 
           file-stores
-          (.getFileStores ^JimfsFileSystem test-file-system)]
+          (.getFileStores ^FileSystem test-file-system)]
       (is (= file-stores
             (fs/file-stores test-file-system))))))
 
