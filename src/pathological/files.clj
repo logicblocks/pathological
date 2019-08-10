@@ -22,7 +22,7 @@
   (:import
     [java.nio.file Files
                    FileVisitor
-                   Path]
+                   Path DirectoryStream$Filter]
     [java.nio.charset Charset
                       StandardCharsets]
     [java.nio.file.attribute PosixFilePermissions
@@ -302,6 +302,23 @@
 (defn executable?
   [^Path path]
   (Files/isExecutable path))
+
+(deftype FnBackedDirectoryStreamFilter
+  [filter-fn]
+
+  DirectoryStream$Filter
+  (accept [_ path]
+    (filter-fn path)))
+
+(defn new-directory-stream
+  ([^Path path]
+   (Files/newDirectoryStream path))
+  ([^Path path glob-or-filter]
+   (if (instance? String glob-or-filter)
+     (Files/newDirectoryStream path ^String glob-or-filter)
+     (Files/newDirectoryStream path
+       ^DirectoryStream$Filter
+       (->FnBackedDirectoryStreamFilter glob-or-filter)))))
 
 (defn new-input-stream
   [^Path path & options]

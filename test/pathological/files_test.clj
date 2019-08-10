@@ -1252,6 +1252,81 @@
           path (p/path test-file-system "/file.txt")]
       (is (false? (f/executable? path))))))
 
+(deftest new-directory-stream
+  (testing "returns a directory stream for the provided path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+          directory-path (p/path test-file-system "/directory-1")
+
+          _ (f/populate-file-tree root-path
+              [[:directory-1
+                [:path-1 {:content ["Line 1" "Line 2"]}]
+                [:path-2 {:content ["Line 3" "Line 4"]}]
+                [:path-3 {:content ["Line 5" "Line 6"]}]
+                [:subdirectory-1
+                 [:path-4 {:content ["Line 7" "Line 8"]}]
+                 [:path-5 {:content ["Line 9" "Line 10"]}]]]])]
+      (with-open [directory-stream (f/new-directory-stream directory-path)]
+        (is (= [(p/path test-file-system "/directory-1/path-1")
+                (p/path test-file-system "/directory-1/path-2")
+                (p/path test-file-system "/directory-1/path-3")
+                (p/path test-file-system "/directory-1/subdirectory-1")]
+              (seq directory-stream))))))
+
+  (testing (str "returns a directory stream for the provided path "
+             "filtered using the supplied glob")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+          directory-path (p/path test-file-system "/directory-1")
+
+          glob "path*"
+
+          _ (f/populate-file-tree root-path
+              [[:directory-1
+                [:path-1 {:content ["Line 1" "Line 2"]}]
+                [:path-2 {:content ["Line 3" "Line 4"]}]
+                [:path-3 {:content ["Line 5" "Line 6"]}]
+                [:subdirectory-1
+                 [:path-4 {:content ["Line 7" "Line 8"]}]
+                 [:path-5 {:content ["Line 9" "Line 10"]}]]]])]
+      (with-open [directory-stream
+                  (f/new-directory-stream directory-path glob)]
+        (is (= [(p/path test-file-system "/directory-1/path-1")
+                (p/path test-file-system "/directory-1/path-2")
+                (p/path test-file-system "/directory-1/path-3")]
+              (seq directory-stream))))))
+
+  (testing (str "returns a directory stream for the provided path "
+             "filtered using the supplied function")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+          directory-path (p/path test-file-system "/directory-1")
+
+          filter (fn [path]
+                   (or
+                     (= (p/path test-file-system "/directory-1/path-1") path)
+                     (= (p/path test-file-system "/directory-1/path-3") path)))
+
+          _ (f/populate-file-tree root-path
+              [[:directory-1
+                [:path-1 {:content ["Line 1" "Line 2"]}]
+                [:path-2 {:content ["Line 3" "Line 4"]}]
+                [:path-3 {:content ["Line 5" "Line 6"]}]
+                [:subdirectory-1
+                 [:path-4 {:content ["Line 7" "Line 8"]}]
+                 [:path-5 {:content ["Line 9" "Line 10"]}]]]])]
+      (with-open [directory-stream
+                  (f/new-directory-stream directory-path filter)]
+        (is (= [(p/path test-file-system "/directory-1/path-1")
+                (p/path test-file-system "/directory-1/path-3")]
+              (seq directory-stream)))))))
+
 (deftest new-input-stream
   (testing "returns an input stream for the provided path"
     (let [test-file-system
@@ -2055,9 +2130,6 @@
             (f/read-all-lines (p/path target-path "/directory1/file2"))))
       (is (= ["Item 3"]
             (f/read-all-lines (p/path target-path "/directory2/file3")))))))
-
-; list
-; new-directory-stream
 
 ; new-byte-channel
 
