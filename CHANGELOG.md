@@ -8,6 +8,11 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Added
+- `lines` method.
+- `lines-stream` method.
+- `file-store` method to `pathological.paths`.
+- `file-stores` method to `pathological.file-systems`.
 
 ## [0.1.4] — 2019-08-10
 ### Added
