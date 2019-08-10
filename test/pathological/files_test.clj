@@ -18,7 +18,8 @@
     [java.nio.file Files Path LinkOption NoSuchFileException]
     [java.nio.file.attribute PosixFilePermissions PosixFilePermission]
     [java.nio.charset StandardCharsets]
-    [java.time Instant]))
+    [java.time Instant]
+    [java.time.temporal ChronoUnit]))
 
 (deftest create-directories
   (testing "creates all directories in path"
@@ -924,7 +925,7 @@
 
           path (p/path test-file-system "/file")
 
-          before-instant (Instant/now)
+          before-instant (.truncatedTo (Instant/now) ChronoUnit/SECONDS)
           _ (f/create-file path)
           last-modified (f/read-last-modified-time path)
           after-instant (Instant/now)
@@ -946,7 +947,7 @@
 
           _ (f/create-symbolic-link link target)
 
-          before-instant (Instant/now)
+          before-instant (.truncatedTo (Instant/now) ChronoUnit/SECONDS)
           _ (f/create-file target)
           last-modified (f/read-last-modified-time link)
           after-instant (Instant/now)
@@ -966,7 +967,7 @@
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")
 
-          before-instant (Instant/now)
+          before-instant (.truncatedTo (Instant/now) ChronoUnit/SECONDS)
           _ (f/create-symbolic-link link target)
           after-instant (Instant/now)
 
@@ -992,6 +993,18 @@
 
       (is (= last-modified
             (f/read-last-modified-time path))))))
+
+(deftest probe-content-type
+  (testing "returns the content type of the path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/file.html")
+          content ["<html></html>"]]
+      (f/write-lines path content)
+
+      (is (= "text/html"
+            (f/probe-content-type path))))))
 
 (deftest exists?
   ; TODO: test for symbolic link handling
@@ -2135,9 +2148,7 @@
 
 ; lines
 
-; probe-content-type
-
-; file-store
+; file-store -> paths
 
 ; read-file-attribute-view
 ; read-attribute

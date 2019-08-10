@@ -20,9 +20,10 @@
     [pathological.file-systems :as file-systems]
     [pathological.principals :as principals])
   (:import
-    [java.nio.file Files
+    [java.nio.file DirectoryStream$Filter
+                   Files
                    FileVisitor
-                   Path DirectoryStream$Filter]
+                   Path]
     [java.nio.charset Charset
                       StandardCharsets]
     [java.nio.file.attribute PosixFilePermissions
@@ -250,6 +251,10 @@
   (let [^"[Ljava.nio.file.LinkOption;"
         link-options (->link-options-array options)]
     (.toString (Files/getLastModifiedTime path link-options))))
+
+(defn probe-content-type
+  [^Path path]
+  (Files/probeContentType path))
 
 (defn set-last-modified-time
   [^Path path last-modified]

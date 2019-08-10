@@ -17,8 +17,13 @@
             [lein-cljfmt "0.6.4"]]
 
   :profiles
-  {:shared {:dependencies [[org.clojure/clojure "1.10.1"]
-                           [eftest "0.5.8"]]}
+  {:shared {:dependencies
+            [[org.clojure/clojure "1.10.1"]
+             [org.apache.tika/tika-core "1.22"]
+             [org.apache.tika/tika-parsers "1.22"
+              :exclusions [com.google.guava/guava]]
+             [ch.qos.logback/logback-classic "1.2.3"]
+             [eftest "0.5.8"]]}
    :dev    [:shared {:source-paths ["dev"]}]
    :test   [:shared]}
 

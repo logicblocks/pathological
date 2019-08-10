@@ -17,6 +17,7 @@ and this project adheres to
 - `find-stream` method.
 - `walk-stream` method.
 - `list-stream` method.
+- `probe-content-type` method.
 
 ## [0.1.3] — 2019-08-08
 ### Added
