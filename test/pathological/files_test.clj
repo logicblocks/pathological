@@ -1049,7 +1049,9 @@
                             path BasicFileAttributeView
                             (u/->link-options-array []))
           ^BasicFileAttributes
-          underlying-attributes (.readAttributes underlying-view)]
+          underlying-attributes (.readAttributes underlying-view)
+
+          attributes (f/read-file-attribute-view path :basic)]
       (is (= (a/map->BasicFileAttributes
                {:path               path
                 :file-key           (.fileKey underlying-attributes)
@@ -1064,8 +1066,9 @@
                 :directory?         (.isDirectory underlying-attributes)
                 :symbolic-link?     (.isSymbolicLink underlying-attributes)
                 :other?             (.isOther underlying-attributes)})
-            (assoc (f/read-file-attribute-view path :basic)
-              :delegate nil)))))
+            (assoc attributes :delegate nil)))
+      (is (instance? BasicFileAttributeView
+            (:delegate attributes)))))
 
   (testing "returns a view over owner file attributes"
     (let [test-file-system
@@ -1081,12 +1084,15 @@
           ^FileOwnerAttributeView
           underlying-view (Files/getFileAttributeView
                             path FileOwnerAttributeView
-                            (u/->link-options-array []))]
+                            (u/->link-options-array []))
+
+          attributes (f/read-file-attribute-view path :owner)]
       (is (= (a/map->OwnerFileAttributes
                {:path  path
                 :owner (.getOwner underlying-view)})
-            (assoc (f/read-file-attribute-view path :owner)
-              :delegate nil)))))
+            (assoc attributes :delegate nil)))
+      (is (instance? FileOwnerAttributeView
+            (:delegate attributes)))))
 
   (testing "returns a view over posix file attributes"
     (let [test-file-system
@@ -1105,7 +1111,9 @@
                             (u/->link-options-array []))
 
           ^PosixFileAttributes
-          underlying-attributes (.readAttributes underlying-view)]
+          underlying-attributes (.readAttributes underlying-view)
+
+          attributes (f/read-file-attribute-view path :posix)]
       (is (= (a/map->PosixFileAttributes
                {:path               path
                 :file-key           (.fileKey underlying-attributes)
@@ -1130,8 +1138,9 @@
                 :directory?         (.isDirectory underlying-attributes)
                 :symbolic-link?     (.isSymbolicLink underlying-attributes)
                 :other?             (.isOther underlying-attributes)})
-            (assoc (f/read-file-attribute-view path :posix)
-              :delegate nil)))))
+            (assoc attributes :delegate nil)))
+      (is (instance? PosixFileAttributeView
+            (:delegate attributes)))))
 
   (testing "returns a view over dos file attributes"
     (let [test-file-system
@@ -1150,7 +1159,9 @@
                             (u/->link-options-array []))
 
           ^DosFileAttributes
-          underlying-attributes (.readAttributes underlying-view)]
+          underlying-attributes (.readAttributes underlying-view)
+
+          attributes (f/read-file-attribute-view path :dos)]
       (is (= (a/map->DosFileAttributes
                {:path               path
                 :file-key           (.fileKey underlying-attributes)
@@ -1172,8 +1183,9 @@
                 :hidden?            (.isHidden underlying-attributes)
                 :archive?           (.isArchive underlying-attributes)
                 :system?            (.isSystem underlying-attributes)})
-            (assoc (f/read-file-attribute-view path :dos)
-              :delegate nil)))))
+            (assoc attributes :delegate nil)))
+      (is (instance? DosFileAttributeView
+            (:delegate attributes)))))
 
   (testing "returns a view over user file attributes"
     (let [test-file-system
@@ -1196,7 +1208,9 @@
             ^bytes (get-in attributes [:attributes "important.thing1"])))
       (is (Arrays/equals important-thing-2
             ^bytes (get-in attributes [:attributes "important.thing2"])))
-      (is (= path (:path attributes))))))
+      (is (= path (:path attributes)))
+      (is (instance? UserDefinedFileAttributeView
+            (:delegate attributes))))))
 
 (deftest set-attribute
   (testing "sets the specified attribute on the path"
