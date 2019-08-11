@@ -264,13 +264,13 @@
         link-options (->link-options-array options)]
     (.toString (Files/getLastModifiedTime path link-options))))
 
-(defn probe-content-type
-  [^Path path]
-  (Files/probeContentType path))
-
 (defn set-last-modified-time
   [^Path path last-modified]
   (Files/setLastModifiedTime path (->file-time last-modified)))
+
+(defn probe-content-type
+  [^Path path]
+  (Files/probeContentType path))
 
 (defn exists?
   [^Path path & options]

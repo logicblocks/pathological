@@ -13,3 +13,7 @@
 (defn root-directories
   [^FileSystem file-system]
   (.getRootDirectories file-system))
+
+(defn supported-file-attribute-views
+  [^FileSystem file-system]
+  (into #{} (map keyword (.supportedFileAttributeViews file-system))))

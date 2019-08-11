@@ -52,3 +52,13 @@
       (is (= #{(p/path test-file-system "C://")
                (p/path test-file-system "D://")}
             (fs/root-directories test-file-system))))))
+
+(deftest supported-file-attribute-views
+  (testing "returns the set of supported file attribute views"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic :owner}))]
+      (is (= #{:basic :owner}
+            (fs/supported-file-attribute-views test-file-system))))))
