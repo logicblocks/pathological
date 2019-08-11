@@ -21,7 +21,10 @@
   {:basic "basic"
    :owner "owner"
    :posix "posix"
-   :unix  "unix"})
+   :unix  "unix"
+   :dos   "dos"
+   :acl   "acl"
+   :user  "user"})
 
 (def ^:dynamic *path-normalizations*
   {:case-fold-ascii   PathNormalization/CASE_FOLD_ASCII

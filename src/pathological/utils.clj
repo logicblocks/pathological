@@ -11,7 +11,7 @@
                    StandardCopyOption]
     [java.nio.file.attribute FileAttribute
                              FileTime
-                             PosixFilePermission]
+                             PosixFilePermission BasicFileAttributeView AclFileAttributeView FileOwnerAttributeView DosFileAttributeView PosixFileAttributeView UserDefinedFileAttributeView]
     [java.nio.charset StandardCharsets Charset]
     [java.time Instant]))
 
@@ -54,6 +54,14 @@
    :skip-subtree  FileVisitResult/SKIP_SUBTREE
    :skip-siblings FileVisitResult/SKIP_SIBLINGS})
 
+(def ^:dynamic *file-attribute-view-classes*
+  {:basic BasicFileAttributeView
+   :owner FileOwnerAttributeView
+   :acl   AclFileAttributeView
+   :dos   DosFileAttributeView
+   :posix PosixFileAttributeView
+   :user  UserDefinedFileAttributeView})
+
 (def posix-file-permissions
   {:owner-read     PosixFilePermission/OWNER_READ
    :owner-write    PosixFilePermission/OWNER_WRITE
@@ -74,14 +82,17 @@
 (defn ->file-time [value]
   (FileTime/from (Instant/parse value)))
 
+(defn <-file-time [value]
+  (str value))
+
 (defn stream-seq [stream]
   (iterator-seq (.iterator stream)))
 
 (defn ->lookup-fn [var]
-  (fn [value] (or (get var value) value)))
+  (fn [value] (get var value value)))
 
 (defn ->charset [value]
-  (or (get *charsets* value) value))
+  (get *charsets* value value))
 
 (defn charset? [value]
   (and value
@@ -117,3 +128,6 @@
 (defn ->file-visit-result [control]
   (or (get *file-visit-results* control)
     (throw (AssertionError. (str "Invalid control: " control)))))
+
+(defn ->file-attribute-view-class [type]
+  (get *file-attribute-view-classes* type type))

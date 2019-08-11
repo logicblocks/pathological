@@ -7,16 +7,22 @@
 
     [pathological.files :as f]
     [pathological.paths :as p]
+    [pathological.principals :as pr]
+    [pathological.attributes :as a]
     [pathological.utils :as u]
 
     [pathological.testing
      :refer [random-file-system-name
              new-in-memory-file-system
-             unix-configuration]])
+             unix-configuration
+             windows-configuration]])
   (:import
     [java.io ByteArrayOutputStream BufferedReader BufferedWriter]
     [java.nio.file Files Path LinkOption NoSuchFileException]
-    [java.nio.file.attribute PosixFilePermissions PosixFilePermission]
+    [java.nio.file.attribute BasicFileAttributes
+                             BasicFileAttributeView
+                             PosixFilePermissions
+                             PosixFilePermission FileOwnerAttributeView AclFileAttributeView PosixFileAttributeView PosixFileAttributes DosFileAttributeView DosFileAttributes]
     [java.nio.charset StandardCharsets]
     [java.time Instant]
     [java.time.temporal ChronoUnit]))
@@ -906,7 +912,7 @@
       (f/create-file target)
       (f/create-symbolic-link link target)
 
-      (Files/setOwner target (f/->user-principal test-file-system "other"))
+      (Files/setOwner target (pr/->user-principal test-file-system "other"))
 
       (is (= "other" (:name (f/read-owner link))))))
 
@@ -919,7 +925,7 @@
       (f/create-file target)
       (f/create-symbolic-link link target)
 
-      (Files/setOwner target (f/->user-principal test-file-system "other"))
+      (Files/setOwner target (pr/->user-principal test-file-system "other"))
 
       (is (= "user" (:name (f/read-owner link :no-follow-links)))))))
 
@@ -931,7 +937,7 @@
           path (p/path test-file-system "/file")]
       (f/create-file path)
 
-      (f/set-owner path (f/->user-principal test-file-system "other"))
+      (f/set-owner path (pr/->user-principal test-file-system "other"))
 
       (is (= "other" (:name (f/read-owner path))))))
 
@@ -944,7 +950,7 @@
       (f/create-file target)
       (f/create-symbolic-link link target)
 
-      (f/set-owner link (f/->user-principal test-file-system "other"))
+      (f/set-owner link (pr/->user-principal test-file-system "other"))
 
       (is (= "user" (:name (f/read-owner link :no-follow-links))))
       (is (= "other" (:name (f/read-owner link)))))))
@@ -1024,6 +1030,149 @@
 
       (is (= last-modified
             (f/read-last-modified-time path))))))
+
+(deftest read-file-attribute-view
+  (testing "returns a view over basic file attributes"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          path (p/path test-file-system "/file")
+
+          _ (f/create-file path)
+
+          ^BasicFileAttributeView
+          underlying-view (Files/getFileAttributeView
+                            path BasicFileAttributeView
+                            (u/->link-options-array []))
+          ^BasicFileAttributes
+          underlying-attributes (.readAttributes underlying-view)]
+      (is (= (a/map->BasicFileAttributes
+               {:path               path
+                :file-key           (.fileKey underlying-attributes)
+                :size               (.size underlying-attributes)
+                :last-modified-time (str (.lastModifiedTime
+                                           underlying-attributes))
+                :last-access-time   (str (.lastAccessTime
+                                           underlying-attributes))
+                :creation-time      (str (.creationTime
+                                           underlying-attributes))
+                :regular-file?      (.isRegularFile underlying-attributes)
+                :directory?         (.isDirectory underlying-attributes)
+                :symbolic-link?     (.isSymbolicLink underlying-attributes)
+                :other?             (.isOther underlying-attributes)})
+            (assoc (f/read-file-attribute-view path :basic)
+              :delegate nil)))))
+
+  (testing "returns a view over owner file attributes"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:owner}))
+
+          path (p/path test-file-system "/file")
+
+          _ (f/create-file path)
+
+          ^FileOwnerAttributeView
+          underlying-view (Files/getFileAttributeView
+                            path FileOwnerAttributeView
+                            (u/->link-options-array []))]
+      (is (= (a/map->OwnerFileAttributes
+               {:path  path
+                :owner (.getOwner underlying-view)})
+            (assoc (f/read-file-attribute-view path :owner)
+              :delegate nil)))))
+
+  (testing "returns a view over posix file attributes"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:posix}))
+
+          path (p/path test-file-system "/file")
+
+          _ (f/create-file path)
+
+          ^PosixFileAttributeView
+          underlying-view (Files/getFileAttributeView
+                            path PosixFileAttributeView
+                            (u/->link-options-array []))
+
+          ^PosixFileAttributes
+          underlying-attributes (.readAttributes underlying-view)]
+      (is (= (a/map->PosixFileAttributes
+               {:path               path
+                :file-key           (.fileKey underlying-attributes)
+                :size               (.size underlying-attributes)
+                :owner              (pr/<-user-principal
+                                      (.owner underlying-attributes))
+                :group              (pr/<-group-principal
+                                      (.group underlying-attributes))
+                :permissions        (into #{}
+                                      (map u/<-posix-file-permission
+                                        (.permissions underlying-attributes)))
+                :last-modified-time (u/<-file-time
+                                      (.lastModifiedTime
+                                        underlying-attributes))
+                :last-access-time   (u/<-file-time
+                                      (.lastAccessTime
+                                        underlying-attributes))
+                :creation-time      (u/<-file-time
+                                      (.creationTime
+                                        underlying-attributes))
+                :regular-file?      (.isRegularFile underlying-attributes)
+                :directory?         (.isDirectory underlying-attributes)
+                :symbolic-link?     (.isSymbolicLink underlying-attributes)
+                :other?             (.isOther underlying-attributes)})
+            (assoc (f/read-file-attribute-view path :posix)
+              :delegate nil)))))
+
+  (testing "returns a view over dos file attributes"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (windows-configuration
+              :attribute-views #{:dos}))
+
+          path (p/path test-file-system "C://file")
+
+          _ (f/create-file path)
+
+          ^DosFileAttributeView
+          underlying-view (Files/getFileAttributeView
+                            path DosFileAttributeView
+                            (u/->link-options-array []))
+
+          ^DosFileAttributes
+          underlying-attributes (.readAttributes underlying-view)]
+      (is (= (a/map->DosFileAttributes
+               {:path               path
+                :file-key           (.fileKey underlying-attributes)
+                :size               (.size underlying-attributes)
+                :last-modified-time (u/<-file-time
+                                      (.lastModifiedTime
+                                        underlying-attributes))
+                :last-access-time   (u/<-file-time
+                                      (.lastAccessTime
+                                        underlying-attributes))
+                :creation-time      (u/<-file-time
+                                      (.creationTime
+                                        underlying-attributes))
+                :regular-file?      (.isRegularFile underlying-attributes)
+                :directory?         (.isDirectory underlying-attributes)
+                :symbolic-link?     (.isSymbolicLink underlying-attributes)
+                :other?             (.isOther underlying-attributes)
+                :read-only?         (.isReadOnly underlying-attributes)
+                :hidden?            (.isHidden underlying-attributes)
+                :archive?           (.isArchive underlying-attributes)
+                :system?            (.isSystem underlying-attributes)})
+            (assoc (f/read-file-attribute-view path :dos)
+              :delegate nil))))))
 
 (deftest probe-content-type
   (testing "returns the content type of the path"
