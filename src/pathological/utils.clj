@@ -9,11 +9,18 @@
                    OpenOption
                    StandardOpenOption
                    StandardCopyOption]
-    [java.nio.file.attribute FileAttribute
+    [java.nio.file.attribute AclFileAttributeView
+                             BasicFileAttributeView
+                             DosFileAttributeView
+                             FileAttribute
+                             FileOwnerAttributeView
                              FileTime
-                             PosixFilePermission BasicFileAttributeView AclFileAttributeView FileOwnerAttributeView DosFileAttributeView PosixFileAttributeView UserDefinedFileAttributeView]
+                             PosixFileAttributeView
+                             PosixFilePermission
+                             UserDefinedFileAttributeView]
     [java.nio.charset StandardCharsets Charset]
-    [java.time Instant]))
+    [java.time Instant]
+    [java.nio ByteBuffer]))
 
 (def ^:dynamic *charsets*
   {:us-ascii   StandardCharsets/US_ASCII
@@ -85,9 +92,6 @@
 (defn <-file-time [value]
   (str value))
 
-(defn stream-seq [stream]
-  (iterator-seq (.iterator stream)))
-
 (defn ->lookup-fn [var]
   (fn [value] (get var value value)))
 
@@ -98,6 +102,25 @@
   (and value
     (or (instance? Charset value)
       (contains? *charsets* value))))
+
+(defn ->bytes
+  ([value]
+   (.getBytes value))
+  ([value charset]
+   (.getBytes value (->charset charset))))
+
+(defn ->byte-buffer
+  ([value]
+   (->byte-buffer value :utf-8))
+  ([value charset]
+   (cond
+     (instance? ByteBuffer value) value
+     (bytes? value) (ByteBuffer/wrap value)
+     :default
+     (ByteBuffer/wrap
+       (.getBytes
+         (str value)
+         ^Charset (->charset charset))))))
 
 (def ->open-option (->lookup-fn *open-options*))
 (def ->copy-option (->lookup-fn *copy-options*))
@@ -131,3 +154,6 @@
 
 (defn ->file-attribute-view-class [type]
   (get *file-attribute-view-classes* type type))
+
+(defn stream-seq [stream]
+  (iterator-seq (.iterator stream)))

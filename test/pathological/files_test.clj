@@ -22,10 +22,11 @@
     [java.nio.file.attribute BasicFileAttributes
                              BasicFileAttributeView
                              PosixFilePermissions
-                             PosixFilePermission FileOwnerAttributeView AclFileAttributeView PosixFileAttributeView PosixFileAttributes DosFileAttributeView DosFileAttributes]
+                             PosixFilePermission FileOwnerAttributeView AclFileAttributeView PosixFileAttributeView PosixFileAttributes DosFileAttributeView DosFileAttributes UserDefinedFileAttributeView]
     [java.nio.charset StandardCharsets]
     [java.time Instant]
-    [java.time.temporal ChronoUnit]))
+    [java.time.temporal ChronoUnit]
+    [java.util Arrays]))
 
 (deftest create-directories
   (testing "creates all directories in path"
@@ -620,7 +621,7 @@
           destination-path (p/path test-file-system "/target")]
       (with-open [input-stream
                   (io/input-stream
-                    (.getBytes (str (string/join "\n" content) "\n")))]
+                    (u/->bytes (str (string/join "\n" content) "\n")))]
         (f/copy input-stream destination-path))
 
       (is (= content (f/read-all-lines destination-path)))))
@@ -1172,7 +1173,50 @@
                 :archive?           (.isArchive underlying-attributes)
                 :system?            (.isSystem underlying-attributes)})
             (assoc (f/read-file-attribute-view path :dos)
-              :delegate nil))))))
+              :delegate nil)))))
+
+  (testing "returns a view over user file attributes"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:user}))
+
+          path (p/path test-file-system "/file")
+
+          ^bytes important-thing-1 (u/->bytes "123456")
+          ^bytes important-thing-2 (u/->bytes "789012")
+
+          _ (f/create-file path)
+          _ (f/set-attribute path "user:important.thing1" important-thing-1)
+          _ (f/set-attribute path "user:important.thing2" important-thing-2)
+
+          attributes (f/read-file-attribute-view path :user)]
+      (is (Arrays/equals important-thing-1
+            ^bytes (get-in attributes [:attributes "important.thing1"])))
+      (is (Arrays/equals important-thing-2
+            ^bytes (get-in attributes [:attributes "important.thing2"])))
+      (is (= path (:path attributes))))))
+
+(deftest set-attribute
+  (testing "sets the specified attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:user}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "user:custom"
+          value "important-value"]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= value
+            (String. ^bytes (Files/getAttribute path attribute
+                              (u/->link-options-array []))))))))
 
 (deftest probe-content-type
   (testing "returns the content type of the path"

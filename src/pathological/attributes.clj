@@ -1,12 +1,29 @@
 (ns pathological.attributes
   (:require
+    [clojure.string :as string]
+
     [pathological.utils
      :refer [<-file-time
-             <-posix-file-permission]]
+             <-posix-file-permission
+             ->byte-buffer]]
     [pathological.principals
      :refer [<-user-principal
              <-group-principal]])
-  (:import [java.nio.file Path]))
+  (:import [java.nio.file Path]
+           [java.nio ByteBuffer]))
+
+(defn view [attribute]
+  (if (string/includes? attribute ":")
+    (keyword (first (string/split attribute #":")))
+    :basic))
+
+(defn view? [attribute v]
+  (= (view attribute) v))
+
+(defn ->value [attribute value]
+  (if (view? attribute :user)
+    (->byte-buffer value)
+    value))
 
 (defprotocol ReloadFileAttributes
   (reload [_]))
@@ -31,6 +48,10 @@
   (set-hidden [_ value])
   (set-archive [_ value])
   (set-system [_ value]))
+
+(defprotocol UpdateUserDefinedFileAttributes
+  (write-attribute [_ name value])
+  (delete-attribute [_ name]))
 
 (defrecord BasicFileAttributes
   [path
@@ -127,6 +148,18 @@
   (set-archive [_ value])
   (set-system [_ value]))
 
+(defrecord UserDefinedFileAttributes
+  [path
+   attributes
+   delegate]
+
+  ReloadFileAttributes
+  (reload [_])
+
+  UpdateUserDefinedFileAttributes
+  (write-attribute [_ name value])
+  (delete-attribute [_ name]))
+
 (defn ->basic-file-attributes
   [^Path path ^java.nio.file.attribute.BasicFileAttributeView view]
   (let [^java.nio.file.attribute.BasicFileAttributes
@@ -195,11 +228,28 @@
        :system?            (.isSystem dos-attributes)
        :delegate           view})))
 
+(defn ->user-defined-file-attributes
+  [^Path path ^java.nio.file.attribute.UserDefinedFileAttributeView view]
+  (let [names (.list view)
+        attributes
+        (into {}
+          (mapv
+            (fn [name]
+              (let [byte-buffer (ByteBuffer/allocate (.size view name))]
+                (.read view name byte-buffer)
+                [name (.array byte-buffer)]))
+            names))]
+    (map->UserDefinedFileAttributes
+      {:path       path
+       :attributes attributes
+       :delegate   view})))
+
 (def ^:dynamic *file-attributes-factories*
   {:basic ->basic-file-attributes
    :owner ->owner-file-attributes
    :posix ->posix-file-attributes
-   :dos   ->dos-file-attributes})
+   :dos   ->dos-file-attributes
+   :user  ->user-defined-file-attributes})
 
 (defn ->file-attributes-factory [type]
   (get *file-attributes-factories* type

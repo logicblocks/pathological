@@ -2,7 +2,6 @@
   (:refer-clojure :exclude [find list])
   (:require
     [pathological.paths :as paths]
-    [pathological.file-systems :as file-systems]
     [pathological.principals :as principals]
     [pathological.attributes :as attributes]
     [pathological.utils :as utils])
@@ -13,8 +12,7 @@
                    Path]
     [java.nio.charset Charset
                       StandardCharsets]
-    [java.nio.file.attribute PosixFilePermissions
-                             UserPrincipal]
+    [java.nio.file.attribute PosixFilePermissions]
     [java.util.function BiPredicate]
     [java.io InputStream OutputStream]))
 
@@ -251,6 +249,13 @@
         type-class (utils/->file-attribute-view-class type)
         factory (attributes/->file-attributes-factory type)]
     (factory path (Files/getFileAttributeView path type-class link-options))))
+
+(defn set-attribute
+  [^Path path attribute value & options]
+  (let [^"[Ljava.nio.file.LinkOption;"
+        link-options (utils/->link-options-array options)
+        value (attributes/->value attribute value)]
+    (Files/setAttribute path attribute value link-options)))
 
 (defn probe-content-type
   [^Path path]
