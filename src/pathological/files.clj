@@ -12,7 +12,6 @@
                    Path]
     [java.nio.charset Charset
                       StandardCharsets]
-    [java.nio.file.attribute PosixFilePermissions]
     [java.util.function BiPredicate]
     [java.io InputStream OutputStream]))
 
@@ -187,27 +186,6 @@
 (defn size
   [^Path path]
   (Files/size path))
-
-(defn ->posix-file-permissions
-  [string]
-  (into #{}
-    (map utils/<-posix-file-permission
-      (PosixFilePermissions/fromString string))))
-
-(defn ->posix-file-permissions-string [permissions]
-  (PosixFilePermissions/toString
-    (into #{}
-      (map utils/->posix-file-permission permissions))))
-
-(defn ->posix-file-permissions-attribute [string-or-set]
-  (let [keyword-set
-        (if (string? string-or-set)
-          (->posix-file-permissions string-or-set)
-          string-or-set)
-
-        posix-file-permission-set
-        (into #{} (map utils/->posix-file-permission keyword-set))]
-    (PosixFilePermissions/asFileAttribute posix-file-permission-set)))
 
 (defn read-posix-file-permissions [path & options]
   (let [^"[Ljava.nio.file.LinkOption;"

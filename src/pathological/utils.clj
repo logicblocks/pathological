@@ -4,6 +4,10 @@
 
     [pathological.principals :as principals])
   (:import
+    [java.util Set]
+    [java.time Instant]
+    [java.nio ByteBuffer]
+    [java.nio.charset StandardCharsets Charset]
     [java.nio.file CopyOption
                    FileVisitOption
                    FileVisitResult
@@ -11,7 +15,11 @@
                    OpenOption
                    StandardOpenOption
                    StandardCopyOption]
-    [java.nio.file.attribute AclFileAttributeView
+    [java.nio.file.attribute AclEntry
+                             AclEntryFlag
+                             AclEntryPermission
+                             AclEntryType
+                             AclFileAttributeView
                              BasicFileAttributeView
                              DosFileAttributeView
                              FileAttribute
@@ -19,11 +27,8 @@
                              FileTime
                              PosixFileAttributeView
                              PosixFilePermission
-                             UserDefinedFileAttributeView AclEntryType AclEntryPermission AclEntryFlag AclEntry]
-    [java.nio.charset StandardCharsets Charset]
-    [java.time Instant]
-    [java.nio ByteBuffer]
-    [java.util Set]))
+                             PosixFilePermissions
+                             UserDefinedFileAttributeView]))
 
 (def ^:dynamic *charsets*
   {:us-ascii   StandardCharsets/US_ASCII
@@ -115,10 +120,36 @@
    :inherit-only         AclEntryFlag/INHERIT_ONLY})
 
 (defn ->posix-file-permission [value]
-  (get posix-file-permissions value))
+  (if-not (instance? PosixFilePermission value)
+    (get posix-file-permissions value)
+    value))
 
 (defn <-posix-file-permission [value]
   (get (map-invert posix-file-permissions) value))
+
+(defn <-posix-file-permissions-string [string]
+  (into #{}
+    (map <-posix-file-permission
+      (PosixFilePermissions/fromString string))))
+
+(defn ->posix-file-permissions-string [permissions]
+  (PosixFilePermissions/toString
+    (into #{}
+      (map ->posix-file-permission permissions))))
+
+(defn ->posix-file-permissions [string-or-set]
+  (let [keyword-set
+        (if (string? string-or-set)
+          (<-posix-file-permissions-string string-or-set)
+          string-or-set)
+
+        posix-file-permission-set
+        (into #{} (map ->posix-file-permission keyword-set))]
+    posix-file-permission-set))
+
+(defn ->posix-file-permissions-attribute [string-or-set]
+    (PosixFilePermissions/asFileAttribute
+      (->posix-file-permissions string-or-set)))
 
 (defn ->acl-entry-type [value]
   (get acl-entry-types value value))
@@ -159,7 +190,9 @@
      :flags flags}))
 
 (defn ->file-time [value]
-  (FileTime/from (Instant/parse value)))
+  (if-not (instance? FileTime value)
+    (FileTime/from (Instant/parse value))
+    value))
 
 (defn <-file-time [value]
   (str value))
@@ -193,6 +226,9 @@
        (.getBytes
          (str value)
          ^Charset (->charset charset))))))
+
+(defn <-byte-buffer [value]
+  (.array value))
 
 (def ->open-option (->lookup-fn *open-options*))
 (def ->copy-option (->lookup-fn *copy-options*))

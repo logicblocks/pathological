@@ -1,10 +1,13 @@
 (ns pathological.attributes
+  (:refer-clojure :exclude [name])
   (:require
     [clojure.string :as string]
 
     [pathological.utils
-     :refer [<-file-time
+     :refer [->file-time
+             <-file-time
              <-posix-file-permission
+             ->posix-file-permissions
              <-acl-entry
              ->byte-buffer]]
     [pathological.principals
@@ -13,18 +16,46 @@
   (:import [java.nio.file Path]
            [java.nio ByteBuffer]))
 
+(defn- camel->kebab [value]
+  (string/lower-case
+    (string/replace value
+      #"([a-z0-9])([A-Z])"
+      "$1-$2")))
+
 (defn view [attribute]
   (if (string/includes? attribute ":")
     (keyword (first (string/split attribute #":")))
     :basic))
 
+(defn name [attribute]
+  (if (string/includes? attribute ":")
+    (keyword (camel->kebab (second (string/split attribute #":"))))
+    (keyword (camel->kebab attribute))))
+
 (defn view? [attribute v]
-  (= (view attribute) v))
+  (let [actual-view (view attribute)
+        test-views (if (seq? v) (into #{} (map keyword v)) #{(keyword v)})]
+    (test-views actual-view)))
+
+(defn name? [attribute n]
+  (let [actual-name (name attribute)
+        test-names (if (seqable? n) (into #{} (map keyword n)) #{(keyword n)})]
+    (test-names actual-name)))
 
 (defn ->value [attribute value]
-  (if (view? attribute :user)
+  (cond
+    (view? attribute :user)
     (->byte-buffer value)
-    value))
+
+    (and
+      (view? attribute :basic)
+      (name? attribute #{:creation-time :last-access-time :last-modified-time}))
+    (->file-time value)
+
+    (and (view? attribute :posix) (name? attribute :permissions))
+    (->posix-file-permissions value)
+
+    :default value))
 
 (defprotocol ReloadFileAttributes
   (reload [_]))

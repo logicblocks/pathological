@@ -17,16 +17,24 @@
              unix-configuration
              windows-configuration]])
   (:import
-    [java.io ByteArrayOutputStream BufferedReader BufferedWriter]
-    [java.nio.file Files Path LinkOption NoSuchFileException]
-    [java.nio.file.attribute BasicFileAttributes
-                             BasicFileAttributeView
-                             PosixFilePermissions
-                             PosixFilePermission FileOwnerAttributeView AclFileAttributeView PosixFileAttributeView PosixFileAttributes DosFileAttributeView DosFileAttributes UserDefinedFileAttributeView]
-    [java.nio.charset StandardCharsets]
+    [java.util Arrays]
     [java.time Instant]
     [java.time.temporal ChronoUnit]
-    [java.util Arrays]))
+    [java.io ByteArrayOutputStream BufferedReader BufferedWriter]
+
+    [java.nio.charset StandardCharsets Charset]
+    [java.nio.file Files Path LinkOption NoSuchFileException]
+    [java.nio.file.attribute AclFileAttributeView
+                             BasicFileAttributes
+                             BasicFileAttributeView
+                             DosFileAttributeView
+                             DosFileAttributes
+                             FileOwnerAttributeView
+                             PosixFileAttributes
+                             PosixFileAttributeView
+                             PosixFilePermission
+                             PosixFilePermissions
+                             UserDefinedFileAttributeView]))
 
 (deftest create-directories
   (testing "creates all directories in path"
@@ -44,7 +52,7 @@
 
           path (p/path test-file-system "/some/very/nested/path/")]
       (f/create-directories path
-        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
+        (u/->posix-file-permissions-attribute "rwxrw-rw-"))
 
       (is (true? (Files/exists path (u/->link-options-array []))))
 
@@ -71,7 +79,7 @@
 
           path (p/path test-file-system "/path/")]
       (f/create-directory path
-        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
+        (u/->posix-file-permissions-attribute "rwxrw-rw-"))
 
       (is (true? (Files/exists path (u/->link-options-array []))))
 
@@ -98,7 +106,7 @@
 
           path (p/path test-file-system "/some-file")]
       (f/create-file path
-        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
+        (u/->posix-file-permissions-attribute "rwxrw-rw-"))
 
       (is (true? (Files/exists path (u/->link-options-array []))))
 
@@ -133,7 +141,7 @@
       (f/create-file target-path)
 
       (f/create-symbolic-link link-path target-path
-        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
+        (u/->posix-file-permissions-attribute "rwxrw-rw-"))
 
       (is (true? (Files/exists link-path
                    (u/->link-options-array [LinkOption/NOFOLLOW_LINKS]))))
@@ -207,7 +215,7 @@
           path (p/path test-file-system "/temporary")
 
           temp-path (f/create-temp-file path prefix suffix
-                      (f/->posix-file-permissions-attribute "rwxr--r--"))]
+                      (u/->posix-file-permissions-attribute "rwxr--r--"))]
       (is (=
             #{:owner-read :owner-write :owner-execute :group-read :others-read}
             (f/read-posix-file-permissions temp-path)))))
@@ -234,7 +242,7 @@
           suffix "-post"
 
           temp-path (f/create-temp-file prefix suffix
-                      (f/->posix-file-permissions-attribute "rwxr--r--"))]
+                      (u/->posix-file-permissions-attribute "rwxr--r--"))]
       (is (=
             #{:owner-read :owner-write :owner-execute :group-read :others-read}
             (f/read-posix-file-permissions temp-path))))))
@@ -271,7 +279,7 @@
           path (p/path test-file-system "/temporary")
 
           temp-path (f/create-temp-directory path prefix
-                      (f/->posix-file-permissions-attribute "rwxr--r--"))]
+                      (u/->posix-file-permissions-attribute "rwxr--r--"))]
       (is (=
             #{:owner-read :owner-write :owner-execute :group-read :others-read}
             (f/read-posix-file-permissions temp-path)))))
@@ -294,7 +302,7 @@
     (let [prefix "pre-"
 
           temp-path (f/create-temp-directory prefix
-                      (f/->posix-file-permissions-attribute "rwxr--r--"))]
+                      (u/->posix-file-permissions-attribute "rwxr--r--"))]
       (is (=
             #{:owner-read :owner-write :owner-execute :group-read :others-read}
             (f/read-posix-file-permissions temp-path))))))
@@ -648,11 +656,11 @@
           source-path (p/path test-file-system "/source")
           target-path (p/path test-file-system "/target")]
       (f/create-file source-path
-        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
+        (u/->posix-file-permissions-attribute "rwxrw-rw-"))
 
       (f/copy source-path target-path :copy-attributes)
 
-      (is (= "rwxrw-rw-" (f/->posix-file-permissions-string
+      (is (= "rwxrw-rw-" (u/->posix-file-permissions-string
                            (f/read-posix-file-permissions target-path)))))))
 
 (deftest move
@@ -678,11 +686,11 @@
           source-path (p/path test-file-system "/source")
           destination-path (p/path test-file-system "/target")]
       (f/create-file source-path
-        (f/->posix-file-permissions-attribute "rwxrw-rw-"))
+        (u/->posix-file-permissions-attribute "rwxrw-rw-"))
 
       (f/move source-path destination-path)
 
-      (is (= "rwxrw-rw-" (f/->posix-file-permissions-string
+      (is (= "rwxrw-rw-" (u/->posix-file-permissions-string
                            (f/read-posix-file-permissions destination-path))))
       (is (false? (f/exists? source-path)))))
 
@@ -731,107 +739,6 @@
 
       (is (= 14 (f/size path))))))
 
-(deftest ->posix-file-permissions
-  (testing "returns posix file permission set for provided string"
-    (is (= #{} (f/->posix-file-permissions "---------")))
-    (is (= #{:owner-read
-             :owner-write
-             :owner-execute
-             :group-read
-             :others-read}
-          (f/->posix-file-permissions "rwxr--r--")))
-    (is (= #{:owner-read
-             :owner-write
-             :owner-execute
-             :group-read
-             :group-write
-             :group-execute
-             :others-read
-             :others-write
-             :others-execute}
-          (f/->posix-file-permissions "rwxrwxrwx")))))
-
-(deftest ->posix-file-permissions-string
-  (testing "returns posix file permissions string for provided set"
-    (is (= "---------" (f/->posix-file-permissions-string #{})))
-    (is (= "rwxr--r--"
-          (f/->posix-file-permissions-string
-            #{:owner-read
-              :owner-write
-              :owner-execute
-              :group-read
-              :others-read})))
-    (is (= "rwxrwxrwx"
-          (f/->posix-file-permissions-string
-            #{:owner-read
-              :owner-write
-              :owner-execute
-              :group-read
-              :group-write
-              :group-execute
-              :others-read
-              :others-write
-              :others-execute})))))
-
-(deftest ->posix-file-permissions-attributes
-  (testing "returns posix file permissions attribute for provided string"
-    (is (= (.value (PosixFilePermissions/asFileAttribute #{}))
-          (.value (f/->posix-file-permissions-attribute "---------"))))
-    (is (= (.value (PosixFilePermissions/asFileAttribute
-                     #{PosixFilePermission/OWNER_READ
-                       PosixFilePermission/OWNER_WRITE
-                       PosixFilePermission/OWNER_EXECUTE
-                       PosixFilePermission/GROUP_READ
-                       PosixFilePermission/OTHERS_READ}))
-          (.value (f/->posix-file-permissions-attribute "rwxr--r--"))))
-    (is (= (.value (PosixFilePermissions/asFileAttribute
-                     #{PosixFilePermission/OWNER_READ
-                       PosixFilePermission/OWNER_WRITE
-                       PosixFilePermission/OWNER_EXECUTE
-                       PosixFilePermission/GROUP_READ
-                       PosixFilePermission/GROUP_WRITE
-                       PosixFilePermission/GROUP_EXECUTE
-                       PosixFilePermission/OTHERS_READ
-                       PosixFilePermission/OTHERS_WRITE
-                       PosixFilePermission/OTHERS_EXECUTE}))
-          (.value (f/->posix-file-permissions-attribute "rwxrwxrwx")))))
-
-  (testing "returns posix file permissions attribute for provided set"
-    (is (= (.value (PosixFilePermissions/asFileAttribute #{}))
-          (.value (f/->posix-file-permissions-attribute #{}))))
-    (is (= (.value (PosixFilePermissions/asFileAttribute
-                     #{PosixFilePermission/OWNER_READ
-                       PosixFilePermission/OWNER_WRITE
-                       PosixFilePermission/OWNER_EXECUTE
-                       PosixFilePermission/GROUP_READ
-                       PosixFilePermission/OTHERS_READ}))
-          (.value (f/->posix-file-permissions-attribute
-                    #{:owner-read
-                      :owner-write
-                      :owner-execute
-                      :group-read
-                      :others-read}))))
-    (is (= (.value (PosixFilePermissions/asFileAttribute
-                     #{PosixFilePermission/OWNER_READ
-                       PosixFilePermission/OWNER_WRITE
-                       PosixFilePermission/OWNER_EXECUTE
-                       PosixFilePermission/GROUP_READ
-                       PosixFilePermission/GROUP_WRITE
-                       PosixFilePermission/GROUP_EXECUTE
-                       PosixFilePermission/OTHERS_READ
-                       PosixFilePermission/OTHERS_WRITE
-                       PosixFilePermission/OTHERS_EXECUTE}))
-          (.value (f/->posix-file-permissions-attribute
-                    #{:owner-read
-                      :owner-write
-                      :owner-execute
-                      :group-read
-                      :group-write
-                      :group-execute
-                      :others-read
-                      :others-write
-                      :others-execute}))))))
-
 (deftest read-posix-file-permissions
   (testing "returns the posix file permissions on the provided path"
     (let [test-file-system
@@ -839,9 +746,9 @@
 
           path (p/path test-file-system "/file")]
       (f/create-file path
-        (f/->posix-file-permissions-attribute "rwxr--r--"))
+        (u/->posix-file-permissions-attribute "rwxr--r--"))
 
-      (is (= (f/->posix-file-permissions "rwxr--r--")
+      (is (= (u/<-posix-file-permissions-string "rwxr--r--")
             (f/read-posix-file-permissions path)))))
 
   (testing "follows symbolic links by default"
@@ -851,9 +758,9 @@
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")]
       (f/create-symbolic-link link target
-        (f/->posix-file-permissions-attribute "r--------"))
+        (u/->posix-file-permissions-attribute "r--------"))
       (f/create-file target
-        (f/->posix-file-permissions-attribute "rwxr--r--"))
+        (u/->posix-file-permissions-attribute "rwxr--r--"))
 
       (is (= #{:owner-read
                :owner-write
@@ -869,11 +776,11 @@
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")]
       (f/create-symbolic-link link target
-        (f/->posix-file-permissions-attribute "r--------"))
+        (u/->posix-file-permissions-attribute "r--------"))
       (f/create-file target
-        (f/->posix-file-permissions-attribute "rwxr--r--"))
+        (u/->posix-file-permissions-attribute "rwxr--r--"))
 
-      (is (= (f/->posix-file-permissions "r--------")
+      (is (= (u/<-posix-file-permissions-string "r--------")
             (f/read-posix-file-permissions link :no-follow-links))))))
 
 (deftest set-posix-file-permissions
@@ -883,7 +790,7 @@
 
           path (p/path test-file-system "/file")]
       (f/create-file path
-        (f/->posix-file-permissions-attribute #{:owner-read}))
+        (u/->posix-file-permissions-attribute #{:owner-read}))
 
       (f/set-posix-file-permissions path
         #{:owner-read :owner-write :owner-execute})
@@ -1033,6 +940,8 @@
             (f/read-last-modified-time path))))))
 
 (deftest read-file-attribute-view
+  ; TODO: test link options
+
   (testing "returns a view over basic file attributes"
     (let [test-file-system
           (new-in-memory-file-system
@@ -1241,23 +1150,25 @@
 
           attributes (f/read-file-attribute-view path :acl)]
       (is (= (a/map->AclFileAttributes
-               {:path path
+               {:path  path
                 :owner (pr/<-user-principal
                          (.getOwner underlying-view))
-                :acl  [{:type        :allow
-                        :principal   user
-                        :permissions #{:read-attributes :write-attributes}
-                        :flags       #{}}
-                       {:type        :deny
-                        :principal   user
-                        :permissions #{:delete}
-                        :flags       #{:file-inherit :directory-inherit}}]})
+                :acl   [{:type        :allow
+                         :principal   user
+                         :permissions #{:read-attributes :write-attributes}
+                         :flags       #{}}
+                        {:type        :deny
+                         :principal   user
+                         :permissions #{:delete}
+                         :flags       #{:file-inherit :directory-inherit}}]})
             (assoc attributes :delegate nil)))
       (is (instance? AclFileAttributeView
             (:delegate attributes))))))
 
 (deftest set-attribute
-  (testing "sets the specified attribute on the path"
+  ; TODO: test link options
+
+  (testing "sets string user defined attribute on the path"
     (let [test-file-system
           (new-in-memory-file-system
             (random-file-system-name)
@@ -1274,7 +1185,237 @@
 
       (is (= value
             (String. ^bytes (Files/getAttribute path attribute
-                              (u/->link-options-array []))))))))
+                              (u/->link-options-array [])))))))
+
+  (testing "sets bytes user defined attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:user}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "user:custom"
+          value (u/->bytes "important-value" :utf-16be)]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (=
+            (String. ^bytes value ^Charset (u/->charset :utf-16be))
+            (String.
+              ^bytes (Files/getAttribute path attribute
+                       (u/->link-options-array []))
+              ^Charset (u/->charset :utf-16be))))))
+
+  (testing "sets byte buffer user defined attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:user}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "user:custom"
+          value (u/->byte-buffer "important-value" :utf-16be)]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (=
+            (String.
+              ^bytes (u/<-byte-buffer value)
+              ^Charset (u/->charset :utf-16be))
+            (String.
+              ^bytes (Files/getAttribute path attribute
+                       (u/->link-options-array []))
+              ^Charset (u/->charset :utf-16be))))))
+
+  (testing "sets file time basic attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "basic:creationTime"
+          value (u/->file-time "2019-05-04T22:10:10Z")]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= (u/->file-time "2019-05-04T22:10:10Z")
+            (Files/getAttribute path attribute
+              (u/->link-options-array []))))))
+
+  (testing "sets timestamp string basic attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "basic:lastAccessTime"
+          value "2019-05-04T22:10:10Z"]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= (u/->file-time "2019-05-04T22:10:10Z")
+            (Files/getAttribute path attribute
+              (u/->link-options-array []))))))
+
+  (testing "sets user principal owner attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:owner}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "owner:owner"
+          value (pr/->user-principal test-file-system "some-user")]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= (:underlying value)
+            (Files/getAttribute path attribute
+              (u/->link-options-array []))))))
+
+  (testing "sets group principal posix attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:posix}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "posix:group"
+          value (pr/->group-principal test-file-system "some-group")]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= (:underlying value)
+            (Files/getAttribute path attribute
+              (u/->link-options-array []))))))
+
+  (testing "sets java permission set posix attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:posix}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "posix:permissions"
+          value (u/->posix-file-permissions "rwxr--r--")]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= value
+            (Files/getAttribute path attribute
+              (u/->link-options-array []))))))
+
+  (testing "sets keyword permission set posix attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:posix}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "posix:permissions"
+          value #{:owner-read
+                  :owner-write
+                  :group-read
+                  :group-write
+                  :others-read}]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= (u/->posix-file-permissions value)
+            (Files/getAttribute path attribute
+              (u/->link-options-array []))))))
+
+  (testing "sets string permissions posix attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:posix}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "posix:permissions"
+          value "rwxr--r--"]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= (u/->posix-file-permissions value)
+            (Files/getAttribute path attribute
+              (u/->link-options-array []))))))
+
+  (testing "sets acl attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:acl}))
+
+          path (p/path test-file-system "/file")
+          user (pr/->user-principal test-file-system "some-user")
+
+          attribute "acl:acl"
+          value [(u/->acl-entry
+                   {:type        :allow
+                    :principal   user
+                    :permissions #{:read-attributes :write-attributes}})
+                 (u/->acl-entry
+                   {:type        :deny
+                    :principal   user
+                    :permissions #{:delete}
+                    :flags       #{:file-inherit :directory-inherit}})]]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= value
+            (Files/getAttribute path attribute
+              (u/->link-options-array []))))))
+
+  (testing "sets boolean dos attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (windows-configuration
+              :attribute-views #{:dos}))
+
+          path (p/path test-file-system "C:\\file")
+
+          attribute "dos:hidden"
+          value true]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= value
+            (Files/getAttribute path attribute
+              (u/->link-options-array [])))))))
 
 (deftest probe-content-type
   (testing "returns the content type of the path"
@@ -2430,4 +2571,3 @@
 
 ; read-attribute
 ; read-attributes
-; set-attribute
