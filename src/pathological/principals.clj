@@ -36,7 +36,9 @@
 
 (defn <-user-principal
   ([principal]
-   (->BasicUserPrincipal (.getName principal) principal)))
+   (if-not (instance? BasicUserPrincipal principal)
+     (->BasicUserPrincipal (.getName principal) principal)
+     principal)))
 
 (defn ->group-principal
   ([name] (->group-principal file-systems/*file-system* name))

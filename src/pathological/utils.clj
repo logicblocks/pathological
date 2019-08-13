@@ -1,6 +1,8 @@
 (ns pathological.utils
   (:require
-    [clojure.set :refer [map-invert]])
+    [clojure.set :refer [map-invert]]
+
+    [pathological.principals :as principals])
   (:import
     [java.nio.file CopyOption
                    FileVisitOption
@@ -17,10 +19,11 @@
                              FileTime
                              PosixFileAttributeView
                              PosixFilePermission
-                             UserDefinedFileAttributeView]
+                             UserDefinedFileAttributeView AclEntryType AclEntryPermission AclEntryFlag AclEntry]
     [java.nio.charset StandardCharsets Charset]
     [java.time Instant]
-    [java.nio ByteBuffer]))
+    [java.nio ByteBuffer]
+    [java.util Set]))
 
 (def ^:dynamic *charsets*
   {:us-ascii   StandardCharsets/US_ASCII
@@ -80,11 +83,80 @@
    :others-write   PosixFilePermission/OTHERS_WRITE
    :others-execute PosixFilePermission/OTHERS_EXECUTE})
 
+(def acl-entry-types
+  {:allow AclEntryType/ALLOW
+   :deny  AclEntryType/DENY
+   :audit AclEntryType/AUDIT
+   :alarm AclEntryType/ALARM})
+
+(def acl-entry-permissions
+  {:read-data              AclEntryPermission/READ_DATA
+   :write-data             AclEntryPermission/WRITE_DATA
+   :append-data            AclEntryPermission/APPEND_DATA
+   :read-named-attributes  AclEntryPermission/READ_NAMED_ATTRS
+   :write-named-attributes AclEntryPermission/WRITE_NAMED_ATTRS
+   :execute                AclEntryPermission/EXECUTE
+   :delete-child           AclEntryPermission/DELETE_CHILD
+   :read-attributes        AclEntryPermission/READ_ATTRIBUTES
+   :write-attributes       AclEntryPermission/WRITE_ATTRIBUTES
+   :delete                 AclEntryPermission/DELETE
+   :read-acl               AclEntryPermission/READ_ACL
+   :write-acl              AclEntryPermission/WRITE_ACL
+   :write-owner            AclEntryPermission/WRITE_OWNER
+   :synchronize            AclEntryPermission/SYNCHRONIZE
+   :list-directory         AclEntryPermission/LIST_DIRECTORY
+   :add-file               AclEntryPermission/ADD_FILE
+   :add-subdirectory       AclEntryPermission/ADD_SUBDIRECTORY})
+
+(def acl-entry-flags
+  {:file-inherit         AclEntryFlag/FILE_INHERIT
+   :directory-inherit    AclEntryFlag/DIRECTORY_INHERIT
+   :no-propagate-inherit AclEntryFlag/NO_PROPAGATE_INHERIT
+   :inherit-only         AclEntryFlag/INHERIT_ONLY})
+
 (defn ->posix-file-permission [value]
   (get posix-file-permissions value))
 
 (defn <-posix-file-permission [value]
   (get (map-invert posix-file-permissions) value))
+
+(defn ->acl-entry-type [value]
+  (get acl-entry-types value value))
+
+(defn <-acl-entry-type [value]
+  (get (map-invert acl-entry-types) value))
+
+(defn ->acl-entry-permission [value]
+  (get acl-entry-permissions value value))
+
+(defn <-acl-entry-permission [value]
+  (get (map-invert acl-entry-permissions) value))
+
+(defn ->acl-entry-flag [value]
+  (get acl-entry-flags value value))
+
+(defn <-acl-entry-flag [value]
+  (get (map-invert acl-entry-flags) value))
+
+(defn ->acl-entry [{:keys [type principal permissions flags]
+                    :or {permissions #{}
+                         flags #{}}}]
+  (-> (AclEntry/newBuilder)
+    (.setType (->acl-entry-type type))
+    (.setPrincipal principal)
+    (.setPermissions ^Set (into #{} (map ->acl-entry-permission permissions)))
+    (.setFlags ^Set (into #{} (map ->acl-entry-flag flags)))
+    (.build)))
+
+(defn <-acl-entry [^AclEntry entry]
+  (let [type (<-acl-entry-type (.type entry))
+        principal (principals/<-user-principal (.principal entry))
+        permissions (into #{} (map <-acl-entry-permission (.permissions entry)))
+        flags (into #{} (map <-acl-entry-flag (.flags entry)))]
+    {:type type
+     :principal principal
+     :permissions permissions
+     :flags flags}))
 
 (defn ->file-time [value]
   (FileTime/from (Instant/parse value)))

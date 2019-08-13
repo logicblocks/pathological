@@ -5,6 +5,7 @@
     [pathological.utils
      :refer [<-file-time
              <-posix-file-permission
+             <-acl-entry
              ->byte-buffer]]
     [pathological.principals
      :refer [<-user-principal
@@ -42,6 +43,9 @@
 
 (defprotocol UpdatePosixFilePermissions
   (set-permissions [_ permissions]))
+
+(defprotocol UpdateFileAcl
+  (set-acl [_ acl-entries]))
 
 (defprotocol UpdateDosFileAttributes
   (set-read-only [_ value])
@@ -160,6 +164,21 @@
   (write-attribute [_ name value])
   (delete-attribute [_ name]))
 
+(defrecord AclFileAttributes
+  [path
+   owner
+   acl
+   delegate]
+
+  ReloadFileAttributes
+  (reload [_])
+
+  UpdateFileOwner
+  (set-owner [_ owner])
+
+  UpdateFileAcl
+  (set-acl [_ acl-entries]))
+
 (defn ->basic-file-attributes
   [^Path path ^java.nio.file.attribute.BasicFileAttributeView view]
   (when view
@@ -181,7 +200,7 @@
 (defn ->owner-file-attributes
   [^Path path ^java.nio.file.attribute.FileOwnerAttributeView view]
   (when view
-    (let [owner (.getOwner view)]
+    (let [owner (<-user-principal (.getOwner view))]
       (map->OwnerFileAttributes
         {:path     path
          :owner    owner
@@ -249,12 +268,24 @@
          :attributes attributes
          :delegate   view}))))
 
+(defn ->acl-file-attributes
+  [^Path path ^java.nio.file.attribute.AclFileAttributeView view]
+  (when view
+    (let [owner (<-user-principal (.getOwner view))
+          acl (mapv (fn [entry] (<-acl-entry entry)) (.getAcl view))]
+      (map->AclFileAttributes
+        {:path     path
+         :owner    owner
+         :acl      acl
+         :delegate view}))))
+
 (def ^:dynamic *file-attributes-factories*
   {:basic ->basic-file-attributes
    :owner ->owner-file-attributes
    :posix ->posix-file-attributes
    :dos   ->dos-file-attributes
-   :user  ->user-defined-file-attributes})
+   :user  ->user-defined-file-attributes
+   :acl   ->acl-file-attributes})
 
 (defn ->file-attributes-factory [type]
   (get *file-attributes-factories* type

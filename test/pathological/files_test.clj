@@ -1089,7 +1089,7 @@
           attributes (f/read-file-attribute-view path :owner)]
       (is (= (a/map->OwnerFileAttributes
                {:path  path
-                :owner (.getOwner underlying-view)})
+                :owner (pr/<-user-principal (.getOwner underlying-view))})
             (assoc attributes :delegate nil)))
       (is (instance? FileOwnerAttributeView
             (:delegate attributes)))))
@@ -1210,6 +1210,50 @@
             ^bytes (get-in attributes [:attributes "important.thing2"])))
       (is (= path (:path attributes)))
       (is (instance? UserDefinedFileAttributeView
+            (:delegate attributes)))))
+
+  (testing "returns a view over acl file attributes"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:acl}))
+
+          path (p/path test-file-system "/directory")
+          user (pr/->user-principal test-file-system "some-user")
+
+          _ (f/create-file path)
+          _ (f/set-attribute path "acl:acl"
+              [(u/->acl-entry
+                 {:type        :allow
+                  :principal   user
+                  :permissions #{:read-attributes :write-attributes}})
+               (u/->acl-entry
+                 {:type        :deny
+                  :principal   user
+                  :permissions #{:delete}
+                  :flags       #{:file-inherit :directory-inherit}})])
+
+          ^AclFileAttributeView
+          underlying-view (Files/getFileAttributeView
+                            path AclFileAttributeView
+                            (u/->link-options-array []))
+
+          attributes (f/read-file-attribute-view path :acl)]
+      (is (= (a/map->AclFileAttributes
+               {:path path
+                :owner (pr/<-user-principal
+                         (.getOwner underlying-view))
+                :acl  [{:type        :allow
+                        :principal   user
+                        :permissions #{:read-attributes :write-attributes}
+                        :flags       #{}}
+                       {:type        :deny
+                        :principal   user
+                        :permissions #{:delete}
+                        :flags       #{:file-inherit :directory-inherit}}]})
+            (assoc attributes :delegate nil)))
+      (is (instance? AclFileAttributeView
             (:delegate attributes))))))
 
 (deftest set-attribute
@@ -2384,7 +2428,6 @@
 
 ; new-byte-channel
 
-; read-file-attribute-view
 ; read-attribute
 ; read-attributes
 ; set-attribute
