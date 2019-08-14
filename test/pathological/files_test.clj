@@ -32,7 +32,6 @@
                              FileOwnerAttributeView
                              PosixFileAttributes
                              PosixFileAttributeView
-                             PosixFilePermission
                              PosixFilePermissions
                              UserDefinedFileAttributeView]))
 

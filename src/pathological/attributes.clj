@@ -81,7 +81,7 @@
     (and
       (view? attribute :acl)
       (name? attribute :acl))
-    (into [] (map <-acl-entry value))
+    (mapv <-acl-entry value)
 
     (name? attribute :owner)
     (<-user-principal value)
@@ -282,9 +282,8 @@
          :size               (.size posix-attributes)
          :owner              (<-user-principal (.owner posix-attributes))
          :group              (<-group-principal (.group posix-attributes))
-         :permissions        (into #{}
-                               (map <-posix-file-permission
-                                 (.permissions posix-attributes)))
+         :permissions        (<-posix-file-permissions
+                               (.permissions posix-attributes))
          :last-modified-time (<-file-time (.lastModifiedTime posix-attributes))
          :last-access-time   (<-file-time (.lastAccessTime posix-attributes))
          :creation-time      (<-file-time (.creationTime posix-attributes))
@@ -337,7 +336,7 @@
   [^Path path ^java.nio.file.attribute.AclFileAttributeView view]
   (when view
     (let [owner (<-user-principal (.getOwner view))
-          acl (mapv (fn [entry] (<-acl-entry entry)) (.getAcl view))]
+          acl (mapv <-acl-entry (.getAcl view))]
       (map->AclFileAttributes
         {:path     path
          :owner    owner
