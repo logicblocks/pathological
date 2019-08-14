@@ -12,6 +12,7 @@ and this project adheres to
 - `read-file-attribute-view` method with corresponding records for default view
   types.
 - `set-attribute` method.
+- `read-attribute` method.
 
 ## [0.1.5] — 2019-08-11
 ### Added

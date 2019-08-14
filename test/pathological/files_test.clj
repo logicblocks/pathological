@@ -1165,6 +1165,244 @@
       (is (instance? AclFileAttributeView
             (:delegate attributes))))))
 
+(deftest get-attribute
+  ; TODO: test link options
+
+  (testing "gets string user defined attribute from the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:user}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "user:custom"
+          value "important-value"]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (Arrays/equals
+            ^bytes (u/->bytes value)
+            ^bytes (f/get-attribute path attribute)))))
+
+  (testing "sets bytes user defined attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:user}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "user:custom"
+          value (u/->bytes "important-value" :utf-16be)]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (Arrays/equals
+            ^bytes value
+            ^bytes (f/get-attribute path attribute)))))
+
+  (testing "sets byte buffer user defined attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:user}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "user:custom"
+          value (u/->byte-buffer "important-value" :utf-16be)]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (Arrays/equals
+            ^bytes (u/<-byte-buffer value)
+            ^bytes (f/get-attribute path attribute)))))
+
+  (testing "sets file time basic attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "basic:creationTime"
+          value (u/->file-time "2019-05-04T22:10:10Z")]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= "2019-05-04T22:10:10Z"
+            (f/get-attribute path attribute)))))
+
+  (testing "sets timestamp string basic attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "basic:lastAccessTime"
+          value "2019-05-04T22:10:10Z"]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= "2019-05-04T22:10:10Z"
+            (f/get-attribute path attribute)))))
+
+  (testing "sets user principal owner attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:owner}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "owner:owner"
+          value (pr/->user-principal test-file-system "some-user")]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= value (f/get-attribute path attribute)))))
+
+  (testing "sets group principal posix attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:posix}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "posix:group"
+          value (pr/->group-principal test-file-system "some-group")]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= value (f/get-attribute path attribute)))))
+
+  (testing "sets java permission set posix attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:posix}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "posix:permissions"
+          value (u/->posix-file-permissions "rwxr--r--")]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= (u/<-posix-file-permissions-string "rwxr--r--")
+            (f/get-attribute path attribute)))))
+
+  (testing "sets keyword permission set posix attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:posix}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "posix:permissions"
+          value #{:owner-read
+                  :owner-write
+                  :group-read
+                  :group-write
+                  :others-read}]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= value (f/get-attribute path attribute)))))
+
+  (testing "sets string permissions posix attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:posix}))
+
+          path (p/path test-file-system "/file")
+
+          attribute "posix:permissions"
+          value "rwxr--r--"]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= (u/<-posix-file-permissions-string "rwxr--r--")
+            (f/get-attribute path attribute)))))
+
+  (testing "sets acl attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:acl}))
+
+          path (p/path test-file-system "/file")
+          user (pr/->user-principal test-file-system "some-user")
+
+          attribute "acl:acl"
+          value [(u/->acl-entry
+                   {:type        :allow
+                    :principal   user
+                    :permissions #{:read-attributes :write-attributes}})
+                 (u/->acl-entry
+                   {:type        :deny
+                    :principal   user
+                    :permissions #{:delete}
+                    :flags       #{:file-inherit :directory-inherit}})]]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= [{:type        :allow
+               :principal   user
+               :permissions #{:read-attributes :write-attributes}
+               :flags       #{}}
+              {:type        :deny
+               :principal   user
+               :permissions #{:delete}
+               :flags       #{:file-inherit :directory-inherit}}]
+            (f/get-attribute path attribute)))))
+
+  (testing "sets boolean dos attribute on the path"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (windows-configuration
+              :attribute-views #{:dos}))
+
+          path (p/path test-file-system "C:\\file")
+
+          attribute "dos:hidden"
+          value true]
+      (f/create-file path)
+
+      (f/set-attribute path attribute value)
+
+      (is (= value (f/get-attribute path attribute))))))
+
 (deftest set-attribute
   ; TODO: test link options
 
@@ -2569,5 +2807,4 @@
 
 ; new-byte-channel
 
-; read-attribute
 ; read-attributes

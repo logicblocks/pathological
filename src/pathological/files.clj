@@ -228,6 +228,13 @@
         factory (attributes/->file-attributes-factory type)]
     (factory path (Files/getFileAttributeView path type-class link-options))))
 
+(defn get-attribute
+  [^Path path attribute & options]
+  (let [^"[Ljava.nio.file.LinkOption;"
+        link-options (utils/->link-options-array options)
+        value (Files/getAttribute path attribute link-options)]
+    (attributes/<-value attribute value)))
+
 (defn set-attribute
   [^Path path attribute value & options]
   (let [^"[Ljava.nio.file.LinkOption;"

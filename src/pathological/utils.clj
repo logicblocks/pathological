@@ -147,6 +147,9 @@
         (into #{} (map ->posix-file-permission keyword-set))]
     posix-file-permission-set))
 
+(defn <-posix-file-permissions [permissions]
+  (into #{} (map <-posix-file-permission permissions)))
+
 (defn ->posix-file-permissions-attribute [string-or-set]
     (PosixFilePermissions/asFileAttribute
       (->posix-file-permissions string-or-set)))
@@ -169,15 +172,20 @@
 (defn <-acl-entry-flag [value]
   (get (map-invert acl-entry-flags) value))
 
-(defn ->acl-entry [{:keys [type principal permissions flags]
-                    :or {permissions #{}
-                         flags #{}}}]
-  (-> (AclEntry/newBuilder)
-    (.setType (->acl-entry-type type))
-    (.setPrincipal principal)
-    (.setPermissions ^Set (into #{} (map ->acl-entry-permission permissions)))
-    (.setFlags ^Set (into #{} (map ->acl-entry-flag flags)))
-    (.build)))
+(defn ->acl-entry [value]
+  (if-not (instance? AclEntry value)
+    (let [{:keys [type principal permissions flags]
+           :or   {permissions #{}
+                  flags       #{}}} value]
+      (-> (AclEntry/newBuilder)
+        (.setType (->acl-entry-type type))
+        (.setPrincipal principal)
+        (.setPermissions
+          ^Set (into #{} (map ->acl-entry-permission permissions)))
+        (.setFlags
+          ^Set (into #{} (map ->acl-entry-flag flags)))
+        (.build)))
+    value))
 
 (defn <-acl-entry [^AclEntry entry]
   (let [type (<-acl-entry-type (.type entry))

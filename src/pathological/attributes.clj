@@ -8,6 +8,7 @@
              <-file-time
              <-posix-file-permission
              ->posix-file-permissions
+             <-posix-file-permissions
              <-acl-entry
              ->byte-buffer]]
     [pathological.principals
@@ -49,11 +50,44 @@
 
     (and
       (view? attribute :basic)
-      (name? attribute #{:creation-time :last-access-time :last-modified-time}))
+      (name? attribute
+        #{:creation-time
+          :last-access-time
+          :last-modified-time}))
     (->file-time value)
 
-    (and (view? attribute :posix) (name? attribute :permissions))
+    (and
+      (view? attribute :posix)
+      (name? attribute :permissions))
     (->posix-file-permissions value)
+
+    :default value))
+
+(defn <-value [attribute value]
+  (cond
+    (and
+      (view? attribute :basic)
+      (name? attribute
+        #{:creation-time
+          :last-access-time
+          :last-modified-time}))
+    (<-file-time value)
+
+    (and
+      (view? attribute :posix)
+      (name? attribute :permissions))
+    (<-posix-file-permissions value)
+
+    (and
+      (view? attribute :acl)
+      (name? attribute :acl))
+    (into [] (map <-acl-entry value))
+
+    (name? attribute :owner)
+    (<-user-principal value)
+
+    (name? attribute :group)
+    (<-group-principal value)
 
     :default value))
 
