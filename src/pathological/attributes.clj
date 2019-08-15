@@ -4,7 +4,8 @@
     [clojure.string :as string]
 
     [pathological.utils
-     :refer [->file-time
+     :refer [camel->kebab
+             ->file-time
              <-file-time
              <-posix-file-permission
              ->posix-file-permissions
@@ -17,76 +18,74 @@
   (:import [java.nio.file Path]
            [java.nio ByteBuffer]))
 
-(defn- camel->kebab [value]
-  (string/lower-case
-    (string/replace value
-      #"([a-z0-9])([A-Z])"
-      "$1-$2")))
-
-(defn view [attribute]
-  (if (string/includes? attribute ":")
-    (keyword (first (string/split attribute #":")))
+(defn view [attribute-spec]
+  (if (string/includes? attribute-spec ":")
+    (keyword (first (string/split attribute-spec #":")))
     :basic))
 
-(defn name [attribute]
-  (if (string/includes? attribute ":")
-    (keyword (camel->kebab (second (string/split attribute #":"))))
-    (keyword (camel->kebab attribute))))
+(defn name [attribute-spec]
+  (if (string/includes? attribute-spec ":")
+    (keyword (camel->kebab (second (string/split attribute-spec #":"))))
+    (keyword (camel->kebab attribute-spec))))
 
-(defn view? [attribute v]
-  (let [actual-view (view attribute)
-        test-views (if (seq? v) (into #{} (map keyword v)) #{(keyword v)})]
+(defn view? [attribute-spec view-or-views]
+  (let [actual-view (view attribute-spec)
+        test-views (if (seq? view-or-views)
+                     (into #{} (map keyword view-or-views))
+                     #{(keyword view-or-views)})]
     (test-views actual-view)))
 
-(defn name? [attribute n]
-  (let [actual-name (name attribute)
-        test-names (if (seqable? n) (into #{} (map keyword n)) #{(keyword n)})]
+(defn name? [attribute-spec name-or-names]
+  (let [actual-name (name attribute-spec)
+        test-names (if (seqable? name-or-names)
+                     (into #{} (map keyword name-or-names))
+                     #{(keyword name-or-names)})]
     (test-names actual-name)))
 
-(defn ->value [attribute value]
+(defn ->value [attribute-spec value]
   (cond
-    (view? attribute :user)
+    (view? attribute-spec :user)
     (->byte-buffer value)
 
     (and
-      (view? attribute :basic)
-      (name? attribute
+      (view? attribute-spec :basic)
+      (name? attribute-spec
         #{:creation-time
           :last-access-time
           :last-modified-time}))
     (->file-time value)
 
     (and
-      (view? attribute :posix)
-      (name? attribute :permissions))
+      (view? attribute-spec :posix)
+      (name? attribute-spec :permissions))
     (->posix-file-permissions value)
 
     :default value))
 
-(defn <-value [attribute value]
+(defn <-value [attribute-spec value]
   (cond
     (and
-      (view? attribute :basic)
-      (name? attribute
+      (view? attribute-spec :basic)
+      (name? attribute-spec
         #{:creation-time
           :last-access-time
           :last-modified-time}))
     (<-file-time value)
 
     (and
-      (view? attribute :posix)
-      (name? attribute :permissions))
+      (view? attribute-spec :posix)
+      (name? attribute-spec :permissions))
     (<-posix-file-permissions value)
 
     (and
-      (view? attribute :acl)
-      (name? attribute :acl))
+      (view? attribute-spec :acl)
+      (name? attribute-spec :acl))
     (mapv <-acl-entry value)
 
-    (name? attribute :owner)
+    (name? attribute-spec :owner)
     (<-user-principal value)
 
-    (name? attribute :group)
+    (name? attribute-spec :group)
     (<-group-principal value)
 
     :default value))

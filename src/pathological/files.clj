@@ -228,19 +228,31 @@
         factory (attributes/->file-attributes-factory type)]
     (factory path (Files/getFileAttributeView path type-class link-options))))
 
-(defn get-attribute
-  [^Path path attribute & options]
+(defn read-attribute
+  [^Path path attribute-spec & options]
   (let [^"[Ljava.nio.file.LinkOption;"
         link-options (utils/->link-options-array options)
-        value (Files/getAttribute path attribute link-options)]
-    (attributes/<-value attribute value)))
+        value (Files/getAttribute path attribute-spec link-options)]
+    (attributes/<-value attribute-spec value)))
+
+(defn read-attributes
+  [^Path path attributes-spec & options]
+  (let [^"[Ljava.nio.file.LinkOption;"
+        link-options (utils/->link-options-array options)
+        view (attributes/view attributes-spec)
+        values (Files/readAttributes path ^String attributes-spec link-options)]
+    (into {}
+      (map (fn [[key value]]
+             [(keyword (utils/camel->kebab key))
+              (attributes/<-value (str (name view) ":" key) value)])
+        values))))
 
 (defn set-attribute
-  [^Path path attribute value & options]
+  [^Path path attribute-spec value & options]
   (let [^"[Ljava.nio.file.LinkOption;"
         link-options (utils/->link-options-array options)
-        value (attributes/->value attribute value)]
-    (Files/setAttribute path attribute value link-options)))
+        value (attributes/->value attribute-spec value)]
+    (Files/setAttribute path attribute-spec value link-options)))
 
 (defn probe-content-type
   [^Path path]

@@ -1,5 +1,6 @@
 (ns pathological.utils
   (:require
+    [clojure.string :as string]
     [clojure.set :refer [map-invert]]
 
     [pathological.principals :as principals])
@@ -29,6 +30,12 @@
                              PosixFilePermission
                              PosixFilePermissions
                              UserDefinedFileAttributeView]))
+
+(defn camel->kebab [value]
+  (string/lower-case
+    (string/replace value
+      #"([a-z0-9])([A-Z])"
+      "$1-$2")))
 
 (def ^:dynamic *charsets*
   {:us-ascii   StandardCharsets/US_ASCII

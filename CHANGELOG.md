@@ -13,6 +13,7 @@ and this project adheres to
   types.
 - `set-attribute` method.
 - `read-attribute` method.
+- `read-attributes` method.
 
 ## [0.1.5] — 2019-08-11
 ### Added
