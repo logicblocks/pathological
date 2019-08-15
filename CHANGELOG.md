@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+
+## [0.1.6] — 2019-08-15
 ### Added
 - `read-file-attribute-view` method with corresponding records for default view
   types.
@@ -75,4 +77,5 @@ and this project adheres to
 [0.1.3]: https://github.com/logicblocks/pathological/compare/0.1.2...0.1.3
 [0.1.4]: https://github.com/logicblocks/pathological/compare/0.1.3...0.1.4
 [0.1.5]: https://github.com/logicblocks/pathological/compare/0.1.4...0.1.5
-[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.5...HEAD
+[0.1.6]: https://github.com/logicblocks/pathological/compare/0.1.5...0.1.6
+[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.6...HEAD
