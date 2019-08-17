@@ -205,9 +205,10 @@
      :flags flags}))
 
 (defn ->file-time [value]
-  (if-not (instance? FileTime value)
-    (FileTime/from (Instant/parse value))
-    value))
+  (when value
+    (if-not (instance? FileTime value)
+      (FileTime/from (Instant/parse value))
+      value)))
 
 (defn <-file-time [value]
   (str value))

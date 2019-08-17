@@ -10,6 +10,7 @@
              <-posix-file-permission
              ->posix-file-permissions
              <-posix-file-permissions
+             ->acl-entry
              <-acl-entry
              ->byte-buffer]]
     [pathological.principals
@@ -17,6 +18,14 @@
              <-group-principal]])
   (:import [java.nio.file Path]
            [java.nio ByteBuffer]))
+
+(declare
+  ->basic-file-attributes
+  ->owner-file-attributes
+  ->posix-file-attributes
+  ->dos-file-attributes
+  ->user-defined-file-attributes
+  ->acl-file-attributes)
 
 (defn view [attribute-spec]
   (if (string/includes? attribute-spec ":")
@@ -47,12 +56,10 @@
     (view? attribute-spec :user)
     (->byte-buffer value)
 
-    (and
-      (view? attribute-spec :basic)
-      (name? attribute-spec
-        #{:creation-time
-          :last-access-time
-          :last-modified-time}))
+    (name? attribute-spec
+      #{:creation-time
+        :last-access-time
+        :last-modified-time})
     (->file-time value)
 
     (and
@@ -64,12 +71,10 @@
 
 (defn <-value [attribute-spec value]
   (cond
-    (and
-      (view? attribute-spec :basic)
-      (name? attribute-spec
-        #{:creation-time
-          :last-access-time
-          :last-modified-time}))
+    (name? attribute-spec
+      #{:creation-time
+        :last-access-time
+        :last-modified-time})
     (<-file-time value)
 
     (and
@@ -91,35 +96,35 @@
     :default value))
 
 (defprotocol ReloadFileAttributes
-  (reload [_]))
+  (reload [view]))
 
 (defprotocol UpdateFileTimes
-  (set-times [_ last-modified-time last-access-time create-time])
-  (set-last-modified-time [_ last-modified-time])
-  (set-last-access-time [_ last-access-time])
-  (set-creation-time [_ creation-time]))
+  (set-times [view last-modified-time last-access-time creation-time])
+  (set-last-modified-time [view last-modified-time])
+  (set-last-access-time [view last-access-time])
+  (set-creation-time [view creation-time]))
 
 (defprotocol UpdateFileOwner
-  (set-owner [_ owner]))
+  (set-owner [view owner]))
 
 (defprotocol UpdateFileGroup
-  (set-group [_ group]))
+  (set-group [view group]))
 
 (defprotocol UpdatePosixFilePermissions
   (set-permissions [_ permissions]))
 
 (defprotocol UpdateFileAcl
-  (set-acl [_ acl-entries]))
+  (set-acl [view acl-entries]))
 
 (defprotocol UpdateDosFileAttributes
-  (set-read-only [_ value])
-  (set-hidden [_ value])
-  (set-archive [_ value])
-  (set-system [_ value]))
+  (set-read-only [view value])
+  (set-hidden [view value])
+  (set-system [view value])
+  (set-archive [view value]))
 
 (defprotocol UpdateUserDefinedFileAttributes
-  (write-attribute [_ name value])
-  (delete-attribute [_ name]))
+  (write-attribute [view name value])
+  (delete-attribute [view name]))
 
 (defrecord BasicFileAttributes
   [path
@@ -135,13 +140,24 @@
    delegate]
 
   ReloadFileAttributes
-  (reload [_])
+  (reload [view]
+    (->basic-file-attributes path (:delegate view)))
 
   UpdateFileTimes
-  (set-times [_ last-modified-time last-access-time creation-time])
-  (set-last-modified-time [_ last-modified-time])
-  (set-last-access-time [_ last-access-time])
-  (set-creation-time [_ creation-time]))
+  (set-times
+    [view new-last-modified-time new-last-access-time new-creation-time]
+    (.setTimes
+      ^java.nio.file.attribute.BasicFileAttributeView (:delegate view)
+      (->file-time new-last-modified-time)
+      (->file-time new-last-access-time)
+      (->file-time new-creation-time))
+    (reload view))
+  (set-last-modified-time [view new-last-modified-time]
+    (set-times view new-last-modified-time nil nil))
+  (set-last-access-time [view new-last-access-time]
+    (set-times view nil new-last-access-time nil))
+  (set-creation-time [view new-creation-time]
+    (set-times view nil nil new-creation-time)))
 
 (defrecord OwnerFileAttributes
   [path
@@ -149,10 +165,15 @@
    delegate]
 
   ReloadFileAttributes
-  (reload [_])
+  (reload [view]
+    (->owner-file-attributes path (:delegate view)))
 
   UpdateFileOwner
-  (set-owner [_ owner]))
+  (set-owner [view new-owner]
+    (.setOwner
+      ^java.nio.file.attribute.FileOwnerAttributeView (:delegate view)
+      new-owner)
+    (reload view)))
 
 (defrecord PosixFileAttributes
   [path
@@ -171,22 +192,45 @@
    delegate]
 
   ReloadFileAttributes
-  (reload [_])
+  (reload [view]
+    (->posix-file-attributes path (:delegate view)))
 
   UpdateFileTimes
-  (set-times [_ last-modified-time last-access-time creation-time])
-  (set-last-modified-time [_ last-modified-time])
-  (set-last-access-time [_ last-access-time])
-  (set-creation-time [_ creation-time])
+  (set-times
+    [view new-last-modified-time new-last-access-time new-creation-time]
+    (.setTimes
+      ^java.nio.file.attribute.PosixFileAttributeView (:delegate view)
+      (->file-time new-last-modified-time)
+      (->file-time new-last-access-time)
+      (->file-time new-creation-time))
+    (reload view))
+  (set-last-modified-time [view new-last-modified-time]
+    (set-times view new-last-modified-time nil nil))
+  (set-last-access-time [view new-last-access-time]
+    (set-times view nil new-last-access-time nil))
+  (set-creation-time [view new-creation-time]
+    (set-times view nil nil new-creation-time))
 
   UpdateFileOwner
-  (set-owner [_ owner])
+  (set-owner [view new-owner]
+    (.setOwner
+      ^java.nio.file.attribute.PosixFileAttributeView (:delegate view)
+      new-owner)
+    (reload view))
 
   UpdateFileGroup
-  (set-group [_ group])
+  (set-group [view new-group]
+    (.setGroup
+      ^java.nio.file.attribute.PosixFileAttributeView (:delegate view)
+      new-group)
+    (reload view))
 
   UpdatePosixFilePermissions
-  (set-permissions [_ permissions]))
+  (set-permissions [view new-permissions]
+    (.setPermissions
+      ^java.nio.file.attribute.PosixFileAttributeView (:delegate view)
+      (->posix-file-permissions new-permissions))
+    (reload view)))
 
 (defrecord DosFileAttributes
   [path
@@ -202,19 +246,46 @@
    delegate]
 
   ReloadFileAttributes
-  (reload [_])
+  (reload [view]
+    (->dos-file-attributes path (:delegate view)))
 
   UpdateFileTimes
-  (set-times [_ last-modified-time last-access-time creation-time])
-  (set-last-modified-time [_ last-modified-time])
-  (set-last-access-time [_ last-access-time])
-  (set-creation-time [_ creation-time])
+  (set-times
+    [view new-last-modified-time new-last-access-time new-creation-time]
+    (.setTimes
+      ^java.nio.file.attribute.DosFileAttributeView (:delegate view)
+      (->file-time new-last-modified-time)
+      (->file-time new-last-access-time)
+      (->file-time new-creation-time))
+    (reload view))
+  (set-last-modified-time [view new-last-modified-time]
+    (set-times view new-last-modified-time nil nil))
+  (set-last-access-time [view new-last-access-time]
+    (set-times view nil new-last-access-time nil))
+  (set-creation-time [view new-creation-time]
+    (set-times view nil nil new-creation-time))
 
   UpdateDosFileAttributes
-  (set-read-only [_ value])
-  (set-hidden [_ value])
-  (set-archive [_ value])
-  (set-system [_ value]))
+  (set-read-only [view new-value]
+    (.setReadOnly
+      ^java.nio.file.attribute.DosFileAttributeView (:delegate view)
+      new-value)
+    (reload view))
+  (set-hidden [view new-value]
+    (.setHidden
+      ^java.nio.file.attribute.DosFileAttributeView (:delegate view)
+      new-value)
+    (reload view))
+  (set-system [view new-value]
+    (.setSystem
+      ^java.nio.file.attribute.DosFileAttributeView (:delegate view)
+      new-value)
+    (reload view))
+  (set-archive [view new-value]
+    (.setArchive
+      ^java.nio.file.attribute.DosFileAttributeView (:delegate view)
+      new-value)
+    (reload view)))
 
 (defrecord UserDefinedFileAttributes
   [path
@@ -222,11 +293,21 @@
    delegate]
 
   ReloadFileAttributes
-  (reload [_])
+  (reload [view]
+    (->user-defined-file-attributes path (:delegate view)))
 
   UpdateUserDefinedFileAttributes
-  (write-attribute [_ name value])
-  (delete-attribute [_ name]))
+  (write-attribute [view name value]
+    (.write
+      ^java.nio.file.attribute.UserDefinedFileAttributeView (:delegate view)
+      name
+      (->byte-buffer value))
+    (reload view))
+  (delete-attribute [view name]
+    (.delete
+      ^java.nio.file.attribute.UserDefinedFileAttributeView (:delegate view)
+      name)
+    (reload view)))
 
 (defrecord AclFileAttributes
   [path
@@ -235,13 +316,22 @@
    delegate]
 
   ReloadFileAttributes
-  (reload [_])
+  (reload [view]
+    (->acl-file-attributes path (:delegate view)))
 
   UpdateFileOwner
-  (set-owner [_ owner])
+  (set-owner [view new-owner]
+    (.setOwner
+      ^java.nio.file.attribute.AclFileAttributeView (:delegate view)
+      new-owner)
+    (reload view))
 
   UpdateFileAcl
-  (set-acl [_ acl-entries]))
+  (set-acl [view new-acl-entries]
+    (.setAcl
+      ^java.nio.file.attribute.AclFileAttributeView (:delegate view)
+      (map ->acl-entry new-acl-entries))
+    (reload view)))
 
 (defn ->basic-file-attributes
   [^Path path ^java.nio.file.attribute.BasicFileAttributeView view]

@@ -49,4 +49,6 @@
 
 (defn <-group-principal
   ([principal]
-   (->BasicGroupPrincipal (.getName principal) principal)))
+   (if-not (instance? BasicGroupPrincipal principal)
+     (->BasicGroupPrincipal (.getName principal) principal)
+     principal)))

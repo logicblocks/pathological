@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Added
+- implementations for mutative methods on attribute views.
 
 ## [0.1.6] — 2019-08-15
 ### Added
