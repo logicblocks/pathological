@@ -13,21 +13,21 @@
     [java.nio.file FileSystem
      Path Files]))
 
-(defprotocol ^:private BasePath
+(defprotocol ^:private Pathable
   (->path ^Path [this paths]))
 
 (extend-type FileSystem
-  BasePath
+  Pathable
   (->path ^Path [^FileSystem this [path & paths]]
     (.getPath this path (->varargs-array String paths))))
 
 (extend-type String
-  BasePath
+  Pathable
   (->path ^Path [^String this paths]
     (.getPath *file-system* this (->varargs-array String paths))))
 
 (extend-type Path
-  BasePath
+  Pathable
   (->path ^Path [^Path this paths]
     (if (seq paths)
       (.getPath (.getFileSystem this)

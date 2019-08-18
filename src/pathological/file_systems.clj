@@ -6,6 +6,18 @@
 
 (def ^{:dynamic true :tag FileSystem} *file-system* (default-file-system))
 
+(defn open?
+  [^FileSystem file-system]
+  (.isOpen file-system))
+
+(defn read-only?
+  [^FileSystem file-system]
+  (.isReadOnly file-system))
+
+(defn close
+  [^FileSystem file-system]
+  (.close file-system))
+
 (defn file-stores
   [^FileSystem file-system]
   (.getFileStores file-system))
@@ -14,6 +26,11 @@
   [^FileSystem file-system]
   (.getRootDirectories file-system))
 
+(defn separator
+  [^FileSystem file-system]
+  (.getSeparator file-system))
+
 (defn supported-file-attribute-views
   [^FileSystem file-system]
   (into #{} (map keyword (.supportedFileAttributeViews file-system))))
+

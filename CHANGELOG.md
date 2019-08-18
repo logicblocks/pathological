@@ -10,6 +10,11 @@ and this project adheres to
 ## [Unreleased]
 ### Added
 - implementations for mutative methods on attribute views.
+- `open?`, `read-only?`, `close` and `separator` functions in 
+  `pathological.file-systems`.
+
+### Changed
+- `BasePath` protocol to `Pathable`.
 
 ## [0.1.6] — 2019-08-15
 ### Added

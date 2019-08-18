@@ -23,6 +23,36 @@
     (is (= (FileSystems/getDefault)
           fs/*file-system*))))
 
+(deftest close
+  (testing "closes the file system"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))]
+      (is (true? (.isOpen test-file-system)))
+
+      (fs/close test-file-system)
+
+      (is (false? (.isOpen test-file-system))))))
+
+(deftest open?
+  (testing "returns true when the file system is open"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))]
+      (is (true? (fs/open? test-file-system)))))
+
+  (testing "returns false when the file system is closed"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))]
+      (.close test-file-system)
+      (is (false? (fs/open? test-file-system))))))
+
+(deftest read-only?
+  ; No easy way to test the read only case
+
+  (testing "returns false when the file system is not read only"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))]
+      (is (false? (fs/read-only? test-file-system))))))
+
 (deftest file-stores
   (testing "returns the file stores of the provided file system"
     (let [test-file-system
@@ -52,6 +82,21 @@
       (is (= #{(p/path test-file-system "C://")
                (p/path test-file-system "D://")}
             (fs/root-directories test-file-system))))))
+
+(deftest separator
+  (testing "returns unix separator"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration))]
+      (is (= "/" (fs/separator test-file-system)))))
+
+  (testing "returns windows separator"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (windows-configuration))]
+      (is (= "\\" (fs/separator test-file-system))))))
 
 (deftest supported-file-attribute-views
   (testing "returns the set of supported file attribute views"
