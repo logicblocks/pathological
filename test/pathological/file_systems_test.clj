@@ -3,6 +3,7 @@
     [clojure.test :refer :all]
 
     [pathological.file-systems :as fs]
+    [pathological.file-stores :as fst]
     [pathological.paths :as p]
 
     [pathological.testing
@@ -11,7 +12,7 @@
              unix-configuration
              windows-configuration]])
   (:import
-    [java.nio.file FileSystems FileSystem]))
+    [java.nio.file FileSystems FileSystem FileStore]))
 
 (deftest default-file-system
   (testing "returns default file system"
@@ -58,10 +59,19 @@
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
-          file-stores
-          (.getFileStores ^FileSystem test-file-system)]
-      (is (= file-stores
-            (fs/file-stores test-file-system))))))
+          file-stores (.getFileStores ^FileSystem test-file-system)
+          ^FileStore file-store (first file-stores)]
+      (is (= [(fst/map->BasicFileStore
+                {:name              (.name file-store)
+                 :type              (.type file-store)
+                 :read-only?        (.isReadOnly file-store)
+                 :total-space       (.getTotalSpace file-store)
+                 :usable-space      (.getUsableSpace file-store)
+                 :unallocated-space (.getUnallocatedSpace file-store)
+                 :block-size        nil
+                 :delegate          nil})]
+            (map #(assoc % :delegate nil)
+              (fs/file-stores test-file-system)))))))
 
 (deftest root-directories
   (testing "returns the only root directory when only one"

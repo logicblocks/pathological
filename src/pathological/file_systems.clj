@@ -1,5 +1,8 @@
 (ns pathological.file-systems
-  (:import [java.nio.file FileSystem FileSystems]))
+  (:require
+    [pathological.file-stores :as fst])
+  (:import
+    [java.nio.file FileSystem FileSystems]))
 
 (defn ^FileSystem default-file-system []
   (FileSystems/getDefault))
@@ -20,7 +23,7 @@
 
 (defn file-stores
   [^FileSystem file-system]
-  (.getFileStores file-system))
+  (map fst/->file-store (.getFileStores file-system)))
 
 (defn root-directories
   [^FileSystem file-system]

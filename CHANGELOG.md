@@ -15,6 +15,8 @@ and this project adheres to
 
 ### Changed
 - `BasePath` protocol to `Pathable`.
+- return `BasicFileStore` record from `file-stores` in 
+  `pathological.file-systems`.
 
 ## [0.1.6] — 2019-08-15
 ### Added
