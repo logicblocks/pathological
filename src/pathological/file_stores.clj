@@ -5,12 +5,17 @@
     [java.nio.file FileStore]
     [clojure.lang Keyword]))
 
+(declare ->file-store)
+
 (defprotocol FileAttributeViewSupport
   (supports-file-attribute-view [file-store class-or-name]))
 
 (defprotocol FileStoreAttributeViewSupport
   (read-file-store-attribute-view [file-store class-or-name])
   (read-attribute [file-store attribute-spec]))
+
+(defprotocol ReloadFileStoreAttributes
+  (reload [view]))
 
 (defmulti ^:private do-supports-file-attribute-view
   (fn [_ class-or-name]
@@ -28,6 +33,13 @@
   [^FileStore file-store class-or-name]
   (.supportsFileAttributeView file-store (name class-or-name)))
 
+(def ^:dynamic *file-store-attributes-factories*
+  {})
+
+(defn ->file-store-attributes-factory [type]
+  (get *file-store-attributes-factories* type
+    (fn [_ view] view)))
+
 (defrecord BasicFileStore
   [name
    type
@@ -38,10 +50,24 @@
    block-size
    delegate]
 
+  ReloadFileStoreAttributes
+  (reload [_]
+    (->file-store delegate))
+
   FileAttributeViewSupport
   (supports-file-attribute-view [_ class-or-name]
     (let [class-or-name (u/->file-attribute-view-class class-or-name)]
-      (do-supports-file-attribute-view delegate class-or-name))))
+      (do-supports-file-attribute-view delegate class-or-name)))
+
+  FileStoreAttributeViewSupport
+  (read-file-store-attribute-view [_ class-or-name]
+    (let [type-class (u/->file-store-attribute-view-class class-or-name)
+          factory (->file-store-attributes-factory type)]
+      (factory (.getFileStoreAttributeView delegate type-class))))
+
+  (read-attribute [_ attribute-spec]
+    (let [value (.getAttribute delegate attribute-spec)]
+      (u/<-attribute-value attribute-spec value))))
 
 (defn ->file-store [^FileStore file-store]
   (let [block-size

@@ -3,16 +3,12 @@
   (:require
     [clojure.java.io :as io]
 
-    [pathological.utils
-     :refer [->varargs-array
-             ->link-options-array
-             ->open-options-array]]
-    [pathological.file-systems :refer [*file-system*]]
+    [pathological.utils :as u]
+    [pathological.file-systems :as fs]
     [pathological.path-matchers :as pm]
     [pathological.file-stores :as fst])
   (:import
-    [java.nio.file FileSystem
-     Path Files]))
+    [java.nio.file FileSystem Path Files]))
 
 (defprotocol ^:private Pathable
   (->path ^Path [this paths]))
@@ -20,12 +16,12 @@
 (extend-type FileSystem
   Pathable
   (->path ^Path [^FileSystem this [path & paths]]
-    (.getPath this path (->varargs-array String paths))))
+    (.getPath this path (u/->varargs-array String paths))))
 
 (extend-type String
   Pathable
   (->path ^Path [^String this paths]
-    (.getPath *file-system* this (->varargs-array String paths))))
+    (.getPath fs/*file-system* this (u/->varargs-array String paths))))
 
 (extend-type Path
   Pathable
@@ -33,13 +29,13 @@
     (if (seq paths)
       (.getPath (.getFileSystem this)
         (str this)
-        (->varargs-array String (map str paths)))
+        (u/->varargs-array String (map str paths)))
       this)))
 
 (defn- opts->open-options-array [opts]
   (let [opts-map (when opts (apply hash-map opts))
         open-options (if (:append opts-map) [:append] [])
-        open-options (->open-options-array open-options)]
+        open-options (u/->open-options-array open-options)]
     open-options))
 
 (extend Path
@@ -150,7 +146,7 @@
 (defn ->real-path
   [^Path path & options]
   (let [^"[Ljava.nio.file.LinkOption;"
-        link-options (->link-options-array options)]
+        link-options (u/->link-options-array options)]
     (.toRealPath path link-options)))
 
 (defn ->file

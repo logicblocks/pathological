@@ -1,6 +1,6 @@
 (ns pathological.principals
   (:require
-    [pathological.file-systems :as file-systems])
+    [pathological.file-systems :as fs])
   (:import
     [java.nio.file FileSystem]
     [java.nio.file.attribute UserPrincipal GroupPrincipal]))
@@ -14,21 +14,21 @@
   (getName [_] name))
 
 (defn lookup-principal-by-name
-  ([name] (lookup-principal-by-name file-systems/*file-system* name))
+  ([name] (lookup-principal-by-name fs/*file-system* name))
   ([^FileSystem file-system name]
    (let [lookup-service (.getUserPrincipalLookupService file-system)
          user-principal (.lookupPrincipalByName lookup-service name)]
      user-principal)))
 
 (defn lookup-principal-by-group-name
-  ([name] (lookup-principal-by-group-name file-systems/*file-system* name))
+  ([name] (lookup-principal-by-group-name fs/*file-system* name))
   ([^FileSystem file-system name]
    (let [lookup-service (.getUserPrincipalLookupService file-system)
          group-principal (.lookupPrincipalByGroupName lookup-service name)]
      group-principal)))
 
 (defn ->user-principal
-  ([name] (->user-principal file-systems/*file-system* name))
+  ([name] (->user-principal fs/*file-system* name))
   ([file-system name]
    (let [underlying
          (lookup-principal-by-name file-system name)]
@@ -41,7 +41,7 @@
      principal)))
 
 (defn ->group-principal
-  ([name] (->group-principal file-systems/*file-system* name))
+  ([name] (->group-principal fs/*file-system* name))
   ([file-system name]
    (let [underlying
          (lookup-principal-by-group-name file-system name)]

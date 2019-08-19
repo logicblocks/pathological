@@ -1,51 +1,10 @@
 (ns pathological.attributes
-  (:refer-clojure :exclude [name])
   (:require
-    [clojure.string :as string]
-    [clojure.set :refer [map-invert]]
-
     [pathological.principals :as pr]
-
     [pathological.utils :as u])
   (:import
-    [java.util Set]
     [java.nio.file Path]
-    [java.nio.file.attribute AclEntry
-                             AclEntryFlag
-                             AclEntryPermission
-                             AclEntryType]
     [java.nio ByteBuffer]))
-
-(def acl-entry-types
-  {:allow AclEntryType/ALLOW
-   :deny  AclEntryType/DENY
-   :audit AclEntryType/AUDIT
-   :alarm AclEntryType/ALARM})
-
-(def acl-entry-permissions
-  {:read-data              AclEntryPermission/READ_DATA
-   :write-data             AclEntryPermission/WRITE_DATA
-   :append-data            AclEntryPermission/APPEND_DATA
-   :read-named-attributes  AclEntryPermission/READ_NAMED_ATTRS
-   :write-named-attributes AclEntryPermission/WRITE_NAMED_ATTRS
-   :execute                AclEntryPermission/EXECUTE
-   :delete-child           AclEntryPermission/DELETE_CHILD
-   :read-attributes        AclEntryPermission/READ_ATTRIBUTES
-   :write-attributes       AclEntryPermission/WRITE_ATTRIBUTES
-   :delete                 AclEntryPermission/DELETE
-   :read-acl               AclEntryPermission/READ_ACL
-   :write-acl              AclEntryPermission/WRITE_ACL
-   :write-owner            AclEntryPermission/WRITE_OWNER
-   :synchronize            AclEntryPermission/SYNCHRONIZE
-   :list-directory         AclEntryPermission/LIST_DIRECTORY
-   :add-file               AclEntryPermission/ADD_FILE
-   :add-subdirectory       AclEntryPermission/ADD_SUBDIRECTORY})
-
-(def acl-entry-flags
-  {:file-inherit         AclEntryFlag/FILE_INHERIT
-   :directory-inherit    AclEntryFlag/DIRECTORY_INHERIT
-   :no-propagate-inherit AclEntryFlag/NO_PROPAGATE_INHERIT
-   :inherit-only         AclEntryFlag/INHERIT_ONLY})
 
 (declare
   ->basic-file-attributes
@@ -54,117 +13,6 @@
   ->dos-file-attributes
   ->user-defined-file-attributes
   ->acl-file-attributes)
-
-(defn view [attribute-spec]
-  (if (string/includes? attribute-spec ":")
-    (keyword (first (string/split attribute-spec #":")))
-    :basic))
-
-(defn name [attribute-spec]
-  (if (string/includes? attribute-spec ":")
-    (keyword (u/camel->kebab (second (string/split attribute-spec #":"))))
-    (keyword (u/camel->kebab attribute-spec))))
-
-(defn view? [attribute-spec view-or-views]
-  (let [actual-view (view attribute-spec)
-        test-views (if (seq? view-or-views)
-                     (into #{} (map keyword view-or-views))
-                     #{(keyword view-or-views)})]
-    (test-views actual-view)))
-
-(defn name? [attribute-spec name-or-names]
-  (let [actual-name (name attribute-spec)
-        test-names (if (seqable? name-or-names)
-                     (into #{} (map keyword name-or-names))
-                     #{(keyword name-or-names)})]
-    (test-names actual-name)))
-
-(defn ->acl-entry-type [value]
-  (get acl-entry-types value value))
-
-(defn <-acl-entry-type [value]
-  (get (map-invert acl-entry-types) value))
-
-(defn ->acl-entry-permission [value]
-  (get acl-entry-permissions value value))
-
-(defn <-acl-entry-permission [value]
-  (get (map-invert acl-entry-permissions) value))
-
-(defn ->acl-entry-flag [value]
-  (get acl-entry-flags value value))
-
-(defn <-acl-entry-flag [value]
-  (get (map-invert acl-entry-flags) value))
-
-(defn ->acl-entry [value]
-  (if-not (instance? AclEntry value)
-    (let [{:keys [type principal permissions flags]
-           :or   {permissions #{}
-                  flags       #{}}} value]
-      (-> (AclEntry/newBuilder)
-        (.setType (->acl-entry-type type))
-        (.setPrincipal principal)
-        (.setPermissions
-          ^Set (into #{} (map ->acl-entry-permission permissions)))
-        (.setFlags
-          ^Set (into #{} (map ->acl-entry-flag flags)))
-        (.build)))
-    value))
-
-(defn <-acl-entry [^AclEntry entry]
-  (let [type (<-acl-entry-type (.type entry))
-        principal (pr/<-user-principal (.principal entry))
-        permissions (into #{} (map <-acl-entry-permission (.permissions entry)))
-        flags (into #{} (map <-acl-entry-flag (.flags entry)))]
-    {:type type
-     :principal principal
-     :permissions permissions
-     :flags flags}))
-
-(defn ->value [attribute-spec value]
-  (cond
-    (view? attribute-spec :user)
-    (u/->byte-buffer value)
-
-    (name? attribute-spec
-      #{:creation-time
-        :last-access-time
-        :last-modified-time})
-    (u/->file-time value)
-
-    (and
-      (view? attribute-spec :posix)
-      (name? attribute-spec :permissions))
-    (u/->posix-file-permissions value)
-
-    :default value))
-
-(defn <-value [attribute-spec value]
-  (cond
-    (name? attribute-spec
-      #{:creation-time
-        :last-access-time
-        :last-modified-time})
-    (u/<-file-time value)
-
-    (and
-      (view? attribute-spec :posix)
-      (name? attribute-spec :permissions))
-    (u/<-posix-file-permissions value)
-
-    (and
-      (view? attribute-spec :acl)
-      (name? attribute-spec :acl))
-    (mapv <-acl-entry value)
-
-    (name? attribute-spec :owner)
-    (pr/<-user-principal value)
-
-    (name? attribute-spec :group)
-    (pr/<-group-principal value)
-
-    :default value))
 
 (defprotocol ReloadFileAttributes
   (reload [view]))
@@ -401,7 +249,7 @@
   (set-acl [view new-acl-entries]
     (.setAcl
       ^java.nio.file.attribute.AclFileAttributeView (:delegate view)
-      (map ->acl-entry new-acl-entries))
+      (map u/->acl-entry new-acl-entries))
     (reload view)))
 
 (defn ->basic-file-attributes
@@ -496,7 +344,7 @@
   [^Path path ^java.nio.file.attribute.AclFileAttributeView view]
   (when view
     (let [owner (pr/<-user-principal (.getOwner view))
-          acl (mapv <-acl-entry (.getAcl view))]
+          acl (mapv u/<-acl-entry (.getAcl view))]
       (map->AclFileAttributes
         {:path     path
          :owner    owner

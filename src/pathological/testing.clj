@@ -1,7 +1,6 @@
 (ns pathological.testing
   (:require
     [pathological.files :as f]
-    [pathological.paths :as p]
     [pathological.file-systems :as fs])
   (:import
     [com.google.common.jimfs Configuration
