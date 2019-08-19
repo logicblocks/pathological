@@ -8,7 +8,8 @@
              ->link-options-array
              ->open-options-array]]
     [pathological.file-systems :refer [*file-system*]]
-    [pathological.path-matchers :as pm])
+    [pathological.path-matchers :as pm]
+    [pathological.file-stores :as fst])
   (:import
     [java.nio.file FileSystem
      Path Files]))
@@ -63,7 +64,7 @@
   (.getFileSystem path))
 
 (defn file-store [^Path path]
-  (Files/getFileStore path))
+  (fst/->file-store (Files/getFileStore path)))
 
 (defn root [^Path path]
   (.getRoot path))

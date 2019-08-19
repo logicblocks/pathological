@@ -2,22 +2,50 @@
   (:refer-clojure :exclude [name])
   (:require
     [clojure.string :as string]
+    [clojure.set :refer [map-invert]]
 
-    [pathological.utils
-     :refer [camel->kebab
-             ->file-time
-             <-file-time
-             <-posix-file-permission
-             ->posix-file-permissions
-             <-posix-file-permissions
-             ->acl-entry
-             <-acl-entry
-             ->byte-buffer]]
-    [pathological.principals
-     :refer [<-user-principal
-             <-group-principal]])
-  (:import [java.nio.file Path]
-           [java.nio ByteBuffer]))
+    [pathological.principals :as pr]
+
+    [pathological.utils :as u])
+  (:import
+    [java.util Set]
+    [java.nio.file Path]
+    [java.nio.file.attribute AclEntry
+                             AclEntryFlag
+                             AclEntryPermission
+                             AclEntryType]
+    [java.nio ByteBuffer]))
+
+(def acl-entry-types
+  {:allow AclEntryType/ALLOW
+   :deny  AclEntryType/DENY
+   :audit AclEntryType/AUDIT
+   :alarm AclEntryType/ALARM})
+
+(def acl-entry-permissions
+  {:read-data              AclEntryPermission/READ_DATA
+   :write-data             AclEntryPermission/WRITE_DATA
+   :append-data            AclEntryPermission/APPEND_DATA
+   :read-named-attributes  AclEntryPermission/READ_NAMED_ATTRS
+   :write-named-attributes AclEntryPermission/WRITE_NAMED_ATTRS
+   :execute                AclEntryPermission/EXECUTE
+   :delete-child           AclEntryPermission/DELETE_CHILD
+   :read-attributes        AclEntryPermission/READ_ATTRIBUTES
+   :write-attributes       AclEntryPermission/WRITE_ATTRIBUTES
+   :delete                 AclEntryPermission/DELETE
+   :read-acl               AclEntryPermission/READ_ACL
+   :write-acl              AclEntryPermission/WRITE_ACL
+   :write-owner            AclEntryPermission/WRITE_OWNER
+   :synchronize            AclEntryPermission/SYNCHRONIZE
+   :list-directory         AclEntryPermission/LIST_DIRECTORY
+   :add-file               AclEntryPermission/ADD_FILE
+   :add-subdirectory       AclEntryPermission/ADD_SUBDIRECTORY})
+
+(def acl-entry-flags
+  {:file-inherit         AclEntryFlag/FILE_INHERIT
+   :directory-inherit    AclEntryFlag/DIRECTORY_INHERIT
+   :no-propagate-inherit AclEntryFlag/NO_PROPAGATE_INHERIT
+   :inherit-only         AclEntryFlag/INHERIT_ONLY})
 
 (declare
   ->basic-file-attributes
@@ -34,8 +62,8 @@
 
 (defn name [attribute-spec]
   (if (string/includes? attribute-spec ":")
-    (keyword (camel->kebab (second (string/split attribute-spec #":"))))
-    (keyword (camel->kebab attribute-spec))))
+    (keyword (u/camel->kebab (second (string/split attribute-spec #":"))))
+    (keyword (u/camel->kebab attribute-spec))))
 
 (defn view? [attribute-spec view-or-views]
   (let [actual-view (view attribute-spec)
@@ -51,21 +79,64 @@
                      #{(keyword name-or-names)})]
     (test-names actual-name)))
 
+(defn ->acl-entry-type [value]
+  (get acl-entry-types value value))
+
+(defn <-acl-entry-type [value]
+  (get (map-invert acl-entry-types) value))
+
+(defn ->acl-entry-permission [value]
+  (get acl-entry-permissions value value))
+
+(defn <-acl-entry-permission [value]
+  (get (map-invert acl-entry-permissions) value))
+
+(defn ->acl-entry-flag [value]
+  (get acl-entry-flags value value))
+
+(defn <-acl-entry-flag [value]
+  (get (map-invert acl-entry-flags) value))
+
+(defn ->acl-entry [value]
+  (if-not (instance? AclEntry value)
+    (let [{:keys [type principal permissions flags]
+           :or   {permissions #{}
+                  flags       #{}}} value]
+      (-> (AclEntry/newBuilder)
+        (.setType (->acl-entry-type type))
+        (.setPrincipal principal)
+        (.setPermissions
+          ^Set (into #{} (map ->acl-entry-permission permissions)))
+        (.setFlags
+          ^Set (into #{} (map ->acl-entry-flag flags)))
+        (.build)))
+    value))
+
+(defn <-acl-entry [^AclEntry entry]
+  (let [type (<-acl-entry-type (.type entry))
+        principal (pr/<-user-principal (.principal entry))
+        permissions (into #{} (map <-acl-entry-permission (.permissions entry)))
+        flags (into #{} (map <-acl-entry-flag (.flags entry)))]
+    {:type type
+     :principal principal
+     :permissions permissions
+     :flags flags}))
+
 (defn ->value [attribute-spec value]
   (cond
     (view? attribute-spec :user)
-    (->byte-buffer value)
+    (u/->byte-buffer value)
 
     (name? attribute-spec
       #{:creation-time
         :last-access-time
         :last-modified-time})
-    (->file-time value)
+    (u/->file-time value)
 
     (and
       (view? attribute-spec :posix)
       (name? attribute-spec :permissions))
-    (->posix-file-permissions value)
+    (u/->posix-file-permissions value)
 
     :default value))
 
@@ -75,12 +146,12 @@
       #{:creation-time
         :last-access-time
         :last-modified-time})
-    (<-file-time value)
+    (u/<-file-time value)
 
     (and
       (view? attribute-spec :posix)
       (name? attribute-spec :permissions))
-    (<-posix-file-permissions value)
+    (u/<-posix-file-permissions value)
 
     (and
       (view? attribute-spec :acl)
@@ -88,10 +159,10 @@
     (mapv <-acl-entry value)
 
     (name? attribute-spec :owner)
-    (<-user-principal value)
+    (pr/<-user-principal value)
 
     (name? attribute-spec :group)
-    (<-group-principal value)
+    (pr/<-group-principal value)
 
     :default value))
 
@@ -148,9 +219,9 @@
     [view new-last-modified-time new-last-access-time new-creation-time]
     (.setTimes
       ^java.nio.file.attribute.BasicFileAttributeView (:delegate view)
-      (->file-time new-last-modified-time)
-      (->file-time new-last-access-time)
-      (->file-time new-creation-time))
+      (u/->file-time new-last-modified-time)
+      (u/->file-time new-last-access-time)
+      (u/->file-time new-creation-time))
     (reload view))
   (set-last-modified-time [view new-last-modified-time]
     (set-times view new-last-modified-time nil nil))
@@ -200,9 +271,9 @@
     [view new-last-modified-time new-last-access-time new-creation-time]
     (.setTimes
       ^java.nio.file.attribute.PosixFileAttributeView (:delegate view)
-      (->file-time new-last-modified-time)
-      (->file-time new-last-access-time)
-      (->file-time new-creation-time))
+      (u/->file-time new-last-modified-time)
+      (u/->file-time new-last-access-time)
+      (u/->file-time new-creation-time))
     (reload view))
   (set-last-modified-time [view new-last-modified-time]
     (set-times view new-last-modified-time nil nil))
@@ -229,7 +300,7 @@
   (set-permissions [view new-permissions]
     (.setPermissions
       ^java.nio.file.attribute.PosixFileAttributeView (:delegate view)
-      (->posix-file-permissions new-permissions))
+      (u/->posix-file-permissions new-permissions))
     (reload view)))
 
 (defrecord DosFileAttributes
@@ -254,9 +325,9 @@
     [view new-last-modified-time new-last-access-time new-creation-time]
     (.setTimes
       ^java.nio.file.attribute.DosFileAttributeView (:delegate view)
-      (->file-time new-last-modified-time)
-      (->file-time new-last-access-time)
-      (->file-time new-creation-time))
+      (u/->file-time new-last-modified-time)
+      (u/->file-time new-last-access-time)
+      (u/->file-time new-creation-time))
     (reload view))
   (set-last-modified-time [view new-last-modified-time]
     (set-times view new-last-modified-time nil nil))
@@ -301,7 +372,7 @@
     (.write
       ^java.nio.file.attribute.UserDefinedFileAttributeView (:delegate view)
       name
-      (->byte-buffer value))
+      (u/->byte-buffer value))
     (reload view))
   (delete-attribute [view name]
     (.delete
@@ -342,9 +413,9 @@
         {:path               path
          :file-key           (.fileKey attributes)
          :size               (.size attributes)
-         :last-modified-time (<-file-time (.lastModifiedTime attributes))
-         :last-access-time   (<-file-time (.lastAccessTime attributes))
-         :creation-time      (<-file-time (.creationTime attributes))
+         :last-modified-time (u/<-file-time (.lastModifiedTime attributes))
+         :last-access-time   (u/<-file-time (.lastAccessTime attributes))
+         :creation-time      (u/<-file-time (.creationTime attributes))
          :regular-file?      (.isRegularFile attributes)
          :directory?         (.isDirectory attributes)
          :symbolic-link?     (.isSymbolicLink attributes)
@@ -354,7 +425,7 @@
 (defn ->owner-file-attributes
   [^Path path ^java.nio.file.attribute.FileOwnerAttributeView view]
   (when view
-    (let [owner (<-user-principal (.getOwner view))]
+    (let [owner (pr/<-user-principal (.getOwner view))]
       (map->OwnerFileAttributes
         {:path     path
          :owner    owner
@@ -369,13 +440,13 @@
         {:path               path
          :file-key           (.fileKey posix-attributes)
          :size               (.size posix-attributes)
-         :owner              (<-user-principal (.owner posix-attributes))
-         :group              (<-group-principal (.group posix-attributes))
-         :permissions        (<-posix-file-permissions
+         :owner              (pr/<-user-principal (.owner posix-attributes))
+         :group              (pr/<-group-principal (.group posix-attributes))
+         :permissions        (u/<-posix-file-permissions
                                (.permissions posix-attributes))
-         :last-modified-time (<-file-time (.lastModifiedTime posix-attributes))
-         :last-access-time   (<-file-time (.lastAccessTime posix-attributes))
-         :creation-time      (<-file-time (.creationTime posix-attributes))
+         :last-modified-time (u/<-file-time (.lastModifiedTime posix-attributes))
+         :last-access-time   (u/<-file-time (.lastAccessTime posix-attributes))
+         :creation-time      (u/<-file-time (.creationTime posix-attributes))
          :regular-file?      (.isRegularFile posix-attributes)
          :directory?         (.isDirectory posix-attributes)
          :symbolic-link?     (.isSymbolicLink posix-attributes)
@@ -391,9 +462,9 @@
         {:path               path
          :file-key           (.fileKey dos-attributes)
          :size               (.size dos-attributes)
-         :last-modified-time (<-file-time (.lastModifiedTime dos-attributes))
-         :last-access-time   (<-file-time (.lastAccessTime dos-attributes))
-         :creation-time      (<-file-time (.creationTime dos-attributes))
+         :last-modified-time (u/<-file-time (.lastModifiedTime dos-attributes))
+         :last-access-time   (u/<-file-time (.lastAccessTime dos-attributes))
+         :creation-time      (u/<-file-time (.creationTime dos-attributes))
          :regular-file?      (.isRegularFile dos-attributes)
          :directory?         (.isDirectory dos-attributes)
          :symbolic-link?     (.isSymbolicLink dos-attributes)
@@ -424,7 +495,7 @@
 (defn ->acl-file-attributes
   [^Path path ^java.nio.file.attribute.AclFileAttributeView view]
   (when view
-    (let [owner (<-user-principal (.getOwner view))
+    (let [owner (pr/<-user-principal (.getOwner view))
           acl (mapv <-acl-entry (.getAcl view))]
       (map->AclFileAttributes
         {:path     path

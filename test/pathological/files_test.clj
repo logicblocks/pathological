@@ -1132,11 +1132,11 @@
 
           _ (f/create-file path)
           _ (f/set-attribute path "acl:acl"
-              [(u/->acl-entry
+              [(a/->acl-entry
                  {:type        :allow
                   :principal   user
                   :permissions #{:read-attributes :write-attributes}})
-               (u/->acl-entry
+               (a/->acl-entry
                  {:type        :deny
                   :principal   user
                   :permissions #{:delete}
@@ -1362,11 +1362,11 @@
           user (pr/->user-principal test-file-system "some-user")
 
           attribute-spec "acl:acl"
-          value [(u/->acl-entry
+          value [(a/->acl-entry
                    {:type        :allow
                     :principal   user
                     :permissions #{:read-attributes :write-attributes}})
-                 (u/->acl-entry
+                 (a/->acl-entry
                    {:type        :deny
                     :principal   user
                     :permissions #{:delete}
@@ -1520,11 +1520,11 @@
           attributes-spec "acl:*"
 
           attribute-1-spec "acl:acl"
-          value-1 [(u/->acl-entry
+          value-1 [(a/->acl-entry
                      {:type        :allow
                       :principal   user
                       :permissions #{:read-attributes :write-attributes}})
-                   (u/->acl-entry
+                   (a/->acl-entry
                      {:type        :deny
                       :principal   user
                       :permissions #{:delete}
@@ -1792,11 +1792,11 @@
           user (pr/->user-principal test-file-system "some-user")
 
           attribute-spec "acl:acl"
-          value [(u/->acl-entry
+          value [(a/->acl-entry
                    {:type        :allow
                     :principal   user
                     :permissions #{:read-attributes :write-attributes}})
-                 (u/->acl-entry
+                 (a/->acl-entry
                    {:type        :deny
                     :principal   user
                     :permissions #{:delete}

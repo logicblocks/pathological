@@ -11,7 +11,8 @@
     [pathological.testing
      :refer [random-file-system-name
              new-in-memory-file-system
-             unix-configuration]])
+             unix-configuration]]
+    [pathological.file-stores :as fst])
   (:import
     [java.nio.file FileSystem
                    FileSystems]

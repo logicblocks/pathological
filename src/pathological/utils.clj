@@ -1,11 +1,8 @@
 (ns pathological.utils
   (:require
     [clojure.string :as string]
-    [clojure.set :refer [map-invert]]
-
-    [pathological.principals :as principals])
+    [clojure.set :refer [map-invert]])
   (:import
-    [java.util Set]
     [java.time Instant]
     [java.nio ByteBuffer]
     [java.nio.charset StandardCharsets Charset]
@@ -16,11 +13,7 @@
                    OpenOption
                    StandardOpenOption
                    StandardCopyOption]
-    [java.nio.file.attribute AclEntry
-                             AclEntryFlag
-                             AclEntryPermission
-                             AclEntryType
-                             AclFileAttributeView
+    [java.nio.file.attribute AclFileAttributeView
                              BasicFileAttributeView
                              DosFileAttributeView
                              FileAttribute
@@ -29,7 +22,8 @@
                              PosixFileAttributeView
                              PosixFilePermission
                              PosixFilePermissions
-                             UserDefinedFileAttributeView]))
+                             UserDefinedFileAttributeView]
+    [clojure.lang Named]))
 
 (defn camel->kebab [value]
   (string/lower-case
@@ -95,37 +89,6 @@
    :others-write   PosixFilePermission/OTHERS_WRITE
    :others-execute PosixFilePermission/OTHERS_EXECUTE})
 
-(def acl-entry-types
-  {:allow AclEntryType/ALLOW
-   :deny  AclEntryType/DENY
-   :audit AclEntryType/AUDIT
-   :alarm AclEntryType/ALARM})
-
-(def acl-entry-permissions
-  {:read-data              AclEntryPermission/READ_DATA
-   :write-data             AclEntryPermission/WRITE_DATA
-   :append-data            AclEntryPermission/APPEND_DATA
-   :read-named-attributes  AclEntryPermission/READ_NAMED_ATTRS
-   :write-named-attributes AclEntryPermission/WRITE_NAMED_ATTRS
-   :execute                AclEntryPermission/EXECUTE
-   :delete-child           AclEntryPermission/DELETE_CHILD
-   :read-attributes        AclEntryPermission/READ_ATTRIBUTES
-   :write-attributes       AclEntryPermission/WRITE_ATTRIBUTES
-   :delete                 AclEntryPermission/DELETE
-   :read-acl               AclEntryPermission/READ_ACL
-   :write-acl              AclEntryPermission/WRITE_ACL
-   :write-owner            AclEntryPermission/WRITE_OWNER
-   :synchronize            AclEntryPermission/SYNCHRONIZE
-   :list-directory         AclEntryPermission/LIST_DIRECTORY
-   :add-file               AclEntryPermission/ADD_FILE
-   :add-subdirectory       AclEntryPermission/ADD_SUBDIRECTORY})
-
-(def acl-entry-flags
-  {:file-inherit         AclEntryFlag/FILE_INHERIT
-   :directory-inherit    AclEntryFlag/DIRECTORY_INHERIT
-   :no-propagate-inherit AclEntryFlag/NO_PROPAGATE_INHERIT
-   :inherit-only         AclEntryFlag/INHERIT_ONLY})
-
 (defn ->posix-file-permission [value]
   (if-not (instance? PosixFilePermission value)
     (get posix-file-permissions value)
@@ -160,49 +123,6 @@
 (defn ->posix-file-permissions-attribute [string-or-set]
     (PosixFilePermissions/asFileAttribute
       (->posix-file-permissions string-or-set)))
-
-(defn ->acl-entry-type [value]
-  (get acl-entry-types value value))
-
-(defn <-acl-entry-type [value]
-  (get (map-invert acl-entry-types) value))
-
-(defn ->acl-entry-permission [value]
-  (get acl-entry-permissions value value))
-
-(defn <-acl-entry-permission [value]
-  (get (map-invert acl-entry-permissions) value))
-
-(defn ->acl-entry-flag [value]
-  (get acl-entry-flags value value))
-
-(defn <-acl-entry-flag [value]
-  (get (map-invert acl-entry-flags) value))
-
-(defn ->acl-entry [value]
-  (if-not (instance? AclEntry value)
-    (let [{:keys [type principal permissions flags]
-           :or   {permissions #{}
-                  flags       #{}}} value]
-      (-> (AclEntry/newBuilder)
-        (.setType (->acl-entry-type type))
-        (.setPrincipal principal)
-        (.setPermissions
-          ^Set (into #{} (map ->acl-entry-permission permissions)))
-        (.setFlags
-          ^Set (into #{} (map ->acl-entry-flag flags)))
-        (.build)))
-    value))
-
-(defn <-acl-entry [^AclEntry entry]
-  (let [type (<-acl-entry-type (.type entry))
-        principal (principals/<-user-principal (.principal entry))
-        permissions (into #{} (map <-acl-entry-permission (.permissions entry)))
-        flags (into #{} (map <-acl-entry-flag (.flags entry)))]
-    {:type type
-     :principal principal
-     :permissions permissions
-     :flags flags}))
 
 (defn ->file-time [value]
   (when value
@@ -277,7 +197,9 @@
     (throw (AssertionError. (str "Invalid control: " control)))))
 
 (defn ->file-attribute-view-class [type]
-  (get *file-attribute-view-classes* type type))
+  (if (instance? Named type)
+    (get *file-attribute-view-classes* (keyword (name type)) type)
+    type))
 
 (defn stream-seq [stream]
   (iterator-seq (.iterator stream)))

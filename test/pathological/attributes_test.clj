@@ -1067,11 +1067,11 @@
           _ (f/create-file path)
 
           user (pr/->user-principal test-file-system "some-user")
-          value [(u/->acl-entry
+          value [(a/->acl-entry
                    {:type        :allow
                     :principal   user
                     :permissions #{:read-attributes :write-attributes}})
-                 (u/->acl-entry
+                 (a/->acl-entry
                    {:type        :deny
                     :principal   user
                     :permissions #{:delete}
@@ -1129,11 +1129,11 @@
           _ (f/create-file path)
 
           user (pr/->user-principal test-file-system "some-user")
-          value [(u/->acl-entry
+          value [(a/->acl-entry
                    {:type        :allow
                     :principal   user
                     :permissions #{:read-attributes :write-attributes}})
-                 (u/->acl-entry
+                 (a/->acl-entry
                    {:type        :deny
                     :principal   user
                     :permissions #{:delete}
