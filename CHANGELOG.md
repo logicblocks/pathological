@@ -12,6 +12,8 @@ and this project adheres to
 - implementations for mutative methods on attribute views.
 - `open?`, `read-only?`, `close` and `separator` functions in 
   `pathological.file-systems`.
+- `supports-file-attribute-view`, `read-file-store-attribute-view` and
+  `read-attribute` on file stores.
 
 ### Changed
 - `BasePath` protocol to `Pathable`.
