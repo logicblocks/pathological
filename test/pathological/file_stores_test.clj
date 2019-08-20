@@ -13,7 +13,7 @@
              unix-configuration
              windows-configuration]])
   (:import [java.nio.file.attribute AclFileAttributeView
-                                    BasicFileAttributeView]))
+            BasicFileAttributeView]))
 
 (deftest supports-file-attribute-view
   (testing "for keyword"

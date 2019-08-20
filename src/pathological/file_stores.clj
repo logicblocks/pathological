@@ -1,4 +1,5 @@
 (ns pathological.file-stores
+  (:refer-clojure :exclude [type])
   (:require
     [pathological.utils :as u])
   (:import
@@ -18,7 +19,7 @@
 
 (defmulti ^:private do-supports-file-attribute-view
   (fn [_ class-or-name]
-    (type class-or-name)))
+    (clojure.core/type class-or-name)))
 
 (defmethod ^:private do-supports-file-attribute-view String
   [^java.nio.file.FileStore file-store ^String class-or-name]
@@ -40,14 +41,14 @@
     (fn [_ view] view)))
 
 (defrecord FileStore
-  [name
-   type
-   read-only?
-   total-space
-   usable-space
-   unallocated-space
-   block-size
-   delegate]
+           [name
+            type
+            read-only?
+            total-space
+            usable-space
+            unallocated-space
+            block-size
+            delegate]
 
   ReloadFileStoreAttributes
   (reload [_]
@@ -73,7 +74,7 @@
 (defn ->file-store [^java.nio.file.FileStore file-store]
   (let [block-size
         (try (.getBlockSize file-store)
-          (catch UnsupportedOperationException _ nil))]
+             (catch UnsupportedOperationException _ nil))]
     (map->FileStore
       {:name              (.name file-store)
        :type              (.type file-store)

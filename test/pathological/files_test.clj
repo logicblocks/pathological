@@ -25,15 +25,15 @@
     [java.nio.charset StandardCharsets Charset]
     [java.nio.file Files Path LinkOption NoSuchFileException]
     [java.nio.file.attribute AclFileAttributeView
-                             BasicFileAttributes
-                             BasicFileAttributeView
-                             DosFileAttributeView
-                             DosFileAttributes
-                             FileOwnerAttributeView
-                             PosixFileAttributes
-                             PosixFileAttributeView
-                             PosixFilePermissions
-                             UserDefinedFileAttributeView]))
+     BasicFileAttributes
+     BasicFileAttributeView
+     DosFileAttributeView
+     DosFileAttributes
+     FileOwnerAttributeView
+     PosixFileAttributes
+     PosixFileAttributeView
+     PosixFilePermissions
+     UserDefinedFileAttributeView]))
 
 (deftest create-directories
   (testing "creates all directories in path"
@@ -220,7 +220,7 @@
             (f/read-posix-file-permissions temp-path)))))
 
   (testing
-    "creates a temporary file in the default file system default location"
+   "creates a temporary file in the default file system default location"
     (let [prefix "pre-"
           suffix "-post"
 
@@ -284,7 +284,7 @@
             (f/read-posix-file-permissions temp-path)))))
 
   (testing
-    "creates a temporary directory in the default file system default location"
+   "creates a temporary directory in the default file system default location"
     (let [prefix "pre-"
 
           temp-path-1 (f/create-temp-directory prefix)

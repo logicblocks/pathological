@@ -1,4 +1,5 @@
 (ns pathological.utils
+  (:refer-clojure :exclude [type])
   (:require
     [clojure.string :as string]
     [clojure.set :refer [map-invert]]
@@ -12,26 +13,27 @@
     [java.nio ByteBuffer]
     [java.nio.charset StandardCharsets Charset]
     [java.nio.file CopyOption
-                   FileVisitOption
-                   FileVisitResult
-                   LinkOption
-                   OpenOption
-                   StandardOpenOption
-                   StandardCopyOption]
+     FileVisitOption
+     FileVisitResult
+     LinkOption
+     OpenOption
+     StandardOpenOption
+     StandardCopyOption]
     [java.nio.file.attribute AclEntry
-                             AclEntryFlag
-                             AclEntryPermission
-                             AclEntryType
-                             AclFileAttributeView
-                             BasicFileAttributeView
-                             DosFileAttributeView
-                             FileAttribute
-                             FileOwnerAttributeView
-                             FileTime
-                             PosixFileAttributeView
-                             PosixFilePermission
-                             PosixFilePermissions
-                             UserDefinedFileAttributeView]))
+     AclEntryFlag
+     AclEntryPermission
+     AclEntryType
+     AclFileAttributeView
+     BasicFileAttributeView
+     DosFileAttributeView
+     FileAttribute
+     FileOwnerAttributeView
+     FileTime
+     PosixFileAttributeView
+     PosixFilePermission
+     PosixFilePermissions
+     UserDefinedFileAttributeView]
+    [java.util.stream Stream]))
 
 (defn camel->kebab [value]
   (string/lower-case
@@ -168,17 +170,17 @@
         (.setType (->acl-entry-type type))
         (.setPrincipal principal)
         (.setPermissions
-          ^Set (into #{} (map ->acl-entry-permission permissions)))
+          ^Set (set (map ->acl-entry-permission permissions)))
         (.setFlags
-          ^Set (into #{} (map ->acl-entry-flag flags)))
+          ^Set (set (map ->acl-entry-flag flags)))
         (.build)))
     value))
 
 (defn <-acl-entry [^AclEntry entry]
   (let [type (<-acl-entry-type (.type entry))
         principal (pr/<-user-principal (.principal entry))
-        permissions (into #{} (map <-acl-entry-permission (.permissions entry)))
-        flags (into #{} (map <-acl-entry-flag (.flags entry)))]
+        permissions (set (map <-acl-entry-permission (.permissions entry)))
+        flags (set (map <-acl-entry-flag (.flags entry)))]
     {:type type
      :principal principal
      :permissions permissions
@@ -193,14 +195,11 @@
   (get (map-invert posix-file-permissions) value))
 
 (defn <-posix-file-permissions-string [string]
-  (into #{}
-    (map <-posix-file-permission
-      (PosixFilePermissions/fromString string))))
+  (set (map <-posix-file-permission (PosixFilePermissions/fromString string))))
 
 (defn ->posix-file-permissions-string [permissions]
   (PosixFilePermissions/toString
-    (into #{}
-      (map ->posix-file-permission permissions))))
+    (set (map ->posix-file-permission permissions))))
 
 (defn ->posix-file-permissions [string-or-set]
   (let [keyword-set
@@ -209,15 +208,15 @@
           string-or-set)
 
         posix-file-permission-set
-        (into #{} (map ->posix-file-permission keyword-set))]
+        (set (map ->posix-file-permission keyword-set))]
     posix-file-permission-set))
 
 (defn <-posix-file-permissions [permissions]
-  (into #{} (map <-posix-file-permission permissions)))
+  (set (map <-posix-file-permission permissions)))
 
 (defn ->posix-file-permissions-attribute [string-or-set]
-    (PosixFilePermissions/asFileAttribute
-      (->posix-file-permissions string-or-set)))
+  (PosixFilePermissions/asFileAttribute
+    (->posix-file-permissions string-or-set)))
 
 (defn ->file-time [value]
   (when value
@@ -240,25 +239,25 @@
       (contains? *charsets* value))))
 
 (defn ->bytes
-  ([value]
-   (.getBytes value))
-  ([value charset]
-   (.getBytes value (->charset charset))))
+  ([^String value]
+    (.getBytes value))
+  ([^String value charset]
+    (.getBytes value ^Charset (->charset charset))))
 
 (defn ->byte-buffer
   ([value]
-   (->byte-buffer value :utf-8))
+    (->byte-buffer value :utf-8))
   ([value charset]
-   (cond
-     (instance? ByteBuffer value) value
-     (bytes? value) (ByteBuffer/wrap value)
-     :default
-     (ByteBuffer/wrap
-       (.getBytes
-         (str value)
-         ^Charset (->charset charset))))))
+    (cond
+      (instance? ByteBuffer value) value
+      (bytes? value) (ByteBuffer/wrap value)
+      :default
+      (ByteBuffer/wrap
+        (.getBytes
+          (str value)
+          ^Charset (->charset charset))))))
 
-(defn <-byte-buffer [value]
+(defn <-byte-buffer [^ByteBuffer value]
   (.array value))
 
 (def ->open-option (->lookup-fn *open-options*))
@@ -285,7 +284,7 @@
   `(->varargs-array FileVisitOption (map ->file-visit-option ~args)))
 
 (defn ->file-visit-options-set [options]
-  (into #{} (map ->file-visit-option options)))
+  (set (map ->file-visit-option options)))
 
 (defn ->file-visit-result [control]
   (or (get *file-visit-results* control)
@@ -335,5 +334,5 @@
 
     :default value))
 
-(defn stream-seq [stream]
+(defn stream-seq [^Stream stream]
   (iterator-seq (.iterator stream)))

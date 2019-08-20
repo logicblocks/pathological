@@ -4,7 +4,7 @@
 
     [pathological.utils :as u])
   (:import [java.nio.file.attribute PosixFilePermission
-                                    PosixFilePermissions]))
+            PosixFilePermissions]))
 
 (deftest <-posix-file-permissions-string
   (testing "returns posix file permission set for provided string"

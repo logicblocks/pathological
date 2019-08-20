@@ -34,5 +34,4 @@
 
 (defn supported-file-attribute-views
   [^FileSystem file-system]
-  (into #{} (map keyword (.supportedFileAttributeViews file-system))))
-
+  (set (map keyword (.supportedFileAttributeViews file-system))))

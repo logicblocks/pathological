@@ -14,7 +14,9 @@
             [lein-changelog "0.3.2"]
             [lein-eftest "0.5.8"]
             [lein-codox "0.10.7"]
-            [lein-cljfmt "0.6.4"]]
+            [lein-cljfmt "0.6.4"]
+            [lein-kibit "0.1.6"]
+            [lein-bikeshed "0.5.1"]]
 
   :profiles
   {:shared {:dependencies
@@ -55,4 +57,12 @@
    ["vcs" "tag"]
    ["vcs" "push"]]
 
-  :aliases {"test" ["with-profile" "test" "eftest" ":all"]})
+  :aliases {"test"      ["with-profile" "test" "eftest" ":all"]
+            "precommit" ["do"
+                         ["check"]
+                         ["kibit" "--replace"]
+                         ["cljfmt" "fix"]
+                         ["bikeshed"
+                          "--name-collisions" "false"
+                          "--verbose" "true"]
+                         ["test"]]})

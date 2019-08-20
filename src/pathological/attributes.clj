@@ -1,4 +1,5 @@
 (ns pathological.attributes
+  (:refer-clojure :exclude [name])
   (:require
     [pathological.principals :as pr]
     [pathological.utils :as u])
@@ -6,9 +7,9 @@
     [java.nio.file Path]
     [java.nio ByteBuffer]
     [java.nio.file.attribute BasicFileAttributes
-                             DosFileAttributes
-                             FileOwnerAttributeView
-                             PosixFileAttributes]))
+     DosFileAttributes
+     FileOwnerAttributeView
+     PosixFileAttributes]))
 
 (declare
   ->basic-file-attribute-view
@@ -50,17 +51,17 @@
   (delete-attribute [view name]))
 
 (defrecord BasicFileAttributeView
-  [path
-   file-key
-   size
-   last-modified-time
-   last-access-time
-   creation-time
-   regular-file?
-   directory?
-   symbolic-link?
-   other?
-   delegate]
+           [path
+            file-key
+            size
+            last-modified-time
+            last-access-time
+            creation-time
+            regular-file?
+            directory?
+            symbolic-link?
+            other?
+            delegate]
 
   ReloadFileAttributes
   (reload [view]
@@ -83,9 +84,9 @@
     (set-times view nil nil new-creation-time)))
 
 (defrecord OwnerFileAttributeView
-  [path
-   owner
-   delegate]
+           [path
+            owner
+            delegate]
 
   ReloadFileAttributes
   (reload [view]
@@ -99,20 +100,20 @@
     (reload view)))
 
 (defrecord PosixFileAttributeView
-  [path
-   file-key
-   size
-   owner
-   group
-   permissions
-   last-modified-time
-   last-access-time
-   creation-time
-   regular-file?
-   directory?
-   symbolic-link?
-   other?
-   delegate]
+           [path
+            file-key
+            size
+            owner
+            group
+            permissions
+            last-modified-time
+            last-access-time
+            creation-time
+            regular-file?
+            directory?
+            symbolic-link?
+            other?
+            delegate]
 
   ReloadFileAttributes
   (reload [view]
@@ -156,17 +157,17 @@
     (reload view)))
 
 (defrecord DosFileAttributeView
-  [path
-   file-key
-   size
-   last-modified-time
-   last-access-time
-   creation-time
-   regular-file?
-   directory?
-   symbolic-link?
-   other?
-   delegate]
+           [path
+            file-key
+            size
+            last-modified-time
+            last-access-time
+            creation-time
+            regular-file?
+            directory?
+            symbolic-link?
+            other?
+            delegate]
 
   ReloadFileAttributes
   (reload [view]
@@ -211,9 +212,9 @@
     (reload view)))
 
 (defrecord UserDefinedFileAttributeView
-  [path
-   attributes
-   delegate]
+           [path
+            attributes
+            delegate]
 
   ReloadFileAttributes
   (reload [view]
@@ -233,10 +234,10 @@
     (reload view)))
 
 (defrecord AclFileAttributeView
-  [path
-   owner
-   acl
-   delegate]
+           [path
+            owner
+            acl
+            delegate]
 
   ReloadFileAttributes
   (reload [view]
@@ -294,7 +295,8 @@
          :group              (pr/<-group-principal (.group posix-attributes))
          :permissions        (u/<-posix-file-permissions
                                (.permissions posix-attributes))
-         :last-modified-time (u/<-file-time (.lastModifiedTime posix-attributes))
+         :last-modified-time (u/<-file-time
+                               (.lastModifiedTime posix-attributes))
          :last-access-time   (u/<-file-time (.lastAccessTime posix-attributes))
          :creation-time      (u/<-file-time (.creationTime posix-attributes))
          :regular-file?      (.isRegularFile posix-attributes)

@@ -14,7 +14,7 @@
              unix-configuration]])
   (:import
     [java.nio.file FileSystem
-                   FileSystems]
+     FileSystems]
     [java.net URI]))
 
 (defn empty-string-array []

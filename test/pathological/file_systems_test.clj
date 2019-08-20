@@ -13,8 +13,8 @@
              windows-configuration]])
   (:import
     [java.nio.file FileSystem
-                   FileStore
-                   FileSystems]))
+     FileStore
+     FileSystems]))
 
 (deftest default-file-system
   (testing "returns default file system"
