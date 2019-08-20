@@ -11,7 +11,7 @@
 
     [eftest.runner :refer [find-tests run-tests]]))
 
-(defn go-test [& dirs]
+(defn run-tests-in [& dirs]
   (run-tests
     (find-tests dirs)
     {:multithread? false}))
