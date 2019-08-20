@@ -3,21 +3,16 @@
   (:require
     [clojure.string :as string]))
 
-(defn- camel->kebab [value]
-  (string/lower-case
-    (string/replace value
-      #"([a-z0-9])([A-Z])"
-      "$1-$2")))
-
 (defn view [attribute-spec]
   (if (string/includes? attribute-spec ":")
     (keyword (first (string/split attribute-spec #":")))
     :basic))
 
 (defn name [attribute-spec]
-  (if (string/includes? attribute-spec ":")
-    (keyword (camel->kebab (second (string/split attribute-spec #":"))))
-    (keyword (camel->kebab attribute-spec))))
+  (let [camel->kebab (requiring-resolve 'pathological.utils/camel->kebab)]
+    (if (string/includes? attribute-spec ":")
+      (keyword (camel->kebab (second (string/split attribute-spec #":"))))
+      (keyword (camel->kebab attribute-spec)))))
 
 (defn view? [attribute-spec view-or-views]
   (let [actual-view (view attribute-spec)
