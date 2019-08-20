@@ -960,7 +960,7 @@
           underlying-attributes (.readAttributes underlying-view)
 
           attributes (f/read-file-attribute-view path :basic)]
-      (is (= (a/map->BasicFileAttributes
+      (is (= (a/map->BasicFileAttributeView
                {:path               path
                 :file-key           (.fileKey underlying-attributes)
                 :size               (.size underlying-attributes)
@@ -995,7 +995,7 @@
                             (u/->link-options-array []))
 
           attributes (f/read-file-attribute-view path :owner)]
-      (is (= (a/map->OwnerFileAttributes
+      (is (= (a/map->OwnerFileAttributeView
                {:path  path
                 :owner (pr/<-user-principal (.getOwner underlying-view))})
             (assoc attributes :delegate nil)))
@@ -1022,7 +1022,7 @@
           underlying-attributes (.readAttributes underlying-view)
 
           attributes (f/read-file-attribute-view path :posix)]
-      (is (= (a/map->PosixFileAttributes
+      (is (= (a/map->PosixFileAttributeView
                {:path               path
                 :file-key           (.fileKey underlying-attributes)
                 :size               (.size underlying-attributes)
@@ -1070,7 +1070,7 @@
           underlying-attributes (.readAttributes underlying-view)
 
           attributes (f/read-file-attribute-view path :dos)]
-      (is (= (a/map->DosFileAttributes
+      (is (= (a/map->DosFileAttributeView
                {:path               path
                 :file-key           (.fileKey underlying-attributes)
                 :size               (.size underlying-attributes)
@@ -1148,7 +1148,7 @@
                             (u/->link-options-array []))
 
           attributes (f/read-file-attribute-view path :acl)]
-      (is (= (a/map->AclFileAttributes
+      (is (= (a/map->AclFileAttributeView
                {:path  path
                 :owner (pr/<-user-principal
                          (.getOwner underlying-view))

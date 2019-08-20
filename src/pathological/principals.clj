@@ -2,15 +2,14 @@
   (:require
     [pathological.file-systems :as fs])
   (:import
-    [java.nio.file FileSystem]
-    [java.nio.file.attribute UserPrincipal GroupPrincipal]))
+    [java.nio.file FileSystem]))
 
-(defrecord BasicUserPrincipal [name underlying]
-  UserPrincipal
+(defrecord UserPrincipal [name underlying]
+  java.nio.file.attribute.UserPrincipal
   (getName [_] name))
 
-(defrecord BasicGroupPrincipal [name underlying]
-  GroupPrincipal
+(defrecord GroupPrincipal [name underlying]
+  java.nio.file.attribute.GroupPrincipal
   (getName [_] name))
 
 (defn lookup-principal-by-name
@@ -32,12 +31,12 @@
   ([file-system name]
    (let [underlying
          (lookup-principal-by-name file-system name)]
-     (->BasicUserPrincipal name underlying))))
+     (->UserPrincipal name underlying))))
 
 (defn <-user-principal
   ([principal]
-   (if-not (instance? BasicUserPrincipal principal)
-     (->BasicUserPrincipal (.getName principal) principal)
+   (if-not (instance? UserPrincipal principal)
+     (->UserPrincipal (.getName principal) principal)
      principal)))
 
 (defn ->group-principal
@@ -45,10 +44,10 @@
   ([file-system name]
    (let [underlying
          (lookup-principal-by-group-name file-system name)]
-     (->BasicGroupPrincipal name underlying))))
+     (->GroupPrincipal name underlying))))
 
 (defn <-group-principal
   ([principal]
-   (if-not (instance? BasicGroupPrincipal principal)
-     (->BasicGroupPrincipal (.getName principal) principal)
+   (if-not (instance? GroupPrincipal principal)
+     (->GroupPrincipal (.getName principal) principal)
      principal)))

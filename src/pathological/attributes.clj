@@ -4,15 +4,19 @@
     [pathological.utils :as u])
   (:import
     [java.nio.file Path]
-    [java.nio ByteBuffer]))
+    [java.nio ByteBuffer]
+    [java.nio.file.attribute BasicFileAttributes
+                             DosFileAttributes
+                             FileOwnerAttributeView
+                             PosixFileAttributes]))
 
 (declare
-  ->basic-file-attributes
-  ->owner-file-attributes
-  ->posix-file-attributes
-  ->dos-file-attributes
-  ->user-defined-file-attributes
-  ->acl-file-attributes)
+  ->basic-file-attribute-view
+  ->owner-file-attribute-view
+  ->posix-file-attribute-view
+  ->dos-file-attribute-view
+  ->user-defined-file-attribute-view
+  ->acl-file-attribute-view)
 
 (defprotocol ReloadFileAttributes
   (reload [view]))
@@ -45,7 +49,7 @@
   (write-attribute [view name value])
   (delete-attribute [view name]))
 
-(defrecord BasicFileAttributes
+(defrecord BasicFileAttributeView
   [path
    file-key
    size
@@ -60,7 +64,7 @@
 
   ReloadFileAttributes
   (reload [view]
-    (->basic-file-attributes path (:delegate view)))
+    (->basic-file-attribute-view path (:delegate view)))
 
   UpdateFileTimes
   (set-times
@@ -78,23 +82,23 @@
   (set-creation-time [view new-creation-time]
     (set-times view nil nil new-creation-time)))
 
-(defrecord OwnerFileAttributes
+(defrecord OwnerFileAttributeView
   [path
    owner
    delegate]
 
   ReloadFileAttributes
   (reload [view]
-    (->owner-file-attributes path (:delegate view)))
+    (->owner-file-attribute-view path (:delegate view)))
 
   UpdateFileOwner
   (set-owner [view new-owner]
     (.setOwner
-      ^java.nio.file.attribute.FileOwnerAttributeView (:delegate view)
+      ^FileOwnerAttributeView (:delegate view)
       new-owner)
     (reload view)))
 
-(defrecord PosixFileAttributes
+(defrecord PosixFileAttributeView
   [path
    file-key
    size
@@ -112,7 +116,7 @@
 
   ReloadFileAttributes
   (reload [view]
-    (->posix-file-attributes path (:delegate view)))
+    (->posix-file-attribute-view path (:delegate view)))
 
   UpdateFileTimes
   (set-times
@@ -151,7 +155,7 @@
       (u/->posix-file-permissions new-permissions))
     (reload view)))
 
-(defrecord DosFileAttributes
+(defrecord DosFileAttributeView
   [path
    file-key
    size
@@ -166,7 +170,7 @@
 
   ReloadFileAttributes
   (reload [view]
-    (->dos-file-attributes path (:delegate view)))
+    (->dos-file-attribute-view path (:delegate view)))
 
   UpdateFileTimes
   (set-times
@@ -206,14 +210,14 @@
       new-value)
     (reload view)))
 
-(defrecord UserDefinedFileAttributes
+(defrecord UserDefinedFileAttributeView
   [path
    attributes
    delegate]
 
   ReloadFileAttributes
   (reload [view]
-    (->user-defined-file-attributes path (:delegate view)))
+    (->user-defined-file-attribute-view path (:delegate view)))
 
   UpdateUserDefinedFileAttributes
   (write-attribute [view name value]
@@ -228,7 +232,7 @@
       name)
     (reload view)))
 
-(defrecord AclFileAttributes
+(defrecord AclFileAttributeView
   [path
    owner
    acl
@@ -236,7 +240,7 @@
 
   ReloadFileAttributes
   (reload [view]
-    (->acl-file-attributes path (:delegate view)))
+    (->acl-file-attribute-view path (:delegate view)))
 
   UpdateFileOwner
   (set-owner [view new-owner]
@@ -252,12 +256,11 @@
       (map u/->acl-entry new-acl-entries))
     (reload view)))
 
-(defn ->basic-file-attributes
+(defn ->basic-file-attribute-view
   [^Path path ^java.nio.file.attribute.BasicFileAttributeView view]
   (when view
-    (let [^java.nio.file.attribute.BasicFileAttributes
-          attributes (.readAttributes view)]
-      (map->BasicFileAttributes
+    (let [^BasicFileAttributes attributes (.readAttributes view)]
+      (map->BasicFileAttributeView
         {:path               path
          :file-key           (.fileKey attributes)
          :size               (.size attributes)
@@ -270,21 +273,20 @@
          :other?             (.isOther attributes)
          :delegate           view}))))
 
-(defn ->owner-file-attributes
-  [^Path path ^java.nio.file.attribute.FileOwnerAttributeView view]
+(defn ->owner-file-attribute-view
+  [^Path path ^FileOwnerAttributeView view]
   (when view
     (let [owner (pr/<-user-principal (.getOwner view))]
-      (map->OwnerFileAttributes
+      (map->OwnerFileAttributeView
         {:path     path
          :owner    owner
          :delegate view}))))
 
-(defn ->posix-file-attributes
+(defn ->posix-file-attribute-view
   [^Path path ^java.nio.file.attribute.PosixFileAttributeView view]
   (when view
-    (let [^java.nio.file.attribute.PosixFileAttributes
-          posix-attributes (.readAttributes view)]
-      (map->PosixFileAttributes
+    (let [^PosixFileAttributes posix-attributes (.readAttributes view)]
+      (map->PosixFileAttributeView
         {:path               path
          :file-key           (.fileKey posix-attributes)
          :size               (.size posix-attributes)
@@ -301,12 +303,11 @@
          :other?             (.isOther posix-attributes)
          :delegate           view}))))
 
-(defn ->dos-file-attributes
+(defn ->dos-file-attribute-view
   [^Path path ^java.nio.file.attribute.DosFileAttributeView view]
   (when view
-    (let [^java.nio.file.attribute.DosFileAttributes
-          dos-attributes (.readAttributes view)]
-      (map->DosFileAttributes
+    (let [^DosFileAttributes dos-attributes (.readAttributes view)]
+      (map->DosFileAttributeView
         {:path               path
          :file-key           (.fileKey dos-attributes)
          :size               (.size dos-attributes)
@@ -323,7 +324,7 @@
          :system?            (.isSystem dos-attributes)
          :delegate           view}))))
 
-(defn ->user-defined-file-attributes
+(defn ->user-defined-file-attribute-view
   [^Path path ^java.nio.file.attribute.UserDefinedFileAttributeView view]
   (when view
     (let [names (.list view)
@@ -335,30 +336,30 @@
                   (.read view name byte-buffer)
                   [name (.array byte-buffer)]))
               names))]
-      (map->UserDefinedFileAttributes
+      (map->UserDefinedFileAttributeView
         {:path       path
          :attributes attributes
          :delegate   view}))))
 
-(defn ->acl-file-attributes
+(defn ->acl-file-attribute-view
   [^Path path ^java.nio.file.attribute.AclFileAttributeView view]
   (when view
     (let [owner (pr/<-user-principal (.getOwner view))
           acl (mapv u/<-acl-entry (.getAcl view))]
-      (map->AclFileAttributes
+      (map->AclFileAttributeView
         {:path     path
          :owner    owner
          :acl      acl
          :delegate view}))))
 
-(def ^:dynamic *file-attributes-factories*
-  {:basic ->basic-file-attributes
-   :owner ->owner-file-attributes
-   :posix ->posix-file-attributes
-   :dos   ->dos-file-attributes
-   :user  ->user-defined-file-attributes
-   :acl   ->acl-file-attributes})
+(def ^:dynamic *file-attribute-view-factories*
+  {:basic ->basic-file-attribute-view
+   :owner ->owner-file-attribute-view
+   :posix ->posix-file-attribute-view
+   :dos   ->dos-file-attribute-view
+   :user  ->user-defined-file-attribute-view
+   :acl   ->acl-file-attribute-view})
 
-(defn ->file-attributes-factory [type]
-  (get *file-attributes-factories* type
+(defn ->file-attribute-view-factory [type]
+  (get *file-attribute-view-factories* type
     (fn [_ view] view)))

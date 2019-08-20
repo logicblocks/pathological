@@ -2,7 +2,6 @@
   (:require
     [pathological.utils :as u])
   (:import
-    [java.nio.file FileStore]
     [clojure.lang Keyword]))
 
 (declare ->file-store)
@@ -22,15 +21,15 @@
     (type class-or-name)))
 
 (defmethod ^:private do-supports-file-attribute-view String
-  [^FileStore file-store ^String class-or-name]
+  [^java.nio.file.FileStore file-store ^String class-or-name]
   (.supportsFileAttributeView file-store class-or-name))
 
 (defmethod ^:private do-supports-file-attribute-view Class
-  [^FileStore file-store ^Class class-or-name]
+  [^java.nio.file.FileStore file-store ^Class class-or-name]
   (.supportsFileAttributeView file-store class-or-name))
 
 (defmethod ^:private do-supports-file-attribute-view Keyword
-  [^FileStore file-store class-or-name]
+  [^java.nio.file.FileStore file-store class-or-name]
   (.supportsFileAttributeView file-store (name class-or-name)))
 
 (def ^:dynamic *file-store-attributes-factories*
@@ -40,7 +39,7 @@
   (get *file-store-attributes-factories* type
     (fn [_ view] view)))
 
-(defrecord BasicFileStore
+(defrecord FileStore
   [name
    type
    read-only?
@@ -63,17 +62,19 @@
   (read-file-store-attribute-view [_ class-or-name]
     (let [type-class (u/->file-store-attribute-view-class class-or-name)
           factory (->file-store-attributes-factory type)]
-      (factory (.getFileStoreAttributeView delegate type-class))))
+      (factory (.getFileStoreAttributeView
+                 ^java.nio.file.FileStore delegate type-class))))
 
   (read-attribute [_ attribute-spec]
-    (let [value (.getAttribute delegate attribute-spec)]
+    (let [value (.getAttribute
+                  ^java.nio.file.FileStore delegate attribute-spec)]
       (u/<-attribute-value attribute-spec value))))
 
-(defn ->file-store [^FileStore file-store]
+(defn ->file-store [^java.nio.file.FileStore file-store]
   (let [block-size
         (try (.getBlockSize file-store)
           (catch UnsupportedOperationException _ nil))]
-    (map->BasicFileStore
+    (map->FileStore
       {:name              (.name file-store)
        :type              (.type file-store)
        :read-only?        (.isReadOnly file-store)

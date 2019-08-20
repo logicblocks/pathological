@@ -12,7 +12,9 @@
              unix-configuration
              windows-configuration]])
   (:import
-    [java.nio.file FileSystems FileSystem FileStore]))
+    [java.nio.file FileSystem
+                   FileStore
+                   FileSystems]))
 
 (deftest default-file-system
   (testing "returns default file system"
@@ -61,7 +63,7 @@
 
           file-stores (.getFileStores ^FileSystem test-file-system)
           ^FileStore file-store (first file-stores)]
-      (is (= [(fst/map->BasicFileStore
+      (is (= [(fst/map->FileStore
                 {:name              (.name file-store)
                  :type              (.type file-store)
                  :read-only?        (.isReadOnly file-store)

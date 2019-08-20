@@ -226,7 +226,7 @@
   (let [^"[Ljava.nio.file.LinkOption;"
         link-options (u/->link-options-array options)
         type-class (u/->file-attribute-view-class type)
-        factory (a/->file-attributes-factory type)]
+        factory (a/->file-attribute-view-factory type)]
     (factory path (Files/getFileAttributeView path type-class link-options))))
 
 (defn read-attribute

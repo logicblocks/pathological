@@ -19,6 +19,10 @@ and this project adheres to
 - `BasePath` protocol to `Pathable`.
 - return `BasicFileStore` record from `file-stores` in 
   `pathological.file-systems`.
+- `BasicUserPrincipal` -> `UserPrincipal`
+- `BasicGroupPrincipal` -> `GroupPrincipal`
+- `*FileAttributes` -> `*FileAttributeViews`
+- `BasicFileStore` -> `FileStore`
 
 ## [0.1.6] — 2019-08-15
 ### Added
