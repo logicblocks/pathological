@@ -14,6 +14,7 @@ and this project adheres to
   `pathological.file-systems`.
 - `supports-file-attribute-view`, `read-file-store-attribute-view` and
   `read-attribute` on file stores.
+- support for registering custom attribute converters. 
 
 ### Changed
 - `BasePath` protocol to `Pathable`.

@@ -27,3 +27,20 @@
                      (set (map keyword name-or-names))
                      #{(keyword name-or-names)})]
     (test-names actual-name)))
+
+(defn wildcard? [spec-component]
+  (= spec-component :*))
+
+(defn specific? [spec-component]
+  (not (wildcard? spec-component)))
+
+(defn selects [actual-spec]
+  (fn [[selector-spec _]]
+    (if (= selector-spec :else)
+      true
+      (let [[selector-view selector-name] selector-spec
+            [actual-view actual-name] actual-spec]
+        (or
+          (= selector-spec actual-spec)
+          (and (wildcard? selector-view) (= selector-name actual-name))
+          (and (wildcard? selector-name) (= selector-view actual-view)))))))

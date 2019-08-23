@@ -2,14 +2,15 @@
   (:refer-clojure :exclude [name])
   (:require
     [pathological.principals :as pr]
-    [pathological.utils :as u])
+    [pathological.utils :as u]
+    [pathological.attribute-specs :as as])
   (:import
     [java.nio.file Path]
     [java.nio ByteBuffer]
     [java.nio.file.attribute BasicFileAttributes
-     DosFileAttributes
-     FileOwnerAttributeView
-     PosixFileAttributes]))
+                             DosFileAttributes
+                             FileOwnerAttributeView
+                             PosixFileAttributes]))
 
 (declare
   ->basic-file-attribute-view
@@ -18,6 +19,126 @@
   ->dos-file-attribute-view
   ->user-defined-file-attribute-view
   ->acl-file-attribute-view)
+
+(defn lower-priority? [a b]
+  (neg? (compare a b)))
+
+(def ^:private conversion-comparator
+  (comparator
+    (fn [[a-spec _] [b-spec _]]
+      (cond
+        (= a-spec :else)
+        false
+
+        (= b-spec :else)
+        true
+
+        :else
+        (let [[a-view a-name] a-spec
+              [b-view b-name] b-spec]
+          (cond
+            ; [:* :_] [:a :_] => true
+            (and (as/wildcard? a-view) (as/specific? b-view))
+            false
+
+            ; [:* :a] [:* :b] => (compare :a :b)
+            (and
+              (as/wildcard? a-view) (as/wildcard? b-view)
+              (as/specific? a-name) (as/specific? b-name)
+              (not= a-name b-name))
+            (lower-priority? a-name b-name)
+
+            ; [:* :a] [:* :a] => false
+            (and
+              (as/wildcard? a-view) (as/wildcard? b-view)
+              (as/specific? a-name) (as/specific? b-name)
+              (= a-name b-name))
+            true
+
+            ; [:* :*] [:* :a] => true
+            (and
+              (as/wildcard? a-view) (as/wildcard? b-view)
+              (as/wildcard? a-name) (as/specific? b-name))
+            false
+
+            ; [:* :*] [:* :*] => false
+            (and
+              (as/wildcard? a-view) (as/wildcard? b-view)
+              (as/wildcard? b-name) (as/wildcard? b-name))
+            true
+
+            ; [:a :*] [:a :b] => true
+            (and
+              (as/specific? a-view) (as/specific? b-view)
+              (as/wildcard? a-name) (as/specific? b-name)
+              (= a-view b-view))
+            false
+
+            ; [:a :_] [:b :_] => (compare :a :b)
+            (and
+              (as/specific? a-view) (as/specific? b-view)
+              (not= a-view b-view))
+            (lower-priority? a-view b-view)
+
+            ; [:a :_] [:* :_] => false
+            (and
+              (as/specific? a-view) (as/wildcard? b-view))
+            true
+
+            ; [:* :a] [:* :*] => false
+            (and
+              (as/wildcard? a-view) (as/wildcard? b-view)
+              (as/specific? a-name) (as/wildcard? b-name))
+            true
+
+            ; [:a :b] [:a :c] => (compare :a :b)
+            (and
+              (as/specific? a-view) (as/specific? b-view)
+              (as/specific? a-name) (as/specific? b-name)
+              (not= a-name b-name))
+            (lower-priority? a-name b-name)
+
+            ; [:a :b] [:a :b] => false
+            (and
+              (as/specific? a-view) (as/specific? b-view)
+              (as/specific? a-name) (as/specific? b-name)
+              (= a-name b-name))
+            true
+
+            :else
+            (throw (ex-info "Fuck" {:a-spec a-spec
+                                    :b-spec b-spec}))))))))
+
+(defn register-conversion [direction selector-spec converter]
+  (let [conversions-var
+        (cond
+          (= direction :to) #'u/*->attribute-value-conversions*
+          (= direction :from) #'u/*<-attribute-value-conversions*
+          :else (throw
+                  (IllegalArgumentException.
+                    (format
+                      "Unknown direction: %s. Must be one of [:to :from]."
+                      direction))))]
+    (alter-var-root
+      conversions-var
+      (fn [conversions]
+        (sort conversion-comparator
+          (conj conversions [selector-spec converter]))))))
+
+(comment
+  (sort conversion-comparator
+    [[[:acl :acl] :first]
+     [[:* :creation-time] :third]
+     [[:posix :permissions] :second]
+     [:else :eighth]
+     [[:* :owner] :seventh]
+     [[:* :*] :watto]
+     [[:* :last-access-time] :fifth]
+     [[:* :group] :fourth]
+     [[:* :last-modified-time] :sixth]
+     [[:acl :acl] :ninth]
+     [[:* :group] :me-first]
+     [[:* :*] :blotto]]))
 
 (defprotocol ReloadFileAttributes
   (reload [view]))
@@ -51,17 +172,17 @@
   (delete-attribute [view name]))
 
 (defrecord BasicFileAttributeView
-           [path
-            file-key
-            size
-            last-modified-time
-            last-access-time
-            creation-time
-            regular-file?
-            directory?
-            symbolic-link?
-            other?
-            delegate]
+  [path
+   file-key
+   size
+   last-modified-time
+   last-access-time
+   creation-time
+   regular-file?
+   directory?
+   symbolic-link?
+   other?
+   delegate]
 
   ReloadFileAttributes
   (reload [view]
@@ -84,9 +205,9 @@
     (set-times view nil nil new-creation-time)))
 
 (defrecord OwnerFileAttributeView
-           [path
-            owner
-            delegate]
+  [path
+   owner
+   delegate]
 
   ReloadFileAttributes
   (reload [view]
@@ -100,20 +221,20 @@
     (reload view)))
 
 (defrecord PosixFileAttributeView
-           [path
-            file-key
-            size
-            owner
-            group
-            permissions
-            last-modified-time
-            last-access-time
-            creation-time
-            regular-file?
-            directory?
-            symbolic-link?
-            other?
-            delegate]
+  [path
+   file-key
+   size
+   owner
+   group
+   permissions
+   last-modified-time
+   last-access-time
+   creation-time
+   regular-file?
+   directory?
+   symbolic-link?
+   other?
+   delegate]
 
   ReloadFileAttributes
   (reload [view]
@@ -157,17 +278,17 @@
     (reload view)))
 
 (defrecord DosFileAttributeView
-           [path
-            file-key
-            size
-            last-modified-time
-            last-access-time
-            creation-time
-            regular-file?
-            directory?
-            symbolic-link?
-            other?
-            delegate]
+  [path
+   file-key
+   size
+   last-modified-time
+   last-access-time
+   creation-time
+   regular-file?
+   directory?
+   symbolic-link?
+   other?
+   delegate]
 
   ReloadFileAttributes
   (reload [view]
@@ -212,9 +333,9 @@
     (reload view)))
 
 (defrecord UserDefinedFileAttributeView
-           [path
-            attributes
-            delegate]
+  [path
+   attributes
+   delegate]
 
   ReloadFileAttributes
   (reload [view]
@@ -234,10 +355,10 @@
     (reload view)))
 
 (defrecord AclFileAttributeView
-           [path
-            owner
-            acl
-            delegate]
+  [path
+   owner
+   acl
+   delegate]
 
   ReloadFileAttributes
   (reload [view]

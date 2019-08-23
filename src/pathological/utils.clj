@@ -13,26 +13,26 @@
     [java.nio ByteBuffer]
     [java.nio.charset StandardCharsets Charset]
     [java.nio.file CopyOption
-     FileVisitOption
-     FileVisitResult
-     LinkOption
-     OpenOption
-     StandardOpenOption
-     StandardCopyOption]
+                   FileVisitOption
+                   FileVisitResult
+                   LinkOption
+                   OpenOption
+                   StandardOpenOption
+                   StandardCopyOption]
     [java.nio.file.attribute AclEntry
-     AclEntryFlag
-     AclEntryPermission
-     AclEntryType
-     AclFileAttributeView
-     BasicFileAttributeView
-     DosFileAttributeView
-     FileAttribute
-     FileOwnerAttributeView
-     FileTime
-     PosixFileAttributeView
-     PosixFilePermission
-     PosixFilePermissions
-     UserDefinedFileAttributeView]
+                             AclEntryFlag
+                             AclEntryPermission
+                             AclEntryType
+                             AclFileAttributeView
+                             BasicFileAttributeView
+                             DosFileAttributeView
+                             FileAttribute
+                             FileOwnerAttributeView
+                             FileTime
+                             PosixFileAttributeView
+                             PosixFilePermission
+                             PosixFilePermissions
+                             UserDefinedFileAttributeView]
     [java.util.stream Stream]))
 
 (defn camel->kebab [value]
@@ -181,10 +181,10 @@
         principal (pr/<-user-principal (.principal entry))
         permissions (set (map <-acl-entry-permission (.permissions entry)))
         flags (set (map <-acl-entry-flag (.flags entry)))]
-    {:type type
-     :principal principal
+    {:type        type
+     :principal   principal
      :permissions permissions
-     :flags flags}))
+     :flags       flags}))
 
 (defn ->posix-file-permission [value]
   (if-not (instance? PosixFilePermission value)
@@ -240,22 +240,22 @@
 
 (defn ->bytes
   ([^String value]
-    (.getBytes value))
+   (.getBytes value))
   ([^String value charset]
-    (.getBytes value ^Charset (->charset charset))))
+   (.getBytes value ^Charset (->charset charset))))
 
 (defn ->byte-buffer
   ([value]
-    (->byte-buffer value :utf-8))
+   (->byte-buffer value :utf-8))
   ([value charset]
-    (cond
-      (instance? ByteBuffer value) value
-      (bytes? value) (ByteBuffer/wrap value)
-      :default
-      (ByteBuffer/wrap
-        (.getBytes
-          (str value)
-          ^Charset (->charset charset))))))
+   (cond
+     (instance? ByteBuffer value) value
+     (bytes? value) (ByteBuffer/wrap value)
+     :default
+     (ByteBuffer/wrap
+       (.getBytes
+         (str value)
+         ^Charset (->charset charset))))))
 
 (defn <-byte-buffer [^ByteBuffer value]
   (.array value))
@@ -290,49 +290,39 @@
   (or (get *file-visit-results* control)
     (throw (AssertionError. (str "Invalid control: " control)))))
 
+(def ^:dynamic *->attribute-value-conversions*
+  [[[:posix :permissions] ->posix-file-permissions]
+   [[:user :*] ->byte-buffer]
+   [[:* :creation-time] ->file-time]
+   [[:* :last-access-time] ->file-time]
+   [[:* :last-modified-time] ->file-time]
+   [:else identity]])
+
+(def ^:dynamic *<-attribute-value-conversions*
+  [[[:acl :acl] #(mapv <-acl-entry %)]
+   [[:posix :permissions] <-posix-file-permissions]
+   [[:* :creation-time] <-file-time]
+   [[:* :group] pr/<-group-principal]
+   [[:* :last-access-time] <-file-time]
+   [[:* :last-modified-time] <-file-time]
+   [[:* :owner] pr/<-user-principal]
+   [:else identity]])
+
 (defn ->attribute-value [attribute-spec value]
-  (cond
-    (as/view? attribute-spec :user)
-    (->byte-buffer value)
-
-    (as/name? attribute-spec
-      #{:creation-time
-        :last-access-time
-        :last-modified-time})
-    (->file-time value)
-
-    (and
-      (as/view? attribute-spec :posix)
-      (as/name? attribute-spec :permissions))
-    (->posix-file-permissions value)
-
-    :default value))
+  (let [spec [(as/view attribute-spec) (as/name attribute-spec)]
+        conversion-entry
+        (first (filter (as/selects spec) *->attribute-value-conversions*))
+        conversion-fn
+        (second conversion-entry)]
+    (conversion-fn value)))
 
 (defn <-attribute-value [attribute-spec value]
-  (cond
-    (as/name? attribute-spec
-      #{:creation-time
-        :last-access-time
-        :last-modified-time})
-    (<-file-time value)
-
-    (and
-      (as/view? attribute-spec :posix)
-      (as/name? attribute-spec :permissions))
-    (<-posix-file-permissions value)
-
-    (and
-      (as/view? attribute-spec :acl)
-      (as/name? attribute-spec :acl))
-    (mapv <-acl-entry value)
-
-    (as/name? attribute-spec :owner)
-    (pr/<-user-principal value)
-
-    (as/name? attribute-spec :group)
-    (pr/<-group-principal value)
-
-    :default value))
+  (let [spec [(as/view attribute-spec) (as/name attribute-spec)]
+        conversion-entry
+        (first (filter (as/selects spec) *<-attribute-value-conversions*))
+        conversion-fn
+        (second conversion-entry)]
+    (conversion-fn value)))
 
 (defn stream-seq [^Stream stream]
   (iterator-seq (.iterator stream)))

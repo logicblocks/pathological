@@ -5,8 +5,7 @@
   :license {:name "The MIT License"
             :url  "https://opensource.org/licenses/MIT"}
 
-  :dependencies [[hbs "1.0.3"]
-                 [com.google.jimfs/jimfs "1.1"]]
+  :dependencies [[com.google.jimfs/jimfs "1.1"]]
 
   :plugins [[lein-cloverage "1.1.1"]
             [lein-shell "0.5.0"]
