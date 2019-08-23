@@ -37,7 +37,7 @@
         (let [[a-view a-name] a-spec
               [b-view b-name] b-spec]
           (cond
-            ; [:* :_] [:a :_] => true
+            ; [:* :_] [:a :_] => false
             (and (as/wildcard? a-view) (as/specific? b-view))
             false
 
@@ -48,26 +48,26 @@
               (not= a-name b-name))
             (lower-priority? a-name b-name)
 
-            ; [:* :a] [:* :a] => false
+            ; [:* :a] [:* :a] => true
             (and
               (as/wildcard? a-view) (as/wildcard? b-view)
               (as/specific? a-name) (as/specific? b-name)
               (= a-name b-name))
             true
 
-            ; [:* :*] [:* :a] => true
+            ; [:* :*] [:* :a] => false
             (and
               (as/wildcard? a-view) (as/wildcard? b-view)
               (as/wildcard? a-name) (as/specific? b-name))
             false
 
-            ; [:* :*] [:* :*] => false
+            ; [:* :*] [:* :*] => true
             (and
               (as/wildcard? a-view) (as/wildcard? b-view)
               (as/wildcard? b-name) (as/wildcard? b-name))
             true
 
-            ; [:a :*] [:a :b] => true
+            ; [:a :*] [:a :b] => false
             (and
               (as/specific? a-view) (as/specific? b-view)
               (as/wildcard? a-name) (as/specific? b-name)
@@ -80,12 +80,12 @@
               (not= a-view b-view))
             (lower-priority? a-view b-view)
 
-            ; [:a :_] [:* :_] => false
+            ; [:a :_] [:* :_] => true
             (and
               (as/specific? a-view) (as/wildcard? b-view))
             true
 
-            ; [:* :a] [:* :*] => false
+            ; [:* :a] [:* :*] => true
             (and
               (as/wildcard? a-view) (as/wildcard? b-view)
               (as/specific? a-name) (as/wildcard? b-name))
@@ -98,16 +98,24 @@
               (not= a-name b-name))
             (lower-priority? a-name b-name)
 
-            ; [:a :b] [:a :b] => false
+            ; [:a :b] [:a :b] => true
             (and
               (as/specific? a-view) (as/specific? b-view)
               (as/specific? a-name) (as/specific? b-name)
+              (= a-view b-view)
               (= a-name b-name))
             true
 
+            ; [:a :b] [:a :*] => true
+            (and
+              (as/specific? a-view) (as/specific? b-view)
+              (as/specific? a-name) (as/wildcard? b-name)
+              (= a-view b-view))
+            true
+
             :else
-            (throw (ex-info "Fuck" {:a-spec a-spec
-                                    :b-spec b-spec}))))))))
+            (throw (ex-info "No comparison for: " {:a-spec a-spec
+                                                   :b-spec b-spec}))))))))
 
 (defn register-conversion [direction selector-spec converter]
   (let [conversions-var
@@ -124,21 +132,6 @@
       (fn [conversions]
         (sort conversion-comparator
           (conj conversions [selector-spec converter]))))))
-
-(comment
-  (sort conversion-comparator
-    [[[:acl :acl] :first]
-     [[:* :creation-time] :third]
-     [[:posix :permissions] :second]
-     [:else :eighth]
-     [[:* :owner] :seventh]
-     [[:* :*] :watto]
-     [[:* :last-access-time] :fifth]
-     [[:* :group] :fourth]
-     [[:* :last-modified-time] :sixth]
-     [[:acl :acl] :ninth]
-     [[:* :group] :me-first]
-     [[:* :*] :blotto]]))
 
 (defprotocol ReloadFileAttributes
   (reload [view]))

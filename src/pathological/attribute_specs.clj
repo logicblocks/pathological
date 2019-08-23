@@ -4,9 +4,10 @@
     [clojure.string :as string]))
 
 (defn view [attribute-spec]
-  (if (string/includes? attribute-spec ":")
-    (keyword (first (string/split attribute-spec #":")))
-    :basic))
+  (let [camel->kebab (requiring-resolve 'pathological.utils/camel->kebab)]
+    (if (string/includes? attribute-spec ":")
+      (keyword (camel->kebab (first (string/split attribute-spec #":"))))
+      :basic)))
 
 (defn name [attribute-spec]
   (let [camel->kebab (requiring-resolve 'pathological.utils/camel->kebab)]
