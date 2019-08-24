@@ -290,39 +290,47 @@
   (or (get *file-visit-results* control)
     (throw (AssertionError. (str "Invalid control: " control)))))
 
+(def ->attribute-value-conversion-defaults
+  {:posix {:permissions ->posix-file-permissions}
+   :user  {:* ->byte-buffer}
+   :*     {:creation-time      ->file-time
+           :last-access-time   ->file-time
+           :last-modified-time ->file-time}})
+
+(def <-attribute-value-conversion-defaults
+  {:acl   {:acl #(mapv <-acl-entry %)}
+   :posix {:permissions <-posix-file-permissions}
+   :*     {:creation-time      <-file-time
+           :last-access-time   <-file-time
+           :last-modified-time <-file-time
+           :owner              pr/<-user-principal
+           :group              pr/<-group-principal}})
+
 (def ^:dynamic *->attribute-value-conversions*
-  [[[:posix :permissions] ->posix-file-permissions]
-   [[:user :*] ->byte-buffer]
-   [[:* :creation-time] ->file-time]
-   [[:* :last-access-time] ->file-time]
-   [[:* :last-modified-time] ->file-time]
-   [:else identity]])
+  ->attribute-value-conversion-defaults)
 
 (def ^:dynamic *<-attribute-value-conversions*
-  [[[:acl :acl] #(mapv <-acl-entry %)]
-   [[:posix :permissions] <-posix-file-permissions]
-   [[:* :creation-time] <-file-time]
-   [[:* :group] pr/<-group-principal]
-   [[:* :last-access-time] <-file-time]
-   [[:* :last-modified-time] <-file-time]
-   [[:* :owner] pr/<-user-principal]
-   [:else identity]])
+  <-attribute-value-conversion-defaults)
+
+(defn- lookup-conversion [all-conversions attribute-spec]
+  (let [view (as/view attribute-spec)
+        name (as/name attribute-spec)]
+    (or
+      (get-in all-conversions [view name])
+      (get-in all-conversions [view :*])
+      (get-in all-conversions [:* name])
+      (get-in all-conversions [:* :*])
+      identity)))
 
 (defn ->attribute-value [attribute-spec value]
-  (let [spec [(as/view attribute-spec) (as/name attribute-spec)]
-        conversion-entry
-        (first (filter (as/selects spec) *->attribute-value-conversions*))
-        conversion-fn
-        (second conversion-entry)]
-    (conversion-fn value)))
+  (let [attribute-conversion
+        (lookup-conversion *->attribute-value-conversions* attribute-spec)]
+    (attribute-conversion value)))
 
 (defn <-attribute-value [attribute-spec value]
-  (let [spec [(as/view attribute-spec) (as/name attribute-spec)]
-        conversion-entry
-        (first (filter (as/selects spec) *<-attribute-value-conversions*))
-        conversion-fn
-        (second conversion-entry)]
-    (conversion-fn value)))
+  (let [attribute-conversion
+        (lookup-conversion *<-attribute-value-conversions* attribute-spec)]
+    (attribute-conversion value)))
 
 (defn stream-seq [^Stream stream]
   (iterator-seq (.iterator stream)))
