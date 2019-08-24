@@ -232,15 +232,20 @@
   [^Path path attribute-spec & options]
   (let [^"[Ljava.nio.file.LinkOption;"
         link-options (u/->link-options-array options)
-        value (Files/getAttribute path attribute-spec link-options)]
+        attribute-spec (as/->attribute-spec attribute-spec)
+        attribute-spec-string (as/->attribute-spec-string attribute-spec)
+        value (Files/getAttribute path attribute-spec-string link-options)]
     (u/<-attribute-value attribute-spec value)))
 
 (defn read-attributes
-  [^Path path attributes-spec & options]
+  [^Path path attribute-spec & options]
   (let [^"[Ljava.nio.file.LinkOption;"
         link-options (u/->link-options-array options)
-        view (as/view attributes-spec)
-        values (Files/readAttributes path ^String attributes-spec link-options)]
+        attribute-spec (as/->attribute-spec attribute-spec)
+        attribute-spec-string (as/->attribute-spec-string attribute-spec)
+        view (as/view attribute-spec)
+        values (Files/readAttributes
+                 path ^String attribute-spec-string link-options)]
     (into {}
       (map (fn [[key value]]
              [(keyword (u/camel->kebab key))
@@ -251,8 +256,10 @@
   [^Path path attribute-spec value & options]
   (let [^"[Ljava.nio.file.LinkOption;"
         link-options (u/->link-options-array options)
+        attribute-spec (as/->attribute-spec attribute-spec)
+        attribute-spec-string (as/->attribute-spec-string attribute-spec)
         value (u/->attribute-value attribute-spec value)]
-    (Files/setAttribute path attribute-spec value link-options)))
+    (Files/setAttribute path attribute-spec-string value link-options)))
 
 (defn probe-content-type
   [^Path path]

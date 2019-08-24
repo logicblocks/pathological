@@ -354,7 +354,7 @@
               (fn [name]
                 (let [byte-buffer (ByteBuffer/allocate (.size view name))]
                   (.read view name byte-buffer)
-                  [name (.array byte-buffer)]))
+                  [(keyword name) (.array byte-buffer)]))
               names))]
       (map->UserDefinedFileAttributeView
         {:path       path

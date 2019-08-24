@@ -37,9 +37,15 @@
 
 (defn camel->kebab [value]
   (string/lower-case
-    (string/replace value
+    (string/replace (name value)
       #"([a-z0-9])([A-Z])"
       "$1-$2")))
+
+(defn kebab->camel [value]
+  (string/replace (name value)
+    #"([a-z0-9])-([a-z0-9])"
+    (fn [[_ first second]]
+      (str first (string/upper-case second)))))
 
 (def ^:dynamic *charsets*
   {:us-ascii   StandardCharsets/US_ASCII

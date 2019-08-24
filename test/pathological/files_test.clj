@@ -8,6 +8,7 @@
     [pathological.files :as f]
     [pathological.paths :as p]
     [pathological.principals :as pr]
+    [pathological.attribute-specs :as as]
     [pathological.attributes :as a]
     [pathological.utils :as u]
 
@@ -1113,9 +1114,9 @@
 
           attributes (f/read-file-attribute-view path :user)]
       (is (Arrays/equals important-thing-1
-            ^bytes (get-in attributes [:attributes "important.thing1"])))
+            ^bytes (get-in attributes [:attributes :important.thing1])))
       (is (Arrays/equals important-thing-2
-            ^bytes (get-in attributes [:attributes "important.thing2"])))
+            ^bytes (get-in attributes [:attributes :important.thing2])))
       (is (= path (:path attributes)))
       (is (instance? UserDefinedFileAttributeView
             (:delegate attributes)))))
@@ -1233,7 +1234,7 @@
 
           path (p/path test-file-system "/file")
 
-          attribute-spec "basic:creationTime"
+          attribute-spec "basic:creation-time"
           value (u/->file-time "2019-05-04T22:10:10Z")]
       (f/create-file path)
 
@@ -1251,7 +1252,7 @@
 
           path (p/path test-file-system "/file")
 
-          attribute-spec "basic:lastAccessTime"
+          attribute-spec "basic:last-access-time"
           value "2019-05-04T22:10:10Z"]
       (f/create-file path)
 
@@ -1400,6 +1401,40 @@
 
       (f/set-attribute path attribute-spec value)
 
+      (is (= value (f/read-attribute path attribute-spec)))))
+
+  (testing "allows attribute spec map"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (windows-configuration
+              :attribute-views #{:dos}))
+
+          path (p/path test-file-system "C:\\file")
+
+          attribute-spec {:view :dos :name :hidden}
+          value true]
+      (f/create-file path)
+
+      (f/set-attribute path attribute-spec value)
+
+      (is (= value (f/read-attribute path attribute-spec)))))
+
+  (testing "allows camel case attribute spec string"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          path (p/path test-file-system "/file")
+
+          attribute-spec "basic:creationTime"
+          value "2019-05-04T22:10:10Z"]
+      (f/create-file path)
+
+      (f/set-attribute path attribute-spec value)
+
       (is (= value (f/read-attribute path attribute-spec))))))
 
 (deftest read-attributes
@@ -1444,12 +1479,12 @@
 
           path (p/path test-file-system "/file")
 
-          attributes-spec "creationTime,lastAccessTime"
+          attributes-spec "creation-time,last-access-time"
 
-          attribute-1-spec "basic:creationTime"
+          attribute-1-spec "basic:creation-time"
           value-1 (u/->file-time "2019-05-04T22:10:10Z")
 
-          attribute-2-spec "basic:lastAccessTime"
+          attribute-2-spec "basic:last-access-time"
           value-2 (u/->file-time "2019-05-04T22:11:00Z")
 
           _ (f/create-file path)
@@ -1550,7 +1585,7 @@
               :owner value-2}
             attributes))))
 
-  (testing "bets dos attributes from the path"
+  (testing "gets dos attributes from the path"
     (let [test-file-system
           (new-in-memory-file-system
             (random-file-system-name)
@@ -1574,7 +1609,61 @@
 
           attributes (f/read-attributes path attributes-spec)]
       (is (= {:hidden true :system false}
-            attributes)))))
+            attributes))))
+
+  (testing "allows attribute spec map"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (windows-configuration
+              :attribute-views #{:dos}))
+
+          path (p/path test-file-system "C:\\file")
+
+          attributes-spec {:view :dos :names #{:hidden :system}}
+
+          attribute-1-spec "dos:hidden"
+          value-1 true
+
+          attribute-2-spec "dos:system"
+          value-2 false
+
+          _ (f/create-file path)
+
+          _ (f/set-attribute path attribute-1-spec value-1)
+          _ (f/set-attribute path attribute-2-spec value-2)
+
+          attributes (f/read-attributes path attributes-spec)]
+      (is (= {:hidden true :system false}
+            attributes))))
+
+  (testing "allows camel case attribute spec string"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          path (p/path test-file-system "/file")
+
+          attributes-spec "basic:creationTime,lastAccessTime"
+
+          attribute-1-spec "basic:creationTime"
+          value-1 (u/->file-time "2019-05-04T22:10:10Z")
+
+          attribute-2-spec "basic:lastAccessTime"
+          value-2 (u/->file-time "2019-05-04T22:11:00Z")
+
+          _ (f/create-file path)
+
+          _ (f/set-attribute path attribute-1-spec value-1)
+          _ (f/set-attribute path attribute-2-spec value-2)
+
+          attributes (f/read-attributes path attributes-spec)]
+      (is (= "2019-05-04T22:10:10Z"
+            (:creation-time attributes)))
+      (is (= "2019-05-04T22:11:00Z"
+            (:last-access-time attributes))))))
 
 (deftest set-attribute
   ; TODO: test link options
@@ -1653,14 +1742,15 @@
 
           path (p/path test-file-system "/file")
 
-          attribute-spec "basic:creationTime"
+          attribute-spec "basic:creation-time"
           value (u/->file-time "2019-05-04T22:10:10Z")]
       (f/create-file path)
 
       (f/set-attribute path attribute-spec value)
 
       (is (= (u/->file-time "2019-05-04T22:10:10Z")
-            (Files/getAttribute path attribute-spec
+            (Files/getAttribute path
+              (as/->attribute-spec-string attribute-spec)
               (u/->link-options-array []))))))
 
   (testing "sets timestamp string basic attribute on the path"
@@ -1672,14 +1762,15 @@
 
           path (p/path test-file-system "/file")
 
-          attribute-spec "basic:lastAccessTime"
+          attribute-spec "basic:last-access-time"
           value "2019-05-04T22:10:10Z"]
       (f/create-file path)
 
       (f/set-attribute path attribute-spec value)
 
       (is (= (u/->file-time "2019-05-04T22:10:10Z")
-            (Files/getAttribute path attribute-spec
+            (Files/getAttribute path
+              (as/->attribute-spec-string attribute-spec)
               (u/->link-options-array []))))))
 
   (testing "sets user principal owner attribute on the path"
@@ -1698,7 +1789,8 @@
       (f/set-attribute path attribute-spec value)
 
       (is (= (:underlying value)
-            (Files/getAttribute path attribute-spec
+            (Files/getAttribute path
+              (as/->attribute-spec-string attribute-spec)
               (u/->link-options-array []))))))
 
   (testing "sets group principal posix attribute on the path"
@@ -1717,7 +1809,8 @@
       (f/set-attribute path attribute-spec value)
 
       (is (= (:underlying value)
-            (Files/getAttribute path attribute-spec
+            (Files/getAttribute path
+              (as/->attribute-spec-string attribute-spec)
               (u/->link-options-array []))))))
 
   (testing "sets java permission set posix attribute on the path"
@@ -1736,7 +1829,8 @@
       (f/set-attribute path attribute-spec value)
 
       (is (= value
-            (Files/getAttribute path attribute-spec
+            (Files/getAttribute path
+              (as/->attribute-spec-string attribute-spec)
               (u/->link-options-array []))))))
 
   (testing "sets keyword permission set posix attribute on the path"
@@ -1759,7 +1853,8 @@
       (f/set-attribute path attribute-spec value)
 
       (is (= (u/->posix-file-permissions value)
-            (Files/getAttribute path attribute-spec
+            (Files/getAttribute path
+              (as/->attribute-spec-string attribute-spec)
               (u/->link-options-array []))))))
 
   (testing "sets string permissions posix attribute on the path"
@@ -1778,7 +1873,8 @@
       (f/set-attribute path attribute-spec value)
 
       (is (= (u/->posix-file-permissions value)
-            (Files/getAttribute path attribute-spec
+            (Files/getAttribute path
+              (as/->attribute-spec-string attribute-spec)
               (u/->link-options-array []))))))
 
   (testing "sets acl attribute on the path"
@@ -1806,7 +1902,8 @@
       (f/set-attribute path attribute-spec value)
 
       (is (= value
-            (Files/getAttribute path attribute-spec
+            (Files/getAttribute path
+              (as/->attribute-spec-string attribute-spec)
               (u/->link-options-array []))))))
 
   (testing "sets boolean dos attribute on the path"
@@ -1825,7 +1922,48 @@
       (f/set-attribute path attribute-spec value)
 
       (is (= value
-            (Files/getAttribute path attribute-spec
+            (Files/getAttribute path
+              (as/->attribute-spec-string attribute-spec)
+              (u/->link-options-array []))))))
+
+  (testing "allows attribute spec map"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (windows-configuration
+              :attribute-views #{:dos}))
+
+          path (p/path test-file-system "C:\\file")
+
+          attribute-spec {:view :dos :name :hidden}
+          value true]
+      (f/create-file path)
+
+      (f/set-attribute path attribute-spec value)
+
+      (is (= value
+            (Files/getAttribute path
+              (as/->attribute-spec-string attribute-spec)
+              (u/->link-options-array []))))))
+
+  (testing "allows camel case attribute spec string"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          path (p/path test-file-system "/file")
+
+          attribute-spec "basic:lastAccessTime"
+          value "2019-05-04T22:10:10Z"]
+      (f/create-file path)
+
+      (f/set-attribute path attribute-spec value)
+
+      (is (= (u/->file-time "2019-05-04T22:10:10Z")
+            (Files/getAttribute path
+              (as/->attribute-spec-string attribute-spec)
               (u/->link-options-array [])))))))
 
 (deftest probe-content-type
