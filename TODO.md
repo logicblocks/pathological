@@ -9,3 +9,4 @@ TODO
 * Allow `paths/matches?` to take a regex 
 * Add `eastwood`
 * Add missing tests
+* Add rebase to path
