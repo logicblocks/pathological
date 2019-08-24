@@ -14,7 +14,7 @@
              unix-configuration]])
   (:import
     [java.nio.file FileSystem
-     FileSystems]
+                   FileSystems Paths]
     [java.net URI]))
 
 (defn empty-string-array []
@@ -24,11 +24,14 @@
   (into-array String args))
 
 (deftest path
-  (let [^FileSystem test-file-system-1
-        (new-in-memory-file-system (random-file-system-name))
+  (let [test-file-system-1-name (random-file-system-name)
+        test-file-system-2-name (random-file-system-name)
+
+        ^FileSystem test-file-system-1
+        (new-in-memory-file-system test-file-system-1-name)
 
         ^FileSystem test-file-system-2
-        (new-in-memory-file-system (random-file-system-name))]
+        (new-in-memory-file-system test-file-system-2-name)]
 
     (testing "uses supplied file system to build path"
       (is (= (.getPath test-file-system-1 "first"
@@ -82,7 +85,18 @@
             (p/path
               (.getPath test-file-system-2 "first" (empty-string-array))
               (.getPath test-file-system-1 "second" (empty-string-array))
-              (.getPath test-file-system-2 "third" (empty-string-array))))))))
+              (.getPath test-file-system-2 "third" (empty-string-array))))))
+
+    (testing "constructs path from URI"
+      (let [uri (URI. (str "jimfs://" test-file-system-1-name "/file"))]
+        (is (= (.getPath test-file-system-1 "/file" (empty-string-array))
+              (p/path uri)))))
+
+    (testing "constructs path from URI and additional names"
+      (let [uri (URI. (str "jimfs://" test-file-system-1-name "/first"))]
+        (is (= (.getPath test-file-system-1 "/first"
+                 (string-array "second" "third"))
+              (p/path uri "second" "third")))))))
 
 (deftest subpath
   (testing "returns subpath between indices"

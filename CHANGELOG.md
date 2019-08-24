@@ -15,7 +15,8 @@ and this project adheres to
 - `supports-file-attribute-view`, `read-file-store-attribute-view` and
   `read-attribute` on file stores.
 - support for registering custom attribute converters.
-- support for attribute specs to be provided as kebab case strings or as maps. 
+- support for attribute specs to be provided as kebab case strings or as maps.
+- support for building paths from URIs. 
 
 ### Changed
 - `BasePath` protocol to `Pathable`.

@@ -8,7 +8,8 @@
     [pathological.path-matchers :as pm]
     [pathological.file-stores :as fst])
   (:import
-    [java.nio.file FileSystem Path Files]))
+    [java.nio.file FileSystem Path Files Paths]
+    [java.net URI]))
 
 (defprotocol ^:private Pathable
   (->path ^Path [this paths]))
@@ -31,6 +32,16 @@
         (str this)
         (u/->varargs-array String (map str paths)))
       this)))
+
+(extend-type URI
+  Pathable
+  (->path ^Path [^URI this paths]
+    (let [path (Paths/get this)]
+      (if (seq paths)
+        (.getPath (.getFileSystem path)
+          (str path)
+          (u/->varargs-array String (map str paths)))
+        path))))
 
 (defn- opts->open-options-array [opts]
   (let [opts-map (when opts (apply hash-map opts))
