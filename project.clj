@@ -25,8 +25,9 @@
               :exclusions [com.google.guava/guava]]
              [ch.qos.logback/logback-classic "1.2.3"]
              [eftest "0.5.8"]]}
-   :dev    [:shared {:source-paths ["dev"]}]
-   :test   [:shared]}
+   :dev    [:shared {:source-paths ["dev"]
+                     :eftest {:multithread? false}}]
+   :test   [:shared {:eftest {:multithread? false}}]}
 
   :cloverage
   {:ns-exclude-regex [#"^user"]}

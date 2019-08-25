@@ -923,7 +923,7 @@
 
           _ (f/create-file path)
 
-          name "important"
+          name :important
           ^bytes value "123456"
 
           initial-view (f/read-file-attribute-view path :user)
@@ -946,7 +946,7 @@
 
           _ (f/create-file path)
 
-          name "important"
+          name :important
           ^bytes value (u/->bytes "123456")
 
           initial-view (f/read-file-attribute-view path :user)
@@ -969,7 +969,7 @@
 
           _ (f/create-file path)
 
-          name "important"
+          name :important
           value "123456"
           byte-buffer (u/->byte-buffer value)
 
@@ -994,7 +994,7 @@
 
           _ (f/create-file path)
 
-          name "important"
+          name :important
           ^bytes value (u/->bytes "123456")
 
           _ (f/set-attribute path "user:important" value)
@@ -1019,7 +1019,7 @@
 
           _ (f/create-file path)
 
-          name "important"
+          name :important
           ^bytes value (u/->bytes "123456")
 
           initial-view (f/read-file-attribute-view path :user)

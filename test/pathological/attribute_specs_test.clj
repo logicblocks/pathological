@@ -1,4 +1,5 @@
 (ns pathological.attribute-specs-test
+  (:refer-clojure :exclude [name])
   (:require
     [clojure.test :refer :all]
 

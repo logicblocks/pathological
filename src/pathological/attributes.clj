@@ -242,13 +242,13 @@
   (write-attribute [view name value]
     (.write
       ^java.nio.file.attribute.UserDefinedFileAttributeView (:delegate view)
-      name
+      (clojure.core/name name)
       (u/->byte-buffer value))
     (reload view))
   (delete-attribute [view name]
     (.delete
       ^java.nio.file.attribute.UserDefinedFileAttributeView (:delegate view)
-      name)
+      (clojure.core/name name))
     (reload view)))
 
 (defrecord AclFileAttributeView
