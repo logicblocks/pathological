@@ -10,7 +10,7 @@
      :refer [random-file-system-name
              new-in-memory-file-system]])
   (:import [java.nio.file.attribute PosixFilePermission
-                                    PosixFilePermissions]))
+            PosixFilePermissions]))
 
 (defmacro with-var-root-reset [var & body]
   `(let [before# (var-get ~var)
