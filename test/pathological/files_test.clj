@@ -24,7 +24,11 @@
     [java.io ByteArrayOutputStream BufferedReader BufferedWriter]
 
     [java.nio.charset StandardCharsets Charset]
-    [java.nio.file Files Path LinkOption NoSuchFileException]
+    [java.nio.file FileAlreadyExistsException
+                   Files
+                   LinkOption
+                   NoSuchFileException
+                   Path]
     [java.nio.file.attribute AclFileAttributeView
                              BasicFileAttributes
                              BasicFileAttributeView
@@ -3098,7 +3102,10 @@
               result))))))
 
 (deftest populate-file-tree
-  ; TODO: deal with pre-existing files and directories
+  ; TODO: deal with pre-existing directories
+  ; TODO: allow setting file attributes
+  ; TODO: allow input streams / readers as content sources
+  ; TODO: allow custom charsets
 
   (testing "creates top level file with contents"
     (let [test-file-system
@@ -3370,6 +3377,273 @@
       (is (true? (f/exists? link-1-path)))
       (is (true? (f/same-file? file-1-path link-1-path)))
       (is (true? (f/exists? link-2-path)))
+      (is (true? (f/same-file? file-2-path link-2-path)))))
+
+  (testing "throws and aborts on existing files by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1 (p/path test-file-system "/file-1")
+          file-2 (p/path test-file-system "/file-2")]
+      (f/create-file file-1)
+
+      (is (thrown? FileAlreadyExistsException
+            (f/populate-file-tree root-path
+              [[:file-1 {:content ["Line 1" "Line 2"]}]
+               [:file-2 {:content ["Line 3" "Line 4"]}]])))
+      (is (true? (f/not-exists? file-2)))))
+
+  (testing "throws and aborts on existing files when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1 (p/path test-file-system "/file-1")
+          file-2 (p/path test-file-system "/file-2")]
+      (f/create-file file-1)
+
+      (is (thrown? FileAlreadyExistsException
+            (f/populate-file-tree root-path
+              [[:file-1 {:content ["Line 1" "Line 2"]}]
+               [:file-2 {:content ["Line 3" "Line 4"]}]]
+              :on-exists :throw)))
+      (is (true? (f/not-exists? file-2)))))
+
+  (testing "overwrites existing files and continues when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-initial-content ["Line 1" "Line 2"]
+          file-1-updated-content ["Line 3" "Line 4"]
+          file-2-content ["Line 5" "Line 6"]
+
+          file-1 (p/path test-file-system "/file-1")
+          file-2 (p/path test-file-system "/file-2")]
+      (f/write-lines file-1 file-1-initial-content)
+
+      (f/populate-file-tree root-path
+        [[:file-1 {:content file-1-updated-content}]
+         [:file-2 {:content file-2-content}]]
+        :on-exists :overwrite)
+
+      (is (= ["Line 3" "Line 4"] (f/read-all-lines file-1)))
+      (is (= ["Line 5" "Line 6"] (f/read-all-lines file-2)))))
+
+  (testing "skips existing files and continues when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-initial-content ["Line 1" "Line 2"]
+          file-1-updated-content ["Line 3" "Line 4"]
+          file-2-content ["Line 5" "Line 6"]
+
+          file-1 (p/path test-file-system "/file-1")
+          file-2 (p/path test-file-system "/file-2")]
+      (f/write-lines file-1 file-1-initial-content)
+
+      (f/populate-file-tree root-path
+        [[:file-1 {:content file-1-updated-content}]
+         [:file-2 {:content file-2-content}]]
+        :on-exists :skip)
+
+      (is (= ["Line 1" "Line 2"] (f/read-all-lines file-1)))
+      (is (= ["Line 5" "Line 6"] (f/read-all-lines file-2)))))
+
+  (testing "throws and aborts on existing symbolic links by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          symlink-1-path (p/path test-file-system "/symlink-1")
+          symlink-2-path (p/path test-file-system "/symlink-2")]
+      (f/create-symbolic-link symlink-1-path file-1-path)
+
+      (is (thrown? FileAlreadyExistsException
+            (f/populate-file-tree root-path
+              [[:file-1 {:content ["Line 1" "Line 2"]}]
+               [:file-2 {:content ["Line 3" "Line 4"]}]
+               [:symlink-1 {:type :symbolic-link :target "/file-1"}]
+               [:symlink-2 {:type :symbolic-link :target "/file-2"}]])))
+
+      (is (true? (f/not-exists? symlink-2-path)))))
+
+  (testing "throws and aborts on existing symbolic links when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          symlink-1-path (p/path test-file-system "/symlink-1")
+          symlink-2-path (p/path test-file-system "/symlink-2")]
+      (f/create-symbolic-link symlink-1-path file-1-path)
+
+      (is (thrown? FileAlreadyExistsException
+            (f/populate-file-tree root-path
+              [[:file-1 {:content ["Line 1" "Line 2"]}]
+               [:file-2 {:content ["Line 3" "Line 4"]}]
+               [:symlink-1 {:type :symbolic-link :target "/file-1"}]
+               [:symlink-2 {:type :symbolic-link :target "/file-2"}]]
+              :on-exists :throw)))
+
+      (is (true? (f/not-exists? symlink-2-path)))))
+
+  (testing "overwrites existing symbolic links and continues when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          file-2-path (p/path test-file-system "/file-2")
+          symlink-1-path (p/path test-file-system "/symlink-1")
+          symlink-2-path (p/path test-file-system "/symlink-2")]
+      (f/create-symbolic-link symlink-1-path file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:file-1 {:content ["Line 1" "Line 2"]}]
+         [:file-2 {:content ["Line 3" "Line 4"]}]
+         [:symlink-1 {:type :symbolic-link :target "/file-2"}]
+         [:symlink-2 {:type :symbolic-link :target "/file-2"}]]
+        :on-exists :overwrite)
+
+      (is (true? (f/exists? file-1-path)))
+      (is (true? (f/exists? file-2-path)))
+
+      (is (true? (f/symbolic-link? symlink-1-path)))
+      (is (= file-2-path (f/read-symbolic-link symlink-1-path)))
+      (is (true? (f/symbolic-link? symlink-2-path)))
+      (is (= file-2-path (f/read-symbolic-link symlink-2-path)))))
+
+  (testing "skips existing symbolic links and continues when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          file-2-path (p/path test-file-system "/file-2")
+          symlink-1-path (p/path test-file-system "/symlink-1")
+          symlink-2-path (p/path test-file-system "/symlink-2")]
+      (f/create-symbolic-link symlink-1-path file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:file-1 {:content ["Line 1" "Line 2"]}]
+         [:file-2 {:content ["Line 3" "Line 4"]}]
+         [:symlink-1 {:type :symbolic-link :target "/file-2"}]
+         [:symlink-2 {:type :symbolic-link :target "/file-2"}]]
+        :on-exists :skip)
+
+      (is (true? (f/exists? file-1-path)))
+      (is (true? (f/exists? file-2-path)))
+
+      (is (true? (f/symbolic-link? symlink-1-path)))
+      (is (= file-1-path (f/read-symbolic-link symlink-1-path)))
+      (is (true? (f/symbolic-link? symlink-2-path)))
+      (is (= file-2-path (f/read-symbolic-link symlink-2-path)))))
+
+  (testing "throws and aborts on existing links by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          link-1-path (p/path test-file-system "/link-1")
+          link-2-path (p/path test-file-system "/link-2")]
+      (f/create-file file-1-path)
+      (f/create-link link-1-path file-1-path)
+
+      (is (thrown? FileAlreadyExistsException
+            (f/populate-file-tree root-path
+              [[:file-2 {:content ["Line 3" "Line 4"]}]
+               [:link-1 {:type :link :target "/file-1"}]
+               [:link-2 {:type :link :target "/file-2"}]])))
+
+      (is (true? (f/not-exists? link-2-path :no-follow-links)))))
+
+  (testing "throws and aborts on existing symbolic links when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          link-1-path (p/path test-file-system "/link-1")
+          link-2-path (p/path test-file-system "/link-2")]
+      (f/create-file file-1-path)
+      (f/create-link link-1-path file-1-path)
+
+      (is (thrown? FileAlreadyExistsException
+            (f/populate-file-tree root-path
+              [[:file-2 {:content ["Line 3" "Line 4"]}]
+               [:link-1 {:type :link :target "/file-1"}]
+               [:link-2 {:type :link :target "/file-2"}]]
+              :on-exists :throw)))
+
+      (is (true? (f/not-exists? link-2-path :no-follow-links)))))
+
+  (testing "overwrites existing links and continues when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          file-2-path (p/path test-file-system "/file-2")
+          link-1-path (p/path test-file-system "/link-1")
+          link-2-path (p/path test-file-system "/link-2")]
+      (f/create-file file-1-path)
+      (f/create-link link-1-path file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:file-2 {:content ["Line 3" "Line 4"]}]
+         [:link-1 {:type :link :target "/file-2"}]
+         [:link-2 {:type :link :target "/file-2"}]]
+        :on-exists :overwrite)
+
+      (is (true? (f/exists? file-1-path)))
+      (is (true? (f/exists? file-2-path)))
+
+      (is (true? (f/exists? link-1-path :no-follow-links)))
+      (is (true? (f/same-file? file-2-path link-1-path)))
+      (is (true? (f/exists? link-2-path :no-follow-links)))
+      (is (true? (f/same-file? file-2-path link-2-path)))))
+
+  (testing "skips existing symbolic links and continues when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          file-2-path (p/path test-file-system "/file-2")
+          link-1-path (p/path test-file-system "/link-1")
+          link-2-path (p/path test-file-system "/link-2")]
+      (f/create-file file-1-path)
+      (f/create-link link-1-path file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:file-2 {:content ["Line 3" "Line 4"]}]
+         [:link-1 {:type :link :target "/file-2"}]
+         [:link-2 {:type :link :target "/file-2"}]]
+        :on-exists :skip)
+
+      (is (true? (f/exists? file-1-path)))
+      (is (true? (f/exists? file-2-path)))
+
+      (is (true? (f/exists? link-1-path :no-follow-links)))
+      (is (true? (f/same-file? file-1-path link-1-path)))
+      (is (true? (f/exists? link-2-path :no-follow-links)))
       (is (true? (f/same-file? file-2-path link-2-path))))))
 
 (deftest delete-recursively
