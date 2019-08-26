@@ -389,7 +389,8 @@
   FileVisitor
   (preVisitDirectory [_ directory basic-file-attributes]
     (invoke-visitor-and-accumulate
-      pre-visit-directory-fn accumulator-atom directory basic-file-attributes))
+      pre-visit-directory-fn accumulator-atom directory
+      (a/->basic-file-attribute-map basic-file-attributes)))
 
   (postVisitDirectory [_ file exception]
     (invoke-visitor-and-accumulate
@@ -397,7 +398,8 @@
 
   (visitFile [_ file basic-file-attributes]
     (invoke-visitor-and-accumulate
-      visit-file-fn accumulator-atom file basic-file-attributes))
+      visit-file-fn accumulator-atom file
+      (a/->basic-file-attribute-map basic-file-attributes)))
 
   (visitFileFailed [_ file exception]
     (invoke-visitor-and-accumulate

@@ -8,6 +8,9 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Changed
+- `BasicFileAttributes` now passed as a map to `pre-visit-directory-fn` and 
+  `visit-file-fn` on `walk`.
 
 ## [0.1.7] — 2019-08-25
 ### Added

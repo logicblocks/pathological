@@ -9,3 +9,4 @@ TODO
 * Add `eastwood`
 * Add missing tests
 * Add `rebase` to path
+* Use `<-attribute-value` in attribute view conversion

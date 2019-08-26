@@ -2715,8 +2715,6 @@
             (f/read-all-lines path :utf-16be))))))
 
 (deftest walk
-  ; TODO: test maximum depth
-
   (testing "returns a seq over top level files"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
@@ -2771,13 +2769,36 @@
         (is (= [(p/path root-path "/directory2")
                 (p/path root-path "/directory2/file1")
                 (p/path root-path "/directory2/file2")]
+              paths)))))
+
+  (testing "walks only to maximum depth supplied"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")]
+      (f/populate-file-tree root-path
+        [[:directory1
+          [:file1 {:content ["Item 1"]}]
+          [:file2 {:content ["Item 2"]}]]
+         [:directory2
+          [:file3 {:content ["Item 3"]}]
+          [:nested1
+           [:nested2 {:type :directory}]
+           [:file4 {:content ["Item 4"]}]]]])
+
+      (let [paths (f/walk root-path :maximum-depth 2)]
+        (is (= [(p/path root-path)
+                (p/path root-path "directory1")
+                (p/path root-path "directory1/file1")
+                (p/path root-path "directory1/file2")
+                (p/path root-path "directory2")
+                (p/path root-path "directory2/file3")
+                (p/path root-path "directory2/nested1")]
               paths))))))
 
 (deftest walk-file-tree
-  ; TODO: test basic file attributes as map
   ; TODO: exception cases, visit file failed
   ; TODO: test maximum depth
-  ; TODO: deal with pre-existing files and directories
 
   (testing "walks top level files and returns accumulated result"
     (let [test-file-system
@@ -2991,9 +3012,64 @@
                 [:file "/directory2/file1"]
                 [:file "/directory2/file2"]
                 [:post "/directory2"]]
+              result)))))
+
+  (testing "passes basic file attribute map to pre directory and file visit fns"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")]
+      (f/populate-file-tree root-path
+        [[:directory1
+          [:file1 {:content ["Item 1"]}]]
+         [:directory2
+          [:file2 {:content ["Item 2"]}]]])
+
+      (let [stable-attributes
+            [:file-key :size
+             :last-modified-time :creation-time
+             :regular-file? :directory? :symbolic-link? :other?]
+
+            ->visit-fn
+            (fn [key]
+              (fn [accumulator path basic-file-attributes]
+                {:control :continue
+                 :result  (conj accumulator
+                            [key
+                             (str path)
+                             (select-keys basic-file-attributes
+                               stable-attributes)])}))
+
+            path
+            (fn [path-string]
+              (p/path test-file-system path-string))
+
+            attributes-for
+            (fn [path-string]
+              (select-keys
+                (f/read-file-attribute-view (path path-string) :basic)
+                stable-attributes))
+
+            result (f/walk-file-tree root-path
+                     :initial-value []
+                     :visit-file-fn (->visit-fn :file)
+                     :pre-visit-directory-fn (->visit-fn :pre))]
+
+        (is (= [[:pre "/"
+                 (attributes-for "/")]
+                [:pre "/directory1"
+                 (attributes-for "/directory1")]
+                [:file "/directory1/file1"
+                 (attributes-for "/directory1/file1")]
+                [:pre "/directory2"
+                 (attributes-for "/directory2")]
+                [:file "/directory2/file2"
+                 (attributes-for "/directory2/file2")]]
               result))))))
 
 (deftest populate-file-tree
+  ; TODO: deal with pre-existing files and directories
+
   (testing "creates top level file with contents"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))

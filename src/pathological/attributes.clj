@@ -275,22 +275,26 @@
       (map u/->acl-entry new-acl-entries))
     (reload view)))
 
+(defn ->basic-file-attribute-map [^BasicFileAttributes attributes]
+  {:file-key           (.fileKey attributes)
+   :size               (.size attributes)
+   :last-modified-time (u/<-file-time (.lastModifiedTime attributes))
+   :last-access-time   (u/<-file-time (.lastAccessTime attributes))
+   :creation-time      (u/<-file-time (.creationTime attributes))
+   :regular-file?      (.isRegularFile attributes)
+   :directory?         (.isDirectory attributes)
+   :symbolic-link?     (.isSymbolicLink attributes)
+   :other?             (.isOther attributes)})
+
 (defn ->basic-file-attribute-view
   [^Path path ^java.nio.file.attribute.BasicFileAttributeView view]
   (when view
     (let [^BasicFileAttributes attributes (.readAttributes view)]
       (map->BasicFileAttributeView
-        {:path               path
-         :file-key           (.fileKey attributes)
-         :size               (.size attributes)
-         :last-modified-time (u/<-file-time (.lastModifiedTime attributes))
-         :last-access-time   (u/<-file-time (.lastAccessTime attributes))
-         :creation-time      (u/<-file-time (.creationTime attributes))
-         :regular-file?      (.isRegularFile attributes)
-         :directory?         (.isDirectory attributes)
-         :symbolic-link?     (.isSymbolicLink attributes)
-         :other?             (.isOther attributes)
-         :delegate           view}))))
+        (merge
+          (->basic-file-attribute-map attributes)
+          {:path               path
+           :delegate           view})))))
 
 (defn ->owner-file-attribute-view
   [^Path path ^FileOwnerAttributeView view]
