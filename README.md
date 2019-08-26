@@ -1,6 +1,7 @@
 # pathological
 
-A thin but complete wrapper of Java NIO2 for Clojure.
+A thin but complete wrapper of Java NIO2 for Clojure. Requires Java 1.7 or 
+greater.
 
 ## Install
 
