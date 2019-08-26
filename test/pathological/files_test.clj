@@ -2798,7 +2798,6 @@
 
 (deftest walk-file-tree
   ; TODO: exception cases, visit file failed
-  ; TODO: test maximum depth
 
   (testing "walks top level files and returns accumulated result"
     (let [test-file-system
@@ -2851,6 +2850,37 @@
                 [:file "/directory2/file3"]
                 [:post "/directory2"]
                 [:post "/"]]
+              result)))))
+
+  (testing "honours maximum depth option when supplied"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")]
+      (f/populate-file-tree root-path
+        [[:directory1
+          [:file1 {:content ["Item 1"]}]]
+         [:directory2
+          [:file2 {:content ["Item 2"]}]
+          [:nested1
+           [:nested2 {:type :directory}]
+           [:file3 {:content ["Item 3"]}]]]])
+
+      (let [->visit-fn (fn [key]
+                         (fn [accumulator path _]
+                           {:control :continue
+                            :result  (conj accumulator [key (str path)])}))
+            result (f/walk-file-tree root-path
+                     :initial-value []
+                     :visit-file-fn (->visit-fn :file)
+                     :pre-visit-directory-fn (->visit-fn :pre)
+                     :maximum-depth 2)]
+        (is (= [[:pre "/"]
+                [:pre "/directory1"]
+                [:file "/directory1/file1"]
+                [:pre "/directory2"]
+                [:file "/directory2/file2"]
+                [:file "/directory2/nested1"]]
               result)))))
 
   (testing "terminates when requested"
