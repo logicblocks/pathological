@@ -3101,11 +3101,125 @@
                  (attributes-for "/directory2/file2")]]
               result))))))
 
+(deftest delete-recursively
+  ; TODO: what should happen when one delete fails?
+
+  (testing "recursively deletes all files/directories in a path"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/root")]
+      (f/create-directory root-path)
+      (f/populate-file-tree root-path
+        [[:directory1
+          [:file1 {:content ["Item 1"]}]
+          [:file2 {:content ["Item 2"]}]]
+         [:directory2
+          [:file3 {:content ["Item 3"]}]]])
+
+      (f/delete-recursively root-path)
+
+      (is (false? (f/exists? root-path)))
+      (is (false? (f/exists? (p/path root-path "/directory1"))))
+      (is (false? (f/exists? (p/path root-path "/directory1/file1"))))
+      (is (false? (f/exists? (p/path root-path "/directory1/file2"))))
+      (is (false? (f/exists? (p/path root-path "/directory2"))))
+      (is (false? (f/exists? (p/path root-path "/directory2/file3")))))))
+
+(deftest copy-recursively
+  ; TODO: what should happen when one copy fails?
+  ; TODO: test copy options
+
+  (testing (str
+             "recursively copies all files/directories in a source path to a "
+             "destination path")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/root")
+          source-path (p/path root-path "source")
+          target-path (p/path root-path "target")]
+      (f/create-directory root-path)
+      (f/populate-file-tree root-path
+        [[:source
+          [:directory1
+           [:file1 {:content ["Item 1"]}]
+           [:file2 {:content ["Item 2"]}]]
+          [:directory2
+           [:file3 {:content ["Item 3"]}]]]])
+
+      (f/copy-recursively source-path target-path)
+
+      (is (true? (f/exists? source-path)))
+      (is (true? (f/exists? (p/path source-path "/directory1"))))
+      (is (true? (f/exists? (p/path source-path "/directory1/file1"))))
+      (is (true? (f/exists? (p/path source-path "/directory1/file2"))))
+      (is (true? (f/exists? (p/path source-path "/directory2"))))
+      (is (true? (f/exists? (p/path source-path "/directory2/file3"))))
+
+      (is (true? (f/exists? target-path)))
+      (is (true? (f/exists? (p/path target-path "/directory1"))))
+      (is (true? (f/exists? (p/path target-path "/directory1/file1"))))
+      (is (true? (f/exists? (p/path target-path "/directory1/file2"))))
+      (is (true? (f/exists? (p/path target-path "/directory2"))))
+      (is (true? (f/exists? (p/path target-path "/directory2/file3"))))
+      (is (= ["Item 1"]
+            (f/read-all-lines (p/path target-path "/directory1/file1"))))
+      (is (= ["Item 2"]
+            (f/read-all-lines (p/path target-path "/directory1/file2"))))
+      (is (= ["Item 3"]
+            (f/read-all-lines (p/path target-path "/directory2/file3")))))))
+
+(deftest move-recursively
+  ; TODO: what should happen when one move fails?
+  ; TODO: test copy options
+
+  (testing (str
+             "recursively moves all files/directories in a source path to "
+             "a destination path")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/root")
+          source-path (p/path root-path "source")
+          target-path (p/path root-path "target")]
+      (f/create-directory root-path)
+      (f/populate-file-tree root-path
+        [[:source
+          [:directory1
+           [:file1 {:content ["Item 1"]}]
+           [:file2 {:content ["Item 2"]}]]
+          [:directory2
+           [:file3 {:content ["Item 3"]}]]]])
+
+      (f/move-recursively source-path target-path)
+
+      (is (false? (f/exists? source-path)))
+      (is (false? (f/exists? (p/path source-path "/directory1"))))
+      (is (false? (f/exists? (p/path source-path "/directory1/file1"))))
+      (is (false? (f/exists? (p/path source-path "/directory1/file2"))))
+      (is (false? (f/exists? (p/path source-path "/directory2"))))
+      (is (false? (f/exists? (p/path source-path "/directory2/file3"))))
+
+      (is (true? (f/exists? target-path)))
+      (is (true? (f/exists? (p/path target-path "/directory1"))))
+      (is (true? (f/exists? (p/path target-path "/directory1/file1"))))
+      (is (true? (f/exists? (p/path target-path "/directory1/file2"))))
+      (is (true? (f/exists? (p/path target-path "/directory2"))))
+      (is (true? (f/exists? (p/path target-path "/directory2/file3"))))
+      (is (= ["Item 1"]
+            (f/read-all-lines (p/path target-path "/directory1/file1"))))
+      (is (= ["Item 2"]
+            (f/read-all-lines (p/path target-path "/directory1/file2"))))
+      (is (= ["Item 3"]
+            (f/read-all-lines (p/path target-path "/directory2/file3")))))))
+
 (deftest populate-file-tree
-  ; TODO: deal with pre-existing directories
   ; TODO: allow setting file attributes
   ; TODO: allow input streams / readers as content sources
   ; TODO: allow custom charsets
+  ; TODO: handle type mismatches
+  ; TODO: handle errors other than file already exists
 
   (testing "creates top level file with contents"
     (let [test-file-system
@@ -3409,7 +3523,7 @@
             (f/populate-file-tree root-path
               [[:file-1 {:content ["Line 1" "Line 2"]}]
                [:file-2 {:content ["Line 3" "Line 4"]}]]
-              :on-exists :throw)))
+              :on-entry-exists :throw)))
       (is (true? (f/not-exists? file-2)))))
 
   (testing "overwrites existing files and continues when requested"
@@ -3429,7 +3543,7 @@
       (f/populate-file-tree root-path
         [[:file-1 {:content file-1-updated-content}]
          [:file-2 {:content file-2-content}]]
-        :on-exists :overwrite)
+        :on-entry-exists :overwrite)
 
       (is (= ["Line 3" "Line 4"] (f/read-all-lines file-1)))
       (is (= ["Line 5" "Line 6"] (f/read-all-lines file-2)))))
@@ -3451,7 +3565,7 @@
       (f/populate-file-tree root-path
         [[:file-1 {:content file-1-updated-content}]
          [:file-2 {:content file-2-content}]]
-        :on-exists :skip)
+        :on-entry-exists :skip)
 
       (is (= ["Line 1" "Line 2"] (f/read-all-lines file-1)))
       (is (= ["Line 5" "Line 6"] (f/read-all-lines file-2)))))
@@ -3493,7 +3607,7 @@
                [:file-2 {:content ["Line 3" "Line 4"]}]
                [:symlink-1 {:type :symbolic-link :target "/file-1"}]
                [:symlink-2 {:type :symbolic-link :target "/file-2"}]]
-              :on-exists :throw)))
+              :on-entry-exists :throw)))
 
       (is (true? (f/not-exists? symlink-2-path)))))
 
@@ -3514,7 +3628,7 @@
          [:file-2 {:content ["Line 3" "Line 4"]}]
          [:symlink-1 {:type :symbolic-link :target "/file-2"}]
          [:symlink-2 {:type :symbolic-link :target "/file-2"}]]
-        :on-exists :overwrite)
+        :on-entry-exists :overwrite)
 
       (is (true? (f/exists? file-1-path)))
       (is (true? (f/exists? file-2-path)))
@@ -3541,7 +3655,7 @@
          [:file-2 {:content ["Line 3" "Line 4"]}]
          [:symlink-1 {:type :symbolic-link :target "/file-2"}]
          [:symlink-2 {:type :symbolic-link :target "/file-2"}]]
-        :on-exists :skip)
+        :on-entry-exists :skip)
 
       (is (true? (f/exists? file-1-path)))
       (is (true? (f/exists? file-2-path)))
@@ -3588,7 +3702,7 @@
               [[:file-2 {:content ["Line 3" "Line 4"]}]
                [:link-1 {:type :link :target "/file-1"}]
                [:link-2 {:type :link :target "/file-2"}]]
-              :on-exists :throw)))
+              :on-entry-exists :throw)))
 
       (is (true? (f/not-exists? link-2-path :no-follow-links)))))
 
@@ -3609,7 +3723,7 @@
         [[:file-2 {:content ["Line 3" "Line 4"]}]
          [:link-1 {:type :link :target "/file-2"}]
          [:link-2 {:type :link :target "/file-2"}]]
-        :on-exists :overwrite)
+        :on-entry-exists :overwrite)
 
       (is (true? (f/exists? file-1-path)))
       (is (true? (f/exists? file-2-path)))
@@ -3636,7 +3750,7 @@
         [[:file-2 {:content ["Line 3" "Line 4"]}]
          [:link-1 {:type :link :target "/file-2"}]
          [:link-2 {:type :link :target "/file-2"}]]
-        :on-exists :skip)
+        :on-entry-exists :skip)
 
       (is (true? (f/exists? file-1-path)))
       (is (true? (f/exists? file-2-path)))
@@ -3644,119 +3758,124 @@
       (is (true? (f/exists? link-1-path :no-follow-links)))
       (is (true? (f/same-file? file-1-path link-1-path)))
       (is (true? (f/exists? link-2-path :no-follow-links)))
-      (is (true? (f/same-file? file-2-path link-2-path))))))
+      (is (true? (f/same-file? file-2-path link-2-path)))))
 
-(deftest delete-recursively
-  ; TODO: what should happen when one delete fails?
-
-  (testing "recursively deletes all files/directories in a path"
+  (testing "throws and aborts on existing directories by default"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
-          root-path (p/path test-file-system "/root")]
-      (f/create-directory root-path)
-      (f/populate-file-tree root-path
-        [[:directory1
-          [:file1 {:content ["Item 1"]}]
-          [:file2 {:content ["Item 2"]}]]
-         [:directory2
-          [:file3 {:content ["Item 3"]}]]])
+          root-path (p/path test-file-system "/")
 
-      (f/delete-recursively root-path)
+          directory-1-path (p/path test-file-system "/directory-1")
+          directory-2-path (p/path test-file-system "/directory-2")]
+      (f/create-directory directory-1-path)
 
-      (is (false? (f/exists? root-path)))
-      (is (false? (f/exists? (p/path root-path "/directory1"))))
-      (is (false? (f/exists? (p/path root-path "/directory1/file1"))))
-      (is (false? (f/exists? (p/path root-path "/directory1/file2"))))
-      (is (false? (f/exists? (p/path root-path "/directory2"))))
-      (is (false? (f/exists? (p/path root-path "/directory2/file3")))))))
+      (is (thrown? FileAlreadyExistsException
+            (f/populate-file-tree root-path
+              [[:directory-1 {:type :directory}]
+               [:directory-2 {:type :directory}]])))
 
-(deftest copy-recursively
-  ; TODO: what should happen when one copy fails?
-  ; TODO: test copy options
+      (is (true? (f/not-exists? directory-2-path)))))
 
-  (testing (str
-             "recursively copies all files/directories in a source path to a "
-             "destination path")
+  (testing "throws and aborts on existing directories when requested"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
-          root-path (p/path test-file-system "/root")
-          source-path (p/path root-path "source")
-          target-path (p/path root-path "target")]
-      (f/create-directory root-path)
-      (f/populate-file-tree root-path
-        [[:source
-          [:directory1
-           [:file1 {:content ["Item 1"]}]
-           [:file2 {:content ["Item 2"]}]]
-          [:directory2
-           [:file3 {:content ["Item 3"]}]]]])
+          root-path (p/path test-file-system "/")
 
-      (f/copy-recursively source-path target-path)
+          directory-1-path (p/path test-file-system "/directory-1")
+          directory-2-path (p/path test-file-system "/directory-2")]
+      (f/create-directory directory-1-path)
 
-      (is (true? (f/exists? source-path)))
-      (is (true? (f/exists? (p/path source-path "/directory1"))))
-      (is (true? (f/exists? (p/path source-path "/directory1/file1"))))
-      (is (true? (f/exists? (p/path source-path "/directory1/file2"))))
-      (is (true? (f/exists? (p/path source-path "/directory2"))))
-      (is (true? (f/exists? (p/path source-path "/directory2/file3"))))
+      (is (thrown? FileAlreadyExistsException
+            (f/populate-file-tree root-path
+              [[:directory-1 {:type :directory}]
+               [:directory-2 {:type :directory}]]
+              :on-directory-exists :throw)))
 
-      (is (true? (f/exists? target-path)))
-      (is (true? (f/exists? (p/path target-path "/directory1"))))
-      (is (true? (f/exists? (p/path target-path "/directory1/file1"))))
-      (is (true? (f/exists? (p/path target-path "/directory1/file2"))))
-      (is (true? (f/exists? (p/path target-path "/directory2"))))
-      (is (true? (f/exists? (p/path target-path "/directory2/file3"))))
-      (is (= ["Item 1"]
-            (f/read-all-lines (p/path target-path "/directory1/file1"))))
-      (is (= ["Item 2"]
-            (f/read-all-lines (p/path target-path "/directory1/file2"))))
-      (is (= ["Item 3"]
-            (f/read-all-lines (p/path target-path "/directory2/file3")))))))
+      (is (true? (f/not-exists? directory-2-path)))))
 
-(deftest move-recursively
-  ; TODO: what should happen when one move fails?
-  ; TODO: test copy options
-
-  (testing (str
-             "recursively moves all files/directories in a source path to "
-             "a destination path")
+  (testing (str "merges entries into existing directories and continues "
+             "when requested")
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
-          root-path (p/path test-file-system "/root")
-          source-path (p/path root-path "source")
-          target-path (p/path root-path "target")]
-      (f/create-directory root-path)
+          root-path (p/path test-file-system "/")
+
+          directory-1-path (p/path test-file-system "/directory-1")
+          directory-1-file-1-path
+          (p/path test-file-system "/directory-1/file-1")
+          directory-1-file-2-path
+          (p/path test-file-system "/directory-1/file-2")
+
+          directory-2-path (p/path test-file-system "/directory-2")]
+      (f/create-directory directory-1-path)
+      (f/create-file directory-1-file-1-path)
+
       (f/populate-file-tree root-path
-        [[:source
-          [:directory1
-           [:file1 {:content ["Item 1"]}]
-           [:file2 {:content ["Item 2"]}]]
-          [:directory2
-           [:file3 {:content ["Item 3"]}]]]])
+        [[:directory-1
+          [:file-2 {:content ["Line 1" "Line 2"]}]]
+         [:directory-2 {:type :directory}]]
+        :on-directory-exists :merge)
 
-      (f/move-recursively source-path target-path)
+      (is (true? (f/exists? directory-1-path)))
+      (is (true? (f/exists? directory-1-file-1-path)))
+      (is (true? (f/exists? directory-1-file-2-path)))
+      (is (true? (f/exists? directory-2-path)))))
 
-      (is (false? (f/exists? source-path)))
-      (is (false? (f/exists? (p/path source-path "/directory1"))))
-      (is (false? (f/exists? (p/path source-path "/directory1/file1"))))
-      (is (false? (f/exists? (p/path source-path "/directory1/file2"))))
-      (is (false? (f/exists? (p/path source-path "/directory2"))))
-      (is (false? (f/exists? (p/path source-path "/directory2/file3"))))
+  (testing (str "overwrites entries in existing directories and continues "
+             "when requested")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
 
-      (is (true? (f/exists? target-path)))
-      (is (true? (f/exists? (p/path target-path "/directory1"))))
-      (is (true? (f/exists? (p/path target-path "/directory1/file1"))))
-      (is (true? (f/exists? (p/path target-path "/directory1/file2"))))
-      (is (true? (f/exists? (p/path target-path "/directory2"))))
-      (is (true? (f/exists? (p/path target-path "/directory2/file3"))))
-      (is (= ["Item 1"]
-            (f/read-all-lines (p/path target-path "/directory1/file1"))))
-      (is (= ["Item 2"]
-            (f/read-all-lines (p/path target-path "/directory1/file2"))))
-      (is (= ["Item 3"]
-            (f/read-all-lines (p/path target-path "/directory2/file3")))))))
+          root-path (p/path test-file-system "/")
+
+          directory-1-path (p/path test-file-system "/directory-1")
+          directory-1-file-1-path
+          (p/path test-file-system "/directory-1/file-1")
+          directory-1-file-2-path
+          (p/path test-file-system "/directory-1/file-2")
+
+          directory-2-path (p/path test-file-system "/directory-2")]
+      (f/create-directory directory-1-path)
+      (f/create-file directory-1-file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:directory-1
+          [:file-2 {:content ["Line 1" "Line 2"]}]]
+         [:directory-2 {:type :directory}]]
+        :on-directory-exists :overwrite)
+
+      (is (true? (f/exists? directory-1-path)))
+      (is (false? (f/exists? directory-1-file-1-path)))
+      (is (true? (f/exists? directory-1-file-2-path)))
+      (is (true? (f/exists? directory-2-path)))))
+
+  (testing "skips entries in existing directories and continues when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          directory-1-path (p/path test-file-system "/directory-1")
+          directory-1-file-1-path
+          (p/path test-file-system "/directory-1/file-1")
+          directory-1-file-2-path
+          (p/path test-file-system "/directory-1/file-2")
+
+          directory-2-path (p/path test-file-system "/directory-2")]
+      (f/create-directory directory-1-path)
+      (f/create-file directory-1-file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:directory-1
+          [:file-2 {:content ["Line 1" "Line 2"]}]]
+         [:directory-2 {:type :directory}]]
+        :on-directory-exists :skip)
+
+      (is (true? (f/exists? directory-1-path)))
+      (is (true? (f/exists? directory-1-file-1-path)))
+      (is (false? (f/exists? directory-1-file-2-path)))
+      (is (true? (f/exists? directory-2-path))))))
 
 ; new-byte-channel

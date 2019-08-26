@@ -432,79 +432,6 @@
         accumulator-atom))
     @accumulator-atom))
 
-(defn- parse-definition [[first second :as definition]]
-  (cond
-    (and (map? first) (:type first)) [first second]
-    (vector? first) [{:type :directory} definition]
-    (map? first) [(assoc first :type :file) second]))
-
-(defn populate-file-tree
-  [^Path path definition & {:as options}]
-  (let [{:keys [on-exists]
-         :or   {on-exists :throw}} options]
-    (doseq [[name & rest] definition
-            :let [[attributes rest] (parse-definition rest)
-                  path (p/path path (clojure.core/name name))]]
-      (condp = (:type attributes)
-        :directory
-        (do
-          (create-directories path)
-          (when (seq rest)
-            (populate-file-tree path rest)))
-
-        :file
-        (let [open-options
-              (cond
-                (= :throw on-exists) #{:create-new :write}
-                (= :skip on-exists) #{:create-new :write}
-                (= :overwrite on-exists) #{:create :truncate-existing :write})
-              content (get attributes :content [])]
-          (try
-            (apply write-lines path content :utf-8 open-options)
-            (catch FileAlreadyExistsException exception
-              (when-not (= :skip on-exists)
-                (throw exception)))))
-
-        :symbolic-link
-        (let [target (:target attributes)
-              create-fn
-              (fn [path target]
-                (create-symbolic-link path
-                  (p/path (p/file-system path) target)))]
-          (assert target (str "Attribute :target missing for path: " path))
-          (try
-            (create-fn path target)
-            (catch FileAlreadyExistsException exception
-              (cond
-                (= :overwrite on-exists)
-                (do
-                  (delete path)
-                  (create-fn path target))
-
-                (= :skip on-exists) nil
-
-                :else (throw exception)))))
-
-        :link
-        (let [target (:target attributes)
-              create-fn
-              (fn [path target]
-                (create-link path
-                  (p/path (p/file-system path) target)))]
-          (assert target (str "Attribute :target missing for path: " path))
-          (try
-            (create-fn path target)
-            (catch FileAlreadyExistsException exception
-              (cond
-                (= :overwrite on-exists)
-                (do
-                  (delete path)
-                  (create-fn path target))
-
-                (= :skip on-exists) nil
-
-                :else (throw exception)))))))))
-
 (defn delete-recursively
   [^Path path]
   (letfn [(delete-fn [_ path _] (delete path))]
@@ -541,3 +468,98 @@
         :pre-visit-directory-fn create-directory-fn
         :visit-file-fn move-fn
         :post-visit-directory-fn delete-directory-fn))))
+
+(defn- parse-definition [[first second :as definition]]
+  (cond
+    (and (map? first) (:type first)) [first second]
+    (vector? first) [{:type :directory} definition]
+    (map? first) [(assoc first :type :file) second]))
+
+(defn populate-file-tree
+  [^Path path definition & {:as options}]
+  (let [{:keys [on-entry-exists
+                on-directory-exists]
+         :or   {on-entry-exists     :throw
+                on-directory-exists :throw}} options]
+    (doseq [[name & rest] definition
+            :let [[attributes rest] (parse-definition rest)
+                  path (p/path path (clojure.core/name name))]]
+      (condp = (:type attributes)
+        :directory
+        (let [create-fn create-directory
+              create-entries-fn
+              (fn [path rest]
+                (when (seq rest)
+                  (populate-file-tree path rest)))]
+          (try
+            (create-fn path)
+            (create-entries-fn path rest)
+            (catch FileAlreadyExistsException exception
+              (cond
+                (= :merge on-directory-exists)
+                (create-entries-fn path rest)
+
+                (= :overwrite on-directory-exists)
+                (do
+                  (delete-recursively path)
+                  (create-fn path)
+                  (create-entries-fn path rest))
+
+                (= :skip on-directory-exists)
+                nil
+
+                :else (throw exception)))))
+
+        :file
+        (let [open-options
+              (cond
+                (= :throw on-entry-exists) #{:create-new :write}
+                (= :skip on-entry-exists) #{:create-new :write}
+                (= :overwrite on-entry-exists)
+                #{:create :truncate-existing :write})
+              content (get attributes :content [])]
+          (try
+            (apply write-lines path content :utf-8 open-options)
+            (catch FileAlreadyExistsException exception
+              (when-not (= :skip on-entry-exists)
+                (throw exception)))))
+
+        :symbolic-link
+        (let [target (:target attributes)
+              create-fn
+              (fn [path target]
+                (create-symbolic-link path
+                  (p/path (p/file-system path) target)))]
+          (assert target (str "Attribute :target missing for path: " path))
+          (try
+            (create-fn path target)
+            (catch FileAlreadyExistsException exception
+              (cond
+                (= :overwrite on-entry-exists)
+                (do
+                  (delete path)
+                  (create-fn path target))
+
+                (= :skip on-entry-exists) nil
+
+                :else (throw exception)))))
+
+        :link
+        (let [target (:target attributes)
+              create-fn
+              (fn [path target]
+                (create-link path
+                  (p/path (p/file-system path) target)))]
+          (assert target (str "Attribute :target missing for path: " path))
+          (try
+            (create-fn path target)
+            (catch FileAlreadyExistsException exception
+              (cond
+                (= :overwrite on-entry-exists)
+                (do
+                  (delete path)
+                  (create-fn path target))
+
+                (= :skip on-entry-exists) nil
+
+                :else (throw exception)))))))))

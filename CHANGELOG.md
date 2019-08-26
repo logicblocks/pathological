@@ -10,8 +10,11 @@ and this project adheres to
 ## [Unreleased]
 ### Added
 - support for specifying handling when a file / symbolic link / link already
-  exists in `populate-file-tree` using `:on-exists` option; possible values are
-  `:throw`, `:overwrite` or `:skip`.
+  exists in `populate-file-tree` using `:on-entry-exists` option; 
+  possible values are `:throw`, `:overwrite` or `:skip`.
+- support for specifying handling when a directory exists in 
+  `populate-file-tree` using `:on-directory-exists` option;
+  possible values are `:throw`, `:overwrite`, `:merge` or `:skip`.
 
 ### Changed
 - `BasicFileAttributes` now passed as a map to `pre-visit-directory-fn` and 
