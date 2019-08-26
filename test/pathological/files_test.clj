@@ -26,15 +26,15 @@
     [java.nio.charset StandardCharsets Charset]
     [java.nio.file Files Path LinkOption NoSuchFileException]
     [java.nio.file.attribute AclFileAttributeView
-     BasicFileAttributes
-     BasicFileAttributeView
-     DosFileAttributeView
-     DosFileAttributes
-     FileOwnerAttributeView
-     PosixFileAttributes
-     PosixFileAttributeView
-     PosixFilePermissions
-     UserDefinedFileAttributeView]))
+                             BasicFileAttributes
+                             BasicFileAttributeView
+                             DosFileAttributeView
+                             DosFileAttributes
+                             FileOwnerAttributeView
+                             PosixFileAttributes
+                             PosixFileAttributeView
+                             PosixFilePermissions
+                             UserDefinedFileAttributeView]))
 
 (deftest create-directories
   (testing "creates all directories in path"
@@ -221,7 +221,7 @@
             (f/read-posix-file-permissions temp-path)))))
 
   (testing
-   "creates a temporary file in the default file system default location"
+    "creates a temporary file in the default file system default location"
     (let [prefix "pre-"
           suffix "-post"
 
@@ -285,7 +285,7 @@
             (f/read-posix-file-permissions temp-path)))))
 
   (testing
-   "creates a temporary directory in the default file system default location"
+    "creates a temporary directory in the default file system default location"
     (let [prefix "pre-"
 
           temp-path-1 (f/create-temp-directory prefix)
@@ -940,8 +940,6 @@
             (f/read-last-modified-time path))))))
 
 (deftest read-file-attribute-view
-  ; TODO: test link options
-
   (testing "returns a view over basic file attributes"
     (let [test-file-system
           (new-in-memory-file-system
@@ -1163,11 +1161,87 @@
                          :flags       #{:file-inherit :directory-inherit}}]})
             (assoc attributes :delegate nil)))
       (is (instance? AclFileAttributeView
+            (:delegate attributes)))))
+
+  (testing "follows symlinks by default"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")
+
+          _ (f/write-lines target ["Line 1"])
+          _ (f/create-symbolic-link link target)
+
+          ^BasicFileAttributeView
+          underlying-view (Files/getFileAttributeView
+                            link BasicFileAttributeView
+                            (u/->link-options-array []))
+          ^BasicFileAttributes
+          underlying-attributes (.readAttributes underlying-view)
+
+          attributes (f/read-file-attribute-view link :basic)]
+      (is (= (a/map->BasicFileAttributeView
+               {:path               link
+                :file-key           (.fileKey underlying-attributes)
+                :size               (.size underlying-attributes)
+                :last-modified-time (str (.lastModifiedTime
+                                           underlying-attributes))
+                :last-access-time   (str (.lastAccessTime
+                                           underlying-attributes))
+                :creation-time      (str (.creationTime
+                                           underlying-attributes))
+                :regular-file?      true
+                :directory?         (.isDirectory underlying-attributes)
+                :symbolic-link?     false
+                :other?             (.isOther underlying-attributes)})
+            (assoc attributes :delegate nil)))
+      (is (instance? BasicFileAttributeView
+            (:delegate attributes)))))
+
+  (testing "does not follow symlinks when requested"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")
+
+          _ (f/write-lines target ["Line 1"])
+          _ (f/create-symbolic-link link target)
+
+          ^BasicFileAttributeView
+          underlying-view (Files/getFileAttributeView
+                            link BasicFileAttributeView
+                            (u/->link-options-array [:no-follow-links]))
+          ^BasicFileAttributes
+          underlying-attributes (.readAttributes underlying-view)
+
+          attributes (f/read-file-attribute-view link :basic :no-follow-links)]
+      (is (= (a/map->BasicFileAttributeView
+               {:path               link
+                :file-key           (.fileKey underlying-attributes)
+                :size               (.size underlying-attributes)
+                :last-modified-time (str (.lastModifiedTime
+                                           underlying-attributes))
+                :last-access-time   (str (.lastAccessTime
+                                           underlying-attributes))
+                :creation-time      (str (.creationTime
+                                           underlying-attributes))
+                :regular-file?      false
+                :directory?         (.isDirectory underlying-attributes)
+                :symbolic-link?     true
+                :other?             (.isOther underlying-attributes)})
+            (assoc attributes :delegate nil)))
+      (is (instance? BasicFileAttributeView
             (:delegate attributes))))))
 
 (deftest read-attribute
-  ; TODO: test link options
-
   (testing "gets string user defined attribute from the path"
     (let [test-file-system
           (new-in-memory-file-system
@@ -1435,11 +1509,49 @@
 
       (f/set-attribute path attribute-spec value)
 
-      (is (= value (f/read-attribute path attribute-spec))))))
+      (is (= value (f/read-attribute path attribute-spec)))))
+
+  (testing "follows links by default"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")
+
+          attribute-spec "basic:last-access-time"
+          value "2019-05-04T22:10:10Z"]
+      (f/create-file target)
+      (f/create-symbolic-link link target)
+
+      (f/set-attribute link attribute-spec value)
+
+      (is (not= value (f/read-attribute link attribute-spec :no-follow-links)))
+      (is (= value (f/read-attribute target attribute-spec)))))
+
+  (testing "does not follow links when requested"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")
+
+          attribute-spec "basic:last-access-time"
+          value "2019-05-04T22:10:10Z"]
+      (f/create-file target)
+      (f/create-symbolic-link link target)
+
+      (f/set-attribute link attribute-spec value :no-follow-links)
+
+      (is (= value (f/read-attribute link attribute-spec :no-follow-links)))
+      (is (not= value (f/read-attribute target attribute-spec))))))
 
 (deftest read-attributes
-  ; TODO: test link options
-
   (testing "gets user defined attributes from the path"
     (let [test-file-system
           (new-in-memory-file-system
@@ -1663,11 +1775,72 @@
       (is (= "2019-05-04T22:10:10Z"
             (:creation-time attributes)))
       (is (= "2019-05-04T22:11:00Z"
-            (:last-access-time attributes))))))
+            (:last-access-time attributes)))))
+
+  (testing "follows links by default"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")
+
+          attributes-spec "basic:creationTime,lastAccessTime"
+
+          attribute-1-spec "basic:creationTime"
+          value-1 (u/->file-time "2019-05-04T22:10:10Z")
+
+          attribute-2-spec "basic:lastAccessTime"
+          value-2 (u/->file-time "2019-05-04T22:11:00Z")
+
+          _ (f/create-file target)
+          _ (f/create-symbolic-link link target)
+
+          _ (f/set-attribute link attribute-1-spec value-1)
+          _ (f/set-attribute link attribute-2-spec value-2)
+
+          attributes (f/read-attributes target attributes-spec)]
+      (is (= "2019-05-04T22:10:10Z"
+            (:creation-time attributes)))
+      (is (= "2019-05-04T22:11:00Z"
+            (:last-access-time attributes)))))
+
+  (testing "does not follow links when requested"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")
+
+          attributes-spec "basic:creationTime,lastAccessTime"
+
+          attribute-1-spec "basic:creationTime"
+          value-1 (u/->file-time "2019-05-04T22:10:10Z")
+
+          attribute-2-spec "basic:lastAccessTime"
+          value-2 (u/->file-time "2019-05-04T22:11:00Z")
+
+          _ (f/create-file target)
+          _ (f/create-symbolic-link link target)
+
+          _ (f/set-attribute link attribute-1-spec value-1 :no-follow-links)
+          _ (f/set-attribute link attribute-2-spec value-2 :no-follow-links)
+
+          target-attributes
+          (f/read-attributes target attributes-spec)
+          link-attributes
+          (f/read-attributes link attributes-spec :no-follow-links)]
+      (is (not= "2019-05-04T22:10:10Z" (:creation-time target-attributes)))
+      (is (not= "2019-05-04T22:11:00Z" (:last-access-time target-attributes)))
+      (is (= "2019-05-04T22:10:10Z" (:creation-time link-attributes)))
+      (is (= "2019-05-04T22:11:00Z" (:last-access-time link-attributes))))))
 
 (deftest set-attribute
-  ; TODO: test link options
-
   (testing "sets string user defined attribute on the path"
     (let [test-file-system
           (new-in-memory-file-system
@@ -1964,6 +2137,58 @@
       (is (= (u/->file-time "2019-05-04T22:10:10Z")
             (Files/getAttribute path
               (as/->attribute-spec-string attribute-spec)
+              (u/->link-options-array []))))))
+
+  (testing "follows links by default"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")
+
+          attribute-spec "basic:last-access-time"
+          value "2019-05-04T22:10:10Z"]
+      (f/create-file target)
+      (f/create-symbolic-link link target)
+
+      (f/set-attribute link attribute-spec value)
+
+      (is (not= (u/->file-time "2019-05-04T22:10:10Z")
+            (Files/getAttribute link
+              (as/->attribute-spec-string attribute-spec)
+              (u/->link-options-array [:no-follow-links]))))
+      (is (= (u/->file-time "2019-05-04T22:10:10Z")
+            (Files/getAttribute target
+              (as/->attribute-spec-string attribute-spec)
+              (u/->link-options-array []))))))
+
+  (testing "does not follow links when requested"
+    (let [test-file-system
+          (new-in-memory-file-system
+            (random-file-system-name)
+            (unix-configuration
+              :attribute-views #{:basic}))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")
+
+          attribute-spec "basic:last-access-time"
+          value "2019-05-04T22:10:10Z"]
+      (f/create-file target)
+      (f/create-symbolic-link link target)
+
+      (f/set-attribute link attribute-spec value :no-follow-links)
+
+      (is (= (u/->file-time "2019-05-04T22:10:10Z")
+            (Files/getAttribute link
+              (as/->attribute-spec-string attribute-spec)
+              (u/->link-options-array [:no-follow-links]))))
+      (is (not= (u/->file-time "2019-05-04T22:10:10Z")
+            (Files/getAttribute target
+              (as/->attribute-spec-string attribute-spec)
               (u/->link-options-array [])))))))
 
 (deftest probe-content-type
@@ -1979,8 +2204,6 @@
             (f/probe-content-type path))))))
 
 (deftest exists?
-  ; TODO: test for symbolic link handling
-
   (testing "returns true when the path exists"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
@@ -2069,8 +2292,6 @@
       (is (true? (f/not-exists? link2 :no-follow-links))))))
 
 (deftest regular-file?
-  ; TODO: test for symbolic link handling
-
   (testing "returns true when path is a regular file"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
@@ -2087,11 +2308,31 @@
           path (p/path test-file-system "/some-directory")]
       (f/create-directory path)
 
-      (is (false? (f/regular-file? path))))))
+      (is (false? (f/regular-file? path)))))
+
+  (testing "follows links by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")]
+      (f/create-file target)
+      (f/create-symbolic-link link target)
+
+      (is (true? (f/regular-file? link)))))
+
+  (testing "does not follow links when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")]
+      (f/create-file target)
+      (f/create-symbolic-link link target)
+
+      (is (false? (f/regular-file? link :no-follow-links))))))
 
 (deftest directory?
-  ; TODO: test for symbolic link handling
-
   (testing "returns true when path is a directory"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
@@ -2108,7 +2349,29 @@
           path (p/path test-file-system "/some-file")]
       (f/create-file path)
 
-      (is (false? (f/directory? path))))))
+      (is (false? (f/directory? path)))))
+
+  (testing "follows links by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")]
+      (f/create-directory target)
+      (f/create-symbolic-link link target)
+
+      (is (true? (f/directory? link)))))
+
+  (testing "does not follow links when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          link (p/path test-file-system "/link")
+          target (p/path test-file-system "/target")]
+      (f/create-directory target)
+      (f/create-symbolic-link link target)
+
+      (is (false? (f/directory? link :no-follow-links))))))
 
 (deftest symbolic-link?
   (testing "returns true when path is a symbolic link"
@@ -3029,8 +3292,8 @@
       (is (false? (f/exists? (p/path root-path "/directory2/file3")))))))
 
 (deftest copy-recursively
-  ; TODO: What should happen when one copy fails?
-  ; TODO: Test copy options
+  ; TODO: what should happen when one copy fails?
+  ; TODO: test copy options
 
   (testing (str
              "recursively copies all files/directories in a source path to a "
@@ -3073,8 +3336,8 @@
             (f/read-all-lines (p/path target-path "/directory2/file3")))))))
 
 (deftest move-recursively
-  ; TODO: What should happen when one move fails?
-  ; TODO: Test copy options
+  ; TODO: what should happen when one move fails?
+  ; TODO: test copy options
 
   (testing (str
              "recursively moves all files/directories in a source path to "
