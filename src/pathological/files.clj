@@ -24,8 +24,14 @@
 
 (defn create-directory
   [^Path path & options]
-  (let [^"[Ljava.nio.file.attribute.FileAttribute;"
-        file-attributes (u/->file-attributes-array options)]
+  (let [attributes
+        (if (map? (first options))
+          (mapv (fn [[attribute-spec value]]
+                  (u/->file-attribute attribute-spec value))
+            (first options))
+          options)
+        ^"[Ljava.nio.file.attribute.FileAttribute;"
+        file-attributes (u/->file-attributes-array attributes)]
     (Files/createDirectory path file-attributes)))
 
 (defn create-file
@@ -481,11 +487,20 @@
         :visit-file-fn move-fn
         :post-visit-directory-fn delete-directory-fn))))
 
-(defn- parse-definition [[first second :as definition]]
+(defn- parse-definition
+  [[first & [second :as rest] :as all]]
   (cond
-    (and (map? first) (:type first)) [first second]
-    (vector? first) [{:type :directory} definition]
-    (map? first) [(assoc first :type :file) second]))
+    (and (map? first) (vector? second))
+    [(assoc first :type :directory) rest]
+
+    (and (map? first) (:type first))
+    [first second]
+
+    (vector? first)
+    [{:type :directory} all]
+
+    (map? first)
+    [(assoc first :type :file) second]))
 
 (defn populate-file-tree
   [^Path path definition & {:as options}]
@@ -498,13 +513,19 @@
                   path (p/path path (clojure.core/name name))]]
       (condp = (:type attributes)
         :directory
-        (let [create-fn create-directory
+        (let [create-fn
+              (fn [path file-attributes]
+                (if (map? file-attributes)
+                  (create-directory path file-attributes)
+                  (apply create-directory path file-attributes)))
               create-entries-fn
               (fn [path rest]
                 (when (seq rest)
-                  (populate-file-tree path rest)))]
+                  (populate-file-tree path rest)))
+
+              file-attributes (get attributes :file-attributes [])]
           (try
-            (create-fn path)
+            (create-fn path file-attributes)
             (create-entries-fn path rest)
             (catch FileAlreadyExistsException exception
               (cond
@@ -514,7 +535,7 @@
                 (= :overwrite on-directory-exists)
                 (do
                   (delete-recursively path)
-                  (create-fn path)
+                  (create-fn path file-attributes)
                   (create-entries-fn path rest))
 
                 (= :skip on-directory-exists)

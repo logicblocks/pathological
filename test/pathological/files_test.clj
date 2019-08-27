@@ -92,7 +92,25 @@
 
             posix-file-permission-string
             (PosixFilePermissions/toString posix-file-permissions)]
-        (is (= "rwxrw-rw-" posix-file-permission-string))))))
+        (is (= "rwxrw-rw-" posix-file-permission-string)))))
+
+  (testing (str "allows file attributes to be provided as a map when "
+             "creating directory")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/some-directory")
+          user (pr/->user-principal test-file-system "some-user")]
+      (f/create-directory path
+        {"posix:permissions"         "rwxrw-rw-"
+         {:view :owner :name :owner} user})
+
+      (is (true? (f/exists? path)))
+      (is (= #{:owner-read :owner-write :owner-execute
+               :group-read :group-write
+               :others-read :others-write}
+            (f/read-attribute path "posix:permissions")))
+      (is (= user (f/read-attribute path "owner:owner"))))))
 
 (deftest create-file
   (testing "creates a file"
@@ -3254,7 +3272,6 @@
             (f/read-all-lines (p/path target-path "/directory2/file3")))))))
 
 (deftest populate-file-tree
-  ; TODO: allow setting file attributes on directories
   ; TODO: allow input streams / readers as content sources
   ; TODO: allow custom charsets
   ; TODO: handle type mismatches
@@ -3480,6 +3497,100 @@
                    (p/path test-file-system "/some-directory-1"))))
       (is (true? (f/directory?
                    (p/path test-file-system "/some-directory-2"))))))
+
+  (testing "sets provided file attributes on directories"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          user-1 (pr/->user-principal test-file-system "first-user")
+          user-2 (pr/->user-principal test-file-system "second-user")
+
+          directory-1-path (p/path test-file-system "/directory-1")
+          directory-2-path (p/path test-file-system "/directory-2")]
+      (f/populate-file-tree root-path
+        [[:directory-1 {:type :directory
+                        :file-attributes
+                        {"posix:permissions" "rwxr-xr-x"
+                         "owner:owner"       user-1}}]
+         [:directory-2 {:type :directory
+                        :file-attributes
+                        {"posix:permissions" "r-xr-xr-x"
+                         "owner:owner"       user-2}}]])
+
+      (is (= #{:owner-read :owner-write :owner-execute
+               :group-read :group-execute
+               :others-read :others-execute}
+            (f/read-posix-file-permissions directory-1-path :no-follow-links)))
+      (is (= user-1
+            (f/read-attribute directory-1-path "owner:owner" :no-follow-links)))
+      (is (= #{:owner-read :owner-execute
+               :group-read :group-execute
+               :others-read :others-execute}
+            (f/read-posix-file-permissions directory-2-path :no-follow-links)))
+      (is (= user-2
+            (f/read-attribute
+              directory-2-path "owner:owner" :no-follow-links)))))
+
+  (testing "allows nested files under directories with file attributes"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          user-1 (pr/->user-principal test-file-system "first-user")
+          user-2 (pr/->user-principal test-file-system "second-user")
+
+          directory-1-path (p/path test-file-system "/directory-1")
+          directory-2-path (p/path test-file-system "/directory-2")
+          file-1-path (p/path test-file-system "/directory-1/file-1")
+          file-2-path (p/path test-file-system "/directory-1/file-2")
+          file-3-path (p/path test-file-system "/directory-2/file-3")]
+      (f/populate-file-tree root-path
+        [[:directory-1 {:file-attributes
+                        {"posix:permissions" "rwxr-xr-x"
+                         "owner:owner"       user-1}}
+          [:file-1 {:content ["Line 1" "Line 2"]}]
+          [:file-2 {:content ["Line 3" "Line 4"]}]]
+         [:directory-2 {:file-attributes
+                        {"posix:permissions" "r-xr-xr-x"
+                         "owner:owner"       user-2}}
+          [:file-3 {:content ["Line 5" "Line 6"]}]]])
+
+      (is (true? (f/exists? file-1-path)))
+      (is (true? (f/exists? file-2-path)))
+      (is (true? (f/exists? file-3-path)))
+
+      (is (not= #{:owner-read :owner-write :owner-execute
+                  :group-read :group-write
+                  :others-read :others-write}
+            (f/read-posix-file-permissions file-1-path :no-follow-links)))
+      (is (not= user-1
+            (f/read-attribute file-1-path "owner:owner" :no-follow-links)))
+      (is (not= #{:owner-read :owner-write :owner-execute
+                  :group-read :group-write
+                  :others-read :others-write}
+            (f/read-posix-file-permissions file-2-path :no-follow-links)))
+      (is (not= user-1
+            (f/read-attribute file-2-path "owner:owner" :no-follow-links)))
+      (is (not= #{:owner-read :group-read :others-read}
+            (f/read-posix-file-permissions file-3-path :no-follow-links)))
+      (is (not= user-2
+            (f/read-attribute file-3-path "owner:owner" :no-follow-links)))
+
+      (is (= #{:owner-read :owner-write :owner-execute
+               :group-read :group-execute
+               :others-read :others-execute}
+            (f/read-posix-file-permissions directory-1-path :no-follow-links)))
+      (is (= user-1
+            (f/read-attribute directory-1-path "owner:owner" :no-follow-links)))
+      (is (= #{:owner-read :owner-execute
+               :group-read :group-execute
+               :others-read :others-execute}
+            (f/read-posix-file-permissions directory-2-path :no-follow-links)))
+      (is (= user-2
+            (f/read-attribute directory-2-path "owner:owner" :no-follow-links)))))
 
   (testing "creates nested file with contents"
     (let [test-file-system
