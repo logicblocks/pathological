@@ -13,26 +13,25 @@
     [java.nio ByteBuffer]
     [java.nio.charset StandardCharsets Charset]
     [java.nio.file CopyOption
-     FileVisitOption
-     FileVisitResult
-     LinkOption
-     OpenOption
-     StandardOpenOption
-     StandardCopyOption]
+                   FileVisitOption
+                   FileVisitResult
+                   LinkOption
+                   OpenOption
+                   StandardOpenOption
+                   StandardCopyOption]
     [java.nio.file.attribute AclEntry
-     AclEntryFlag
-     AclEntryPermission
-     AclEntryType
-     AclFileAttributeView
-     BasicFileAttributeView
-     DosFileAttributeView
-     FileAttribute
-     FileOwnerAttributeView
-     FileTime
-     PosixFileAttributeView
-     PosixFilePermission
-     PosixFilePermissions
-     UserDefinedFileAttributeView]
+                             AclEntryFlag
+                             AclEntryPermission
+                             AclEntryType
+                             AclFileAttributeView
+                             BasicFileAttributeView
+                             DosFileAttributeView
+                             FileOwnerAttributeView
+                             FileTime
+                             PosixFileAttributeView
+                             PosixFilePermission
+                             PosixFilePermissions
+                             UserDefinedFileAttributeView]
     [java.util.stream Stream]))
 
 (defn camel->kebab [value]
@@ -246,22 +245,22 @@
 
 (defn ->bytes
   ([^String value]
-    (.getBytes value))
+   (.getBytes value))
   ([^String value charset]
-    (.getBytes value ^Charset (->charset charset))))
+   (.getBytes value ^Charset (->charset charset))))
 
 (defn ->byte-buffer
   ([value]
-    (->byte-buffer value :utf-8))
+   (->byte-buffer value :utf-8))
   ([value charset]
-    (cond
-      (instance? ByteBuffer value) value
-      (bytes? value) (ByteBuffer/wrap value)
-      :default
-      (ByteBuffer/wrap
-        (.getBytes
-          (str value)
-          ^Charset (->charset charset))))))
+   (cond
+     (instance? ByteBuffer value) value
+     (bytes? value) (ByteBuffer/wrap value)
+     :default
+     (ByteBuffer/wrap
+       (.getBytes
+         (str value)
+         ^Charset (->charset charset))))))
 
 (defn <-byte-buffer [^ByteBuffer value]
   (.array value))
@@ -275,7 +274,7 @@
   `(into-array ~type (or ~args [])))
 
 (defmacro ->file-attributes-array [args]
-  `(->varargs-array FileAttribute ~args))
+  `(->varargs-array java.nio.file.attribute.FileAttribute ~args))
 
 (defmacro ->open-options-array [args]
   `(->varargs-array OpenOption (map ->open-option ~args)))
@@ -337,6 +336,16 @@
   (let [attribute-conversion
         (lookup-conversion *<-attribute-value-conversions* attribute-spec)]
     (attribute-conversion value)))
+
+(defrecord FileAttribute [name value]
+  java.nio.file.attribute.FileAttribute
+  (name [_] name)
+  (value [_] value))
+
+(defn ->file-attribute [attribute-spec value]
+  (map->FileAttribute
+    {:name  (as/->attribute-spec-string attribute-spec)
+     :value (->attribute-value attribute-spec value)}))
 
 (defn stream-seq [^Stream stream]
   (iterator-seq (.iterator stream)))

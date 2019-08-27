@@ -30,14 +30,26 @@
 
 (defn create-file
   [^Path path & options]
-  (let [^"[Ljava.nio.file.attribute.FileAttribute;"
-        file-attributes (u/->file-attributes-array options)]
+  (let [attributes
+        (if (map? (first options))
+          (mapv (fn [[attribute-spec value]]
+                  (u/->file-attribute attribute-spec value))
+            (first options))
+          options)
+        ^"[Ljava.nio.file.attribute.FileAttribute;"
+        file-attributes (u/->file-attributes-array attributes)]
     (Files/createFile path file-attributes)))
 
 (defn create-symbolic-link
   [^Path link ^Path target & options]
-  (let [^"[Ljava.nio.file.attribute.FileAttribute;"
-        file-attributes (u/->file-attributes-array options)]
+  (let [attributes
+        (if (map? (first options))
+          (mapv (fn [[attribute-spec value]]
+                  (u/->file-attribute attribute-spec value))
+            (first options))
+          options)
+        ^"[Ljava.nio.file.attribute.FileAttribute;"
+        file-attributes (u/->file-attributes-array attributes)]
     (Files/createSymbolicLink link target file-attributes)))
 
 (defn create-link
@@ -511,34 +523,51 @@
                 :else (throw exception)))))
 
         :file
-        (let [open-options
-              (cond
-                (= :throw on-entry-exists) #{:create-new :write}
-                (= :skip on-entry-exists) #{:create-new :write}
-                (= :overwrite on-entry-exists)
-                #{:create :truncate-existing :write})
-              content (get attributes :content [])]
+        (let [create-fn
+              (fn [path file-attributes]
+                (if (map? file-attributes)
+                  (create-file path file-attributes)
+                  (apply create-file path file-attributes)))
+              write-fn
+              (fn [path content]
+                (write-lines path content))
+
+              content (get attributes :content [])
+              file-attributes (get attributes :file-attributes [])]
           (try
-            (apply write-lines path content :utf-8 open-options)
+            (create-fn path file-attributes)
+            (write-fn path content)
             (catch FileAlreadyExistsException exception
-              (when-not (= :skip on-entry-exists)
-                (throw exception)))))
+              (cond
+                (= :skip on-entry-exists)
+                nil
+
+                (= :overwrite on-entry-exists)
+                (do
+                  (delete path)
+                  (create-fn path file-attributes)
+                  (write-fn path content))
+
+                :else (throw exception)))))
 
         :symbolic-link
-        (let [target (:target attributes)
-              create-fn
-              (fn [path target]
-                (create-symbolic-link path
-                  (p/path (p/file-system path) target)))]
+        (let [create-fn
+              (fn [path target file-attributes]
+                (let [target (p/path (p/file-system path) target)]
+                  (if (map? file-attributes)
+                    (create-symbolic-link path target file-attributes)
+                    (apply create-symbolic-link path target file-attributes))))
+              target (:target attributes)
+              file-attributes (get attributes :file-attributes [])]
           (assert target (str "Attribute :target missing for path: " path))
           (try
-            (create-fn path target)
+            (create-fn path target file-attributes)
             (catch FileAlreadyExistsException exception
               (cond
                 (= :overwrite on-entry-exists)
                 (do
                   (delete path)
-                  (create-fn path target))
+                  (create-fn path target file-attributes))
 
                 (= :skip on-entry-exists) nil
 

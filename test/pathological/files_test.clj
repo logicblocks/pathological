@@ -119,7 +119,24 @@
 
             posix-file-permission-string
             (PosixFilePermissions/toString posix-file-permissions)]
-        (is (= "rwxrw-rw-" posix-file-permission-string))))))
+        (is (= "rwxrw-rw-" posix-file-permission-string)))))
+
+  (testing "allows file attributes to be provided as a map when creating file"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          path (p/path test-file-system "/some-file")
+          user (pr/->user-principal test-file-system "some-user")]
+      (f/create-file path
+        {"posix:permissions"         "rwxrw-rw-"
+         {:view :owner :name :owner} user})
+
+      (is (true? (f/exists? path)))
+      (is (= #{:owner-read :owner-write :owner-execute
+               :group-read :group-write
+               :others-read :others-write}
+            (f/read-attribute path "posix:permissions")))
+      (is (= user (f/read-attribute path "owner:owner"))))))
 
 (deftest create-symbolic-link
   (testing "creates a symbolic link"
@@ -157,7 +174,29 @@
 
             posix-file-permission-string
             (PosixFilePermissions/toString posix-file-permissions)]
-        (is (= "rwxrw-rw-" posix-file-permission-string))))))
+        (is (= "rwxrw-rw-" posix-file-permission-string)))))
+
+  (testing (str "allows file attributes to be provided as a map when creating "
+             "symbolic link")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          target-path (p/path test-file-system "/target")
+          link-path (p/path test-file-system "/link")
+
+          user (pr/->user-principal test-file-system "some-user")]
+      (f/create-file target-path)
+      (f/create-symbolic-link link-path target-path
+        {"posix:permissions"         "rwxrw-rw-"
+         {:view :owner :name :owner} user})
+
+      (is (true? (f/exists? link-path :no-follow-links)))
+      (is (= #{:owner-read :owner-write :owner-execute
+               :group-read :group-write
+               :others-read :others-write}
+            (f/read-attribute link-path "posix:permissions" :no-follow-links)))
+      (is (= user
+            (f/read-attribute link-path "owner:owner" :no-follow-links))))))
 
 (deftest create-link
   (testing "creates a link"
@@ -329,7 +368,7 @@
           (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/path/to/file")
-          content ["line 1" "line 2" "line 3"]]
+          content ["Line 1" "Line 2" "Line 3"]]
       (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
 
       (f/write-lines path content)
@@ -341,7 +380,7 @@
           (new-in-memory-file-system (random-file-system-name))
 
           path (p/path test-file-system "/path/to/file")
-          content ["line 1" "line 2" "line 3"]]
+          content ["Line 1" "Line 2" "Line 3"]]
       (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
 
       (f/write-lines path content :utf-16)
@@ -385,7 +424,7 @@
           (new-in-memory-file-system (random-file-system-name))
 
           ^Path path (p/path test-file-system "/path/to/file")
-          content ["line 1" "line 2" "line 3"]
+          content ["Line 1" "Line 2" "Line 3"]
 
           ^"[Ljava.nio.file.OpenOption;"
           default-options (u/->open-options-array [])]
@@ -399,7 +438,7 @@
           (new-in-memory-file-system (random-file-system-name))
 
           ^Path path (p/path test-file-system "/path/to/file")
-          content ["line 1" "line 2" "line 3"]
+          content ["Line 1" "Line 2" "Line 3"]
 
           ^"[Ljava.nio.file.OpenOption;"
           default-options (u/->open-options-array [])]
@@ -3215,11 +3254,12 @@
             (f/read-all-lines (p/path target-path "/directory2/file3")))))))
 
 (deftest populate-file-tree
-  ; TODO: allow setting file attributes
+  ; TODO: allow setting file attributes on directories
   ; TODO: allow input streams / readers as content sources
   ; TODO: allow custom charsets
   ; TODO: handle type mismatches
   ; TODO: handle errors other than file already exists
+  ; TODO: allow overrides of options on a per path basis
 
   (testing "creates top level file with contents"
     (let [test-file-system
@@ -3227,12 +3267,12 @@
 
           root-path (p/path test-file-system "/")
           definition
-          [[:file {:content ["line 1" "line 2"]}]]
+          [[:file {:content ["Line 1" "Line 2"]}]]
           path (p/path test-file-system "/file")]
       (f/populate-file-tree root-path definition)
 
       (is (f/regular-file? path))
-      (is (= ["line 1" "line 2"]
+      (is (= ["Line 1" "Line 2"]
             (f/read-all-lines path)))))
 
   (testing "creates top level files with content"
@@ -3241,18 +3281,46 @@
 
           root-path (p/path test-file-system "/")
           definition
-          [[:file1 {:content ["line 1" "line 2"]}]
-           [:file2 {:content ["line 3" "line 4"]}]]
+          [[:file1 {:content ["Line 1" "Line 2"]}]
+           [:file2 {:content ["Line 3" "Line 4"]}]]
           path-1 (p/path test-file-system "/file1")
           path-2 (p/path test-file-system "/file2")]
       (f/populate-file-tree root-path definition)
 
       (is (f/regular-file? path-1))
-      (is (= ["line 1" "line 2"]
+      (is (= ["Line 1" "Line 2"]
             (f/read-all-lines path-1)))
       (is (f/regular-file? path-1))
-      (is (= ["line 3" "line 4"]
+      (is (= ["Line 3" "Line 4"]
             (f/read-all-lines path-2)))))
+
+  (testing "sets provided file attributes on files"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          user-1 (pr/->user-principal test-file-system "first-user")
+          user-2 (pr/->user-principal test-file-system "second-user")
+
+          path-1 (p/path test-file-system "/file-1")
+          path-2 (p/path test-file-system "/file-2")]
+      (f/populate-file-tree root-path
+        [[:file-1 {:file-attributes
+                   {"posix:permissions" "rwxrw-rw-"
+                    "owner:owner"       user-1}}]
+         [:file-2 {:file-attributes
+                   {"posix:permissions" "r--r--r--"
+                    "owner:owner"       user-2}}]])
+
+      (is (= #{:owner-read :owner-write :owner-execute
+               :group-read :group-write
+               :others-read :others-write}
+            (f/read-posix-file-permissions path-1)))
+      (is (= user-1 (f/read-attribute path-1 "owner:owner")))
+      (is (= #{:owner-read :group-read :others-read}
+            (f/read-posix-file-permissions path-2)))
+      (is (= user-2 (f/read-attribute path-2 "owner:owner")))))
 
   (testing "creates top level symbolic link"
     (let [test-file-system
@@ -3260,7 +3328,7 @@
 
           root-path (p/path test-file-system "/")
           definition
-          [[:file {:content ["line 1" "line 2"]}]
+          [[:file {:content ["Line 1" "Line 2"]}]
            [:symlink {:type :symbolic-link :target "/file"}]]
           file-path (p/path test-file-system "/file")
           symlink-path (p/path test-file-system "/symlink")]
@@ -3275,8 +3343,8 @@
 
           root-path (p/path test-file-system "/")
           definition
-          [[:file1 {:content ["line 1" "line 2"]}]
-           [:file2 {:content ["line 3" "line 4"]}]
+          [[:file1 {:content ["Line 1" "Line 2"]}]
+           [:file2 {:content ["Line 3" "Line 4"]}]
            [:symlink1 {:type :symbolic-link :target "/file1"}]
            [:symlink2 {:type :symbolic-link :target "/file2"}]]
           file-1-path (p/path test-file-system "/file1")
@@ -3296,10 +3364,59 @@
 
           root-path (p/path test-file-system "/")
           definition
-          [[:file {:content ["line 1" "line 2"]}]
+          [[:file {:content ["Line 1" "Line 2"]}]
            [:symlink {:type :symbolic-link}]]]
       (is (thrown? AssertionError
             (f/populate-file-tree root-path definition)))))
+
+  (testing "sets provided file attributes on symbolic links"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          user-1 (pr/->user-principal test-file-system "first-user")
+          user-2 (pr/->user-principal test-file-system "second-user")
+
+          file-1-path (p/path test-file-system "/file-1")
+          file-2-path (p/path test-file-system "/file-2")
+          symlink-1-path (p/path test-file-system "/symlink-1")
+          symlink-2-path (p/path test-file-system "/symlink-2")]
+      (f/populate-file-tree root-path
+        [[:file-1 {:content ["Line 1" "Line 2"]}]
+         [:file-2 {:content ["Line 3" "Line 4"]}]
+         [:symlink-1 {:type   :symbolic-link
+                      :target "/file-1"
+                      :file-attributes
+                              {"posix:permissions" "rwxrw-rw-"
+                               "owner:owner"       user-1}}]
+         [:symlink-2 {:type   :symbolic-link
+                      :target "/file-2"
+                      :file-attributes
+                              {"posix:permissions" "r--r--r--"
+                               "owner:owner"       user-2}}]])
+
+      (is (not= #{:owner-read :owner-write :owner-execute
+                  :group-read :group-write
+                  :others-read :others-write}
+            (f/read-posix-file-permissions file-1-path :no-follow-links)))
+      (is (not= user-1
+            (f/read-attribute file-1-path "owner:owner" :no-follow-links)))
+      (is (not= #{:owner-read :group-read :others-read}
+            (f/read-posix-file-permissions file-2-path :no-follow-links)))
+      (is (not= user-2
+            (f/read-attribute file-2-path "owner:owner" :no-follow-links)))
+
+      (is (= #{:owner-read :owner-write :owner-execute
+               :group-read :group-write
+               :others-read :others-write}
+            (f/read-posix-file-permissions symlink-1-path :no-follow-links)))
+      (is (= user-1
+            (f/read-attribute symlink-1-path "owner:owner" :no-follow-links)))
+      (is (= #{:owner-read :group-read :others-read}
+            (f/read-posix-file-permissions symlink-2-path :no-follow-links)))
+      (is (= user-2
+            (f/read-attribute symlink-2-path "owner:owner" :no-follow-links)))))
 
   (testing "creates top level link"
     (let [test-file-system
@@ -3307,7 +3424,7 @@
 
           root-path (p/path test-file-system "/")
           definition
-          [[:file {:content ["line 1" "line 2"]}]
+          [[:file {:content ["Line 1" "Line 2"]}]
            [:link {:type :link :target "/file"}]]
           file-path (p/path test-file-system "/file")
           link-path (p/path test-file-system "/link")]
@@ -3322,8 +3439,8 @@
 
           root-path (p/path test-file-system "/")
           definition
-          [[:file1 {:content ["line 1" "line 2"]}]
-           [:file2 {:content ["line 3" "line 4"]}]
+          [[:file1 {:content ["Line 1" "Line 2"]}]
+           [:file2 {:content ["Line 3" "Line 4"]}]
            [:link1 {:type :link :target "/file1"}]
            [:link2 {:type :link :target "/file2"}]]
           file-1-path (p/path test-file-system "/file1")
@@ -3370,10 +3487,10 @@
 
           root-path (p/path test-file-system "/")
           definition
-          [[:some [:path [:to [:file {:content ["line 1" "line 2"]}]]]]]]
+          [[:some [:path [:to [:file {:content ["Line 1" "Line 2"]}]]]]]]
       (f/populate-file-tree root-path definition)
 
-      (is (= ["line 1" "line 2"]
+      (is (= ["Line 1" "Line 2"]
             (f/read-all-lines
               (p/path test-file-system "/some/path/to/file"))))))
 
@@ -3384,14 +3501,14 @@
           root-path (p/path test-file-system "/")
           definition
           [[:some [:path [:to
-                          [:file-1 {:content ["line 1" "line 2"]}]
-                          [:file-2 {:content ["line 3" "line 4"]}]]]]]]
+                          [:file-1 {:content ["Line 1" "Line 2"]}]
+                          [:file-2 {:content ["Line 3" "Line 4"]}]]]]]]
       (f/populate-file-tree root-path definition)
 
-      (is (= ["line 1" "line 2"]
+      (is (= ["Line 1" "Line 2"]
             (f/read-all-lines
               (p/path test-file-system "/some/path/to/file-1"))))
-      (is (= ["line 3" "line 4"]
+      (is (= ["Line 3" "Line 4"]
             (f/read-all-lines
               (p/path test-file-system "/some/path/to/file-2"))))))
 
@@ -3403,7 +3520,7 @@
           definition
           [[:some
             [:directory
-             [:file {:content ["line 1" "line 2"]}]]
+             [:file {:content ["Line 1" "Line 2"]}]]
             [:other
              [:directory
               [:symlink {:type   :symbolic-link
@@ -3424,8 +3541,8 @@
           definition
           [[:some
             [:directory
-             [:file1 {:content ["line 1" "line 2"]}]
-             [:file2 {:content ["line 3" "line 4"]}]]
+             [:file1 {:content ["Line 1" "Line 2"]}]
+             [:file2 {:content ["Line 3" "Line 4"]}]]
             [:other
              [:directory
               [:symlink1 {:type   :symbolic-link
@@ -3453,7 +3570,7 @@
           definition
           [[:some
             [:directory
-             [:file {:content ["line 1" "line 2"]}]]
+             [:file {:content ["Line 1" "Line 2"]}]]
             [:other
              [:directory
               [:link {:type   :link
@@ -3474,8 +3591,8 @@
           definition
           [[:some
             [:directory
-             [:file1 {:content ["line 1" "line 2"]}]
-             [:file2 {:content ["line 3" "line 4"]}]]
+             [:file1 {:content ["Line 1" "Line 2"]}]
+             [:file2 {:content ["Line 3" "Line 4"]}]]
             [:other
              [:directory
               [:link1 {:type   :link
