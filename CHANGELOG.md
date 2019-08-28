@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+
+## [0.1.9] — 2019-08-28
 ### Added
 - support for setting file attributes on files, symbolic links and directories
   in `populate-file-tree`.
@@ -117,4 +119,5 @@ and this project adheres to
 [0.1.6]: https://github.com/logicblocks/pathological/compare/0.1.5...0.1.6
 [0.1.7]: https://github.com/logicblocks/pathological/compare/0.1.6...0.1.7
 [0.1.8]: https://github.com/logicblocks/pathological/compare/0.1.7...0.1.8
-[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.8...HEAD
+[0.1.9]: https://github.com/logicblocks/pathological/compare/0.1.8...0.1.9
+[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.9...HEAD
