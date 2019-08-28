@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 - support for setting file attributes on files, symbolic links and directories
   in `populate-file-tree`.
+- support `String`, `InputStream` and `Reader` content in `populate-file-tree`.
 
 ## [0.1.8] — 2019-08-26
 ### Added

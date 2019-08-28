@@ -3272,7 +3272,6 @@
             (f/read-all-lines (p/path target-path "/directory2/file3")))))))
 
 (deftest populate-file-tree
-  ; TODO: allow input streams / readers as content sources
   ; TODO: allow custom charsets
   ; TODO: handle type mismatches
   ; TODO: handle errors other than file already exists
@@ -3307,11 +3306,63 @@
       (is (f/regular-file? path-1))
       (is (= ["Line 1" "Line 2"]
             (f/read-all-lines path-1)))
-      (is (f/regular-file? path-1))
+      (is (f/regular-file? path-2))
       (is (= ["Line 3" "Line 4"]
             (f/read-all-lines path-2)))))
 
-  (testing "sets provided file attributes on files"
+  (testing "allows content to be supplied as string"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/file1")]
+      (f/populate-file-tree root-path
+        [[:file1 {:content "Line 1\nLine 2"}]])
+
+      (is (f/regular-file? path-1))
+      (is (= ["Line 1" "Line 2"]
+            (f/read-all-lines path-1)))))
+
+  (testing "allows content to be supplied as an input stream"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+          path-1 (p/path test-file-system "/file1")
+
+          content ["Hello" "world!"]]
+      (with-open [input-stream
+                  (io/input-stream
+                    (u/->bytes (str (string/join "\n" content) "\n")))]
+        (f/populate-file-tree root-path
+          [[:file1 {:content input-stream}]]))
+
+      (is (f/regular-file? path-1))
+      (is (= ["Hello" "world!"]
+            (f/read-all-lines path-1)))))
+
+  (testing "allows content to be supplied as a reader"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+          path-1 (p/path test-file-system "/file1")
+
+          content ["Hello" "world!"]]
+      (with-open [input-stream
+                  (io/input-stream
+                    (u/->bytes (str (string/join "\n" content) "\n")))
+                  reader
+                  (io/reader input-stream)]
+        (f/populate-file-tree root-path
+          [[:file1 {:content reader}]]))
+
+      (is (f/regular-file? path-1))
+      (is (= ["Hello" "world!"]
+            (f/read-all-lines path-1)))))
+
+  (testing "sets provided file attributes on top level files"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3386,7 +3437,7 @@
       (is (thrown? AssertionError
             (f/populate-file-tree root-path definition)))))
 
-  (testing "sets provided file attributes on symbolic links"
+  (testing "sets provided file attributes on top level symbolic links"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3498,7 +3549,7 @@
       (is (true? (f/directory?
                    (p/path test-file-system "/some-directory-2"))))))
 
-  (testing "sets provided file attributes on directories"
+  (testing "sets provided file attributes on top level directories"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3512,12 +3563,12 @@
       (f/populate-file-tree root-path
         [[:directory-1 {:type :directory
                         :file-attributes
-                        {"posix:permissions" "rwxr-xr-x"
-                         "owner:owner"       user-1}}]
+                              {"posix:permissions" "rwxr-xr-x"
+                               "owner:owner"       user-1}}]
          [:directory-2 {:type :directory
                         :file-attributes
-                        {"posix:permissions" "r-xr-xr-x"
-                         "owner:owner"       user-2}}]])
+                              {"posix:permissions" "r-xr-xr-x"
+                               "owner:owner"       user-2}}]])
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-execute
@@ -3721,7 +3772,7 @@
       (is (true? (f/exists? link-2-path)))
       (is (true? (f/same-file? file-2-path link-2-path)))))
 
-  (testing "throws and aborts on existing files by default"
+  (testing "throws and aborts on existing top level files by default"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3737,7 +3788,7 @@
                [:file-2 {:content ["Line 3" "Line 4"]}]])))
       (is (true? (f/not-exists? file-2)))))
 
-  (testing "throws and aborts on existing files when requested"
+  (testing "throws and aborts on existing top level files when requested"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3754,7 +3805,7 @@
               :on-entry-exists :throw)))
       (is (true? (f/not-exists? file-2)))))
 
-  (testing "overwrites existing files and continues when requested"
+  (testing "overwrites existing top level files and continues when requested"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3776,7 +3827,7 @@
       (is (= ["Line 3" "Line 4"] (f/read-all-lines file-1)))
       (is (= ["Line 5" "Line 6"] (f/read-all-lines file-2)))))
 
-  (testing "skips existing files and continues when requested"
+  (testing "skips existing top level files and continues when requested"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3798,7 +3849,7 @@
       (is (= ["Line 1" "Line 2"] (f/read-all-lines file-1)))
       (is (= ["Line 5" "Line 6"] (f/read-all-lines file-2)))))
 
-  (testing "throws and aborts on existing symbolic links by default"
+  (testing "throws and aborts on existing top level symbolic links by default"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3818,7 +3869,8 @@
 
       (is (true? (f/not-exists? symlink-2-path)))))
 
-  (testing "throws and aborts on existing symbolic links when requested"
+  (testing (str "throws and aborts on existing top level symbolic links "
+             "when requested")
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3839,7 +3891,8 @@
 
       (is (true? (f/not-exists? symlink-2-path)))))
 
-  (testing "overwrites existing symbolic links and continues when requested"
+  (testing (str "overwrites existing top level symbolic links and continues "
+             "when requested")
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3866,7 +3919,8 @@
       (is (true? (f/symbolic-link? symlink-2-path)))
       (is (= file-2-path (f/read-symbolic-link symlink-2-path)))))
 
-  (testing "skips existing symbolic links and continues when requested"
+  (testing (str "skips existing top level symbolic links and continues "
+             "when requested")
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3893,7 +3947,7 @@
       (is (true? (f/symbolic-link? symlink-2-path)))
       (is (= file-2-path (f/read-symbolic-link symlink-2-path)))))
 
-  (testing "throws and aborts on existing links by default"
+  (testing "throws and aborts on existing top level links by default"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3913,7 +3967,8 @@
 
       (is (true? (f/not-exists? link-2-path :no-follow-links)))))
 
-  (testing "throws and aborts on existing symbolic links when requested"
+  (testing (str "throws and aborts on existing top level symbolic links "
+             "when requested")
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3934,7 +3989,7 @@
 
       (is (true? (f/not-exists? link-2-path :no-follow-links)))))
 
-  (testing "overwrites existing links and continues when requested"
+  (testing "overwrites existing top level links and continues when requested"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3961,7 +4016,7 @@
       (is (true? (f/exists? link-2-path :no-follow-links)))
       (is (true? (f/same-file? file-2-path link-2-path)))))
 
-  (testing "skips existing symbolic links and continues when requested"
+  (testing "skips existing top level links and continues when requested"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3988,7 +4043,7 @@
       (is (true? (f/exists? link-2-path :no-follow-links)))
       (is (true? (f/same-file? file-2-path link-2-path)))))
 
-  (testing "throws and aborts on existing directories by default"
+  (testing "throws and aborts on existing top level directories by default"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -4005,7 +4060,7 @@
 
       (is (true? (f/not-exists? directory-2-path)))))
 
-  (testing "throws and aborts on existing directories when requested"
+  (testing "throws and aborts on existing top level directories when requested"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -4023,8 +4078,8 @@
 
       (is (true? (f/not-exists? directory-2-path)))))
 
-  (testing (str "merges entries into existing directories and continues "
-             "when requested")
+  (testing (str "merges entries into existing top level directories and "
+             "continues when requested")
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -4051,8 +4106,8 @@
       (is (true? (f/exists? directory-1-file-2-path)))
       (is (true? (f/exists? directory-2-path)))))
 
-  (testing (str "overwrites entries in existing directories and continues "
-             "when requested")
+  (testing (str "overwrites entries in existing top level directories and "
+             "continues when requested")
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -4079,7 +4134,8 @@
       (is (true? (f/exists? directory-1-file-2-path)))
       (is (true? (f/exists? directory-2-path)))))
 
-  (testing "skips entries in existing directories and continues when requested"
+  (testing (str "skips entries in existing top level  directories and "
+             "continues when requested")
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 

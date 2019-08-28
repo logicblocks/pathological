@@ -46,6 +46,8 @@
     (fn [[_ first second]]
       (str first (string/upper-case second)))))
 
+(def line-separator (System/lineSeparator))
+
 (def ^:dynamic *charsets*
   {:us-ascii   StandardCharsets/US_ASCII
    :iso-8859-1 StandardCharsets/ISO_8859_1

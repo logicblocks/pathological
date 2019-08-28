@@ -1,11 +1,15 @@
 (ns pathological.files
   (:refer-clojure :exclude [find list])
   (:require
+    [clojure.string :as string]
+    [clojure.java.io :as io]
+
     [pathological.paths :as p]
     [pathological.principals :as pr]
     [pathological.attributes :as a]
     [pathological.attribute-specs :as as]
-    [pathological.utils :as u])
+    [pathological.utils :as u]
+    [clojure.java.io :as io])
   (:import
     [java.nio.file DirectoryStream$Filter
                    Files
@@ -551,9 +555,19 @@
                   (apply create-file path file-attributes)))
               write-fn
               (fn [path content]
-                (write-lines path content))
+                (io/copy content (new-output-stream path)))
 
-              content (get attributes :content [])
+              content (get attributes :content "")
+              content (cond
+                        (coll? content)
+                        (io/input-stream
+                          (u/->bytes (string/join u/line-separator content)))
+
+                        (string? content)
+                        (io/input-stream
+                          (u/->bytes content))
+
+                        :else content)
               file-attributes (get attributes :file-attributes [])]
           (try
             (create-fn path file-attributes)
