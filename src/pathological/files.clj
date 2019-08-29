@@ -557,15 +557,18 @@
               (fn [path content]
                 (io/copy content (new-output-stream path)))
 
+              charset (get attributes :charset :utf-8)
               content (get attributes :content "")
               content (cond
                         (coll? content)
                         (io/input-stream
-                          (u/->bytes (string/join u/line-separator content)))
+                          (u/->bytes
+                            (string/join u/line-separator content)
+                            charset))
 
                         (string? content)
                         (io/input-stream
-                          (u/->bytes content))
+                          (u/->bytes content charset))
 
                         :else content)
               file-attributes (get attributes :file-attributes [])]

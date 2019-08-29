@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Added
+- support for character sets other than UTF-8 in `populate-file-tree`.
 
 ## [0.1.9] — 2019-08-28
 ### Added

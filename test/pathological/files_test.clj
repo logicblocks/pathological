@@ -3272,7 +3272,6 @@
             (f/read-all-lines (p/path target-path "/directory2/file3")))))))
 
 (deftest populate-file-tree
-  ; TODO: allow custom charsets
   ; TODO: handle type mismatches
   ; TODO: handle errors other than file already exists
   ; TODO: allow overrides of options on a per path basis
@@ -3310,6 +3309,20 @@
       (is (= ["Line 3" "Line 4"]
             (f/read-all-lines path-2)))))
 
+  (testing (str "allows charset to be specified when content is a collection "
+             "of lines")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+          path-1 (p/path test-file-system "/file1")]
+      (f/populate-file-tree root-path
+        [[:file1 {:content ["Line 1" "Line 2"] :charset :utf-16be}]])
+
+      (is (f/regular-file? path-1))
+      (is (= ["Line 1" "Line 2"]
+            (f/read-all-lines path-1 :utf-16be)))))
+
   (testing "allows content to be supplied as string"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
@@ -3323,6 +3336,19 @@
       (is (f/regular-file? path-1))
       (is (= ["Line 1" "Line 2"]
             (f/read-all-lines path-1)))))
+
+  (testing "allows charset to be specified when content is string"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+          path-1 (p/path test-file-system "/file1")]
+      (f/populate-file-tree root-path
+        [[:file1 {:content "Line 1\nLine 2" :charset :utf-16be}]])
+
+      (is (f/regular-file? path-1))
+      (is (= ["Line 1" "Line 2"]
+            (f/read-all-lines path-1 :utf-16be)))))
 
   (testing "allows content to be supplied as an input stream"
     (let [test-file-system
