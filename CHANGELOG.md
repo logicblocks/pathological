@@ -11,6 +11,10 @@ and this project adheres to
 ### Added
 - support for character sets other than UTF-8 in `populate-file-tree`.
 
+### Fixed
+- issue where options passed to `populate-file-tree` would not be applied to
+  nested entries.
+
 ## [0.1.9] — 2019-08-28
 ### Added
 - support for setting file attributes on files, symbolic links and directories

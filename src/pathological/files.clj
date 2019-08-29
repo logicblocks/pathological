@@ -525,7 +525,8 @@
               create-entries-fn
               (fn [path rest]
                 (when (seq rest)
-                  (populate-file-tree path rest)))
+                  (apply populate-file-tree path rest
+                    (flatten (into [] options)))))
 
               file-attributes (get attributes :file-attributes [])]
           (try

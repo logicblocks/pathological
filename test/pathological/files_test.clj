@@ -40,6 +40,8 @@
                              PosixFilePermissions
                              UserDefinedFileAttributeView]))
 
+(declare thrown?)
+
 (deftest create-directories
   (testing "creates all directories in path"
     (let [test-file-system
@@ -3272,9 +3274,9 @@
             (f/read-all-lines (p/path target-path "/directory2/file3")))))))
 
 (deftest populate-file-tree
+  ; TODO: allow overrides of options on a per path basis
   ; TODO: handle type mismatches
   ; TODO: handle errors other than file already exists
-  ; TODO: allow overrides of options on a per path basis
 
   (testing "creates top level file with contents"
     (let [test-file-system
@@ -3610,7 +3612,8 @@
             (f/read-attribute
               directory-2-path "owner:owner" :no-follow-links)))))
 
-  (testing "allows nested files under directories with file attributes"
+  (testing (str "allows nested files under top level directories with "
+             "file attributes")
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -3667,7 +3670,8 @@
                :others-read :others-execute}
             (f/read-posix-file-permissions directory-2-path :no-follow-links)))
       (is (= user-2
-            (f/read-attribute directory-2-path "owner:owner" :no-follow-links)))))
+            (f/read-attribute directory-2-path
+              "owner:owner" :no-follow-links)))))
 
   (testing "creates nested file with contents"
     (let [test-file-system
@@ -3699,6 +3703,35 @@
       (is (= ["Line 3" "Line 4"]
             (f/read-all-lines
               (p/path test-file-system "/some/path/to/file-2"))))))
+
+  (testing "sets provided file attributes on nested files"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          user-1 (pr/->user-principal test-file-system "first-user")
+          user-2 (pr/->user-principal test-file-system "second-user")
+
+          path-1 (p/path test-file-system "/some/path/to/file-1")
+          path-2 (p/path test-file-system "/some/path/to/file-2")]
+      (f/populate-file-tree root-path
+        [[:some [:path [:to
+                        [:file-1 {:file-attributes
+                                  {"posix:permissions" "rwxrw-rw-"
+                                   "owner:owner"       user-1}}]
+                        [:file-2 {:file-attributes
+                                  {"posix:permissions" "r--r--r--"
+                                   "owner:owner"       user-2}}]]]]])
+
+      (is (= #{:owner-read :owner-write :owner-execute
+               :group-read :group-write
+               :others-read :others-write}
+            (f/read-posix-file-permissions path-1)))
+      (is (= user-1 (f/read-attribute path-1 "owner:owner")))
+      (is (= #{:owner-read :group-read :others-read}
+            (f/read-posix-file-permissions path-2)))
+      (is (= user-2 (f/read-attribute path-2 "owner:owner")))))
 
   (testing "creates nested symbolic link"
     (let [test-file-system
@@ -3797,6 +3830,132 @@
       (is (true? (f/same-file? file-1-path link-1-path)))
       (is (true? (f/exists? link-2-path)))
       (is (true? (f/same-file? file-2-path link-2-path)))))
+
+  (testing "creates nested directory"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+          definition
+          [[:some
+            [:directory {:type :directory}]]]]
+      (f/populate-file-tree root-path definition)
+
+      (is (true? (f/directory?
+                   (p/path test-file-system "/some/directory"))))))
+
+  (testing "creates nested directories"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+          definition
+          [[:some
+            [:directory-1 {:type :directory}]
+            [:directory-2 {:type :directory}]]]]
+      (f/populate-file-tree root-path definition)
+
+      (is (true? (f/directory?
+                   (p/path test-file-system "/some/directory-1"))))
+      (is (true? (f/directory?
+                   (p/path test-file-system "/some/directory-2"))))))
+
+  (testing "sets provided file attributes on nested directories"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          user-1 (pr/->user-principal test-file-system "first-user")
+          user-2 (pr/->user-principal test-file-system "second-user")
+
+          directory-1-path (p/path test-file-system "/some/directory-1")
+          directory-2-path (p/path test-file-system "/some/directory-2")]
+      (f/populate-file-tree root-path
+        [[:some
+          [:directory-1 {:type :directory
+                         :file-attributes
+                               {"posix:permissions" "rwxr-xr-x"
+                                "owner:owner"       user-1}}]
+          [:directory-2 {:type :directory
+                         :file-attributes
+                               {"posix:permissions" "r-xr-xr-x"
+                                "owner:owner"       user-2}}]]])
+
+      (is (= #{:owner-read :owner-write :owner-execute
+               :group-read :group-execute
+               :others-read :others-execute}
+            (f/read-posix-file-permissions directory-1-path :no-follow-links)))
+      (is (= user-1
+            (f/read-attribute directory-1-path "owner:owner" :no-follow-links)))
+      (is (= #{:owner-read :owner-execute
+               :group-read :group-execute
+               :others-read :others-execute}
+            (f/read-posix-file-permissions directory-2-path :no-follow-links)))
+      (is (= user-2
+            (f/read-attribute
+              directory-2-path "owner:owner" :no-follow-links)))))
+
+  (testing "allows nested files under nested directories with file attributes"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          user-1 (pr/->user-principal test-file-system "first-user")
+          user-2 (pr/->user-principal test-file-system "second-user")
+
+          directory-1-path (p/path test-file-system "/some/directory-1")
+          directory-2-path (p/path test-file-system "/some/directory-2")
+          file-1-path (p/path test-file-system "/some/directory-1/file-1")
+          file-2-path (p/path test-file-system "/some/directory-1/file-2")
+          file-3-path (p/path test-file-system "/some/directory-2/file-3")]
+      (f/populate-file-tree root-path
+        [[:some
+          [:directory-1 {:file-attributes
+                         {"posix:permissions" "rwxr-xr-x"
+                          "owner:owner"       user-1}}
+           [:file-1 {:content ["Line 1" "Line 2"]}]
+           [:file-2 {:content ["Line 3" "Line 4"]}]]
+          [:directory-2 {:file-attributes
+                         {"posix:permissions" "r-xr-xr-x"
+                          "owner:owner"       user-2}}
+           [:file-3 {:content ["Line 5" "Line 6"]}]]]])
+
+      (is (true? (f/exists? file-1-path)))
+      (is (true? (f/exists? file-2-path)))
+      (is (true? (f/exists? file-3-path)))
+
+      (is (not= #{:owner-read :owner-write :owner-execute
+                  :group-read :group-write
+                  :others-read :others-write}
+            (f/read-posix-file-permissions file-1-path :no-follow-links)))
+      (is (not= user-1
+            (f/read-attribute file-1-path "owner:owner" :no-follow-links)))
+      (is (not= #{:owner-read :owner-write :owner-execute
+                  :group-read :group-write
+                  :others-read :others-write}
+            (f/read-posix-file-permissions file-2-path :no-follow-links)))
+      (is (not= user-1
+            (f/read-attribute file-2-path "owner:owner" :no-follow-links)))
+      (is (not= #{:owner-read :group-read :others-read}
+            (f/read-posix-file-permissions file-3-path :no-follow-links)))
+      (is (not= user-2
+            (f/read-attribute file-3-path "owner:owner" :no-follow-links)))
+
+      (is (= #{:owner-read :owner-write :owner-execute
+               :group-read :group-execute
+               :others-read :others-execute}
+            (f/read-posix-file-permissions directory-1-path :no-follow-links)))
+      (is (= user-1
+            (f/read-attribute directory-1-path "owner:owner" :no-follow-links)))
+      (is (= #{:owner-read :owner-execute
+               :group-read :group-execute
+               :others-read :others-execute}
+            (f/read-posix-file-permissions directory-2-path :no-follow-links)))
+      (is (= user-2
+            (f/read-attribute directory-2-path
+              "owner:owner" :no-follow-links)))))
 
   (testing "throws and aborts on existing top level files by default"
     (let [test-file-system
@@ -4186,6 +4345,335 @@
       (is (true? (f/exists? directory-1-path)))
       (is (true? (f/exists? directory-1-file-1-path)))
       (is (false? (f/exists? directory-1-file-2-path)))
-      (is (true? (f/exists? directory-2-path))))))
+      (is (true? (f/exists? directory-2-path)))))
+
+  (testing "throws and aborts on existing nested files by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1 (p/path test-file-system "/some/path/to/file-1")
+          file-2 (p/path test-file-system "/some/path/to/file-2")]
+      (f/create-directories (p/parent file-1))
+      (f/create-file file-1)
+
+      (is (thrown? FileAlreadyExistsException
+            (f/populate-file-tree root-path
+              [[:some
+                [:path
+                 [:to
+                  [:file-1 {:content ["Line 1" "Line 2"]}]
+                  [:file-2 {:content ["Line 3" "Line 4"]}]]]]]
+              :on-directory-exists :merge)))
+      (is (true? (f/not-exists? file-2)))))
+
+  (testing "throws and aborts on existing nested files when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1 (p/path test-file-system "/some/path/to/file-1")
+          file-2 (p/path test-file-system "/some/path/to/file-2")]
+      (f/create-directories (p/parent file-1))
+      (f/create-file file-1)
+
+      (is (thrown? FileAlreadyExistsException
+            (f/populate-file-tree root-path
+              [[:some
+                [:path
+                 [:to
+                  [:file-1 {:content ["Line 1" "Line 2"]}]
+                  [:file-2 {:content ["Line 3" "Line 4"]}]]]]]
+              :on-entry-exists :throw
+              :on-directory-exists :merge)))
+      (is (true? (f/not-exists? file-2)))))
+
+  (testing "overwrites existing nested files and continues when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-initial-content ["Line 1" "Line 2"]
+          file-1-updated-content ["Line 3" "Line 4"]
+          file-2-content ["Line 5" "Line 6"]
+
+          file-1 (p/path test-file-system "/some/path/to/file-1")
+          file-2 (p/path test-file-system "/some/path/to/file-2")]
+      (f/create-directories (p/parent file-1))
+      (f/write-lines file-1 file-1-initial-content)
+
+      (f/populate-file-tree root-path
+        [[:some
+          [:path
+           [:to
+            [:file-1 {:content file-1-updated-content}]
+            [:file-2 {:content file-2-content}]]]]]
+        :on-entry-exists :overwrite
+        :on-directory-exists :merge)
+
+      (is (= ["Line 3" "Line 4"] (f/read-all-lines file-1)))
+      (is (= ["Line 5" "Line 6"] (f/read-all-lines file-2)))))
+
+  (testing "skips existing nested files and continues when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-initial-content ["Line 1" "Line 2"]
+          file-1-updated-content ["Line 3" "Line 4"]
+          file-2-content ["Line 5" "Line 6"]
+
+          file-1 (p/path test-file-system "/some/path/to/file-1")
+          file-2 (p/path test-file-system "/some/path/to/file-2")]
+      (f/create-directories (p/parent file-1))
+      (f/write-lines file-1 file-1-initial-content)
+
+      (f/populate-file-tree root-path
+        [[:some
+          [:path
+           [:to
+            [:file-1 {:content file-1-updated-content}]
+            [:file-2 {:content file-2-content}]]]]]
+        :on-entry-exists :skip
+        :on-directory-exists :merge)
+
+      (is (= ["Line 1" "Line 2"] (f/read-all-lines file-1)))
+      (is (= ["Line 5" "Line 6"] (f/read-all-lines file-2)))))
+
+  (testing "throws and aborts on existing nested symbolic links by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          symlink-1-path (p/path test-file-system "/some/path/to/symlink-1")
+          symlink-2-path (p/path test-file-system "/some/path/to/symlink-2")]
+      (f/create-directories (p/parent symlink-1-path))
+      (f/create-symbolic-link symlink-1-path file-1-path)
+
+      (is (thrown? FileAlreadyExistsException
+            (f/populate-file-tree root-path
+              [[:file-1 {:content ["Line 1" "Line 2"]}]
+               [:file-2 {:content ["Line 3" "Line 4"]}]
+               [:some
+                [:path
+                 [:to
+                  [:symlink-1 {:type :symbolic-link :target "/file-1"}]
+                  [:symlink-2 {:type :symbolic-link :target "/file-2"}]]]]]
+              :on-directory-exists :merge)))
+
+      (is (true? (f/not-exists? symlink-2-path)))))
+
+  (testing (str "throws and aborts on existing nested symbolic links "
+             "when requested")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          symlink-1-path (p/path test-file-system "/some/path/to/symlink-1")
+          symlink-2-path (p/path test-file-system "/some/path/to/symlink-2")]
+      (f/create-directories (p/parent symlink-1-path))
+      (f/create-symbolic-link symlink-1-path file-1-path)
+
+      (is (thrown? FileAlreadyExistsException
+            (f/populate-file-tree root-path
+              [[:file-1 {:content ["Line 1" "Line 2"]}]
+               [:file-2 {:content ["Line 3" "Line 4"]}]
+               [:some
+                [:path
+                 [:to
+                  [:symlink-1 {:type :symbolic-link :target "/file-1"}]
+                  [:symlink-2 {:type :symbolic-link :target "/file-2"}]]]]]
+              :on-entry-exists :throw
+              :on-directory-exists :merge)))
+
+      (is (true? (f/not-exists? symlink-2-path)))))
+
+  (testing (str "overwrites existing top level symbolic links and continues "
+             "when requested")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          file-2-path (p/path test-file-system "/file-2")
+          symlink-1-path (p/path test-file-system "/some/path/to/symlink-1")
+          symlink-2-path (p/path test-file-system "/some/path/to/symlink-2")]
+      (f/create-directories (p/parent symlink-1-path))
+      (f/create-symbolic-link symlink-1-path file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:file-1 {:content ["Line 1" "Line 2"]}]
+         [:file-2 {:content ["Line 3" "Line 4"]}]
+         [:some
+          [:path
+           [:to
+            [:symlink-1 {:type :symbolic-link :target "/file-2"}]
+            [:symlink-2 {:type :symbolic-link :target "/file-2"}]]]]]
+        :on-entry-exists :overwrite
+        :on-directory-exists :merge)
+
+      (is (true? (f/exists? file-1-path)))
+      (is (true? (f/exists? file-2-path)))
+
+      (is (true? (f/symbolic-link? symlink-1-path)))
+      (is (= file-2-path (f/read-symbolic-link symlink-1-path)))
+      (is (true? (f/symbolic-link? symlink-2-path)))
+      (is (= file-2-path (f/read-symbolic-link symlink-2-path)))))
+
+  (testing "skips existing nested symbolic links and continues when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          file-2-path (p/path test-file-system "/file-2")
+          symlink-1-path (p/path test-file-system "/some/path/to/symlink-1")
+          symlink-2-path (p/path test-file-system "/some/path/to/symlink-2")]
+      (f/create-directories (p/parent symlink-1-path))
+      (f/create-symbolic-link symlink-1-path file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:file-1 {:content ["Line 1" "Line 2"]}]
+         [:file-2 {:content ["Line 3" "Line 4"]}]
+         [:some
+          [:path
+           [:to
+            [:symlink-1 {:type :symbolic-link :target "/file-2"}]
+            [:symlink-2 {:type :symbolic-link :target "/file-2"}]]]]]
+        :on-entry-exists :skip
+        :on-directory-exists :merge)
+
+      (is (true? (f/exists? file-1-path)))
+      (is (true? (f/exists? file-2-path)))
+
+      (is (true? (f/symbolic-link? symlink-1-path)))
+      (is (= file-1-path (f/read-symbolic-link symlink-1-path)))
+      (is (true? (f/symbolic-link? symlink-2-path)))
+      (is (= file-2-path (f/read-symbolic-link symlink-2-path)))))
+
+  (testing "throws and aborts on existing top level links by default"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          link-1-path (p/path test-file-system "/some/path/to/link-1")
+          link-2-path (p/path test-file-system "/some/path/to/link-2")]
+      (f/create-directories (p/parent link-1-path))
+      (f/create-file file-1-path)
+      (f/create-link link-1-path file-1-path)
+
+      (is (thrown? FileAlreadyExistsException
+            (f/populate-file-tree root-path
+              [[:file-2 {:content ["Line 3" "Line 4"]}]
+               [:some
+                [:path
+                 [:to
+                  [:link-1 {:type :link :target "/file-1"}]
+                  [:link-2 {:type :link :target "/file-2"}]]]]]
+              :on-directory-exists :merge)))
+
+      (is (true? (f/not-exists? link-2-path :no-follow-links)))))
+
+  (testing "throws and aborts on existing nested symbolic links when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          link-1-path (p/path test-file-system "/some/path/to/link-1")
+          link-2-path (p/path test-file-system "/some/path/to/link-2")]
+      (f/create-directories (p/parent link-1-path))
+      (f/create-file file-1-path)
+      (f/create-link link-1-path file-1-path)
+
+      (is (thrown? FileAlreadyExistsException
+            (f/populate-file-tree root-path
+              [[:file-2 {:content ["Line 3" "Line 4"]}]
+               [:some
+                [:path
+                 [:to
+                  [:link-1 {:type :link :target "/file-1"}]
+                  [:link-2 {:type :link :target "/file-2"}]]]]]
+              :on-entry-exists :throw
+              :on-directory-exists :merge)))
+
+      (is (true? (f/not-exists? link-2-path :no-follow-links)))))
+
+  (testing "overwrites existing top level links and continues when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          file-2-path (p/path test-file-system "/file-2")
+          link-1-path (p/path test-file-system "/some/path/to/link-1")
+          link-2-path (p/path test-file-system "/some/path/to/link-2")]
+      (f/create-directories (p/parent link-1-path))
+      (f/create-file file-1-path)
+      (f/create-link link-1-path file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:file-2 {:content ["Line 3" "Line 4"]}]
+         [:some
+          [:path
+           [:to
+            [:link-1 {:type :link :target "/file-2"}]
+            [:link-2 {:type :link :target "/file-2"}]]]]]
+        :on-entry-exists :overwrite
+        :on-directory-exists :merge)
+
+      (is (true? (f/exists? file-1-path)))
+      (is (true? (f/exists? file-2-path)))
+
+      (is (true? (f/exists? link-1-path :no-follow-links)))
+      (is (true? (f/same-file? file-2-path link-1-path)))
+      (is (true? (f/exists? link-2-path :no-follow-links)))
+      (is (true? (f/same-file? file-2-path link-2-path)))))
+
+  (testing "skips existing nested links and continues when requested"
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          file-2-path (p/path test-file-system "/file-2")
+          link-1-path (p/path test-file-system "/some/path/to/link-1")
+          link-2-path (p/path test-file-system "/some/path/to/link-2")]
+      (f/create-directories (p/parent link-1-path))
+      (f/create-file file-1-path)
+      (f/create-link link-1-path file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:file-2 {:content ["Line 3" "Line 4"]}]
+         [:some
+          [:path
+           [:to
+            [:link-1 {:type :link :target "/file-2"}]
+            [:link-2 {:type :link :target "/file-2"}]]]]]
+        :on-entry-exists :skip
+        :on-directory-exists :merge)
+
+      (is (true? (f/exists? file-1-path)))
+      (is (true? (f/exists? file-2-path)))
+
+      (is (true? (f/exists? link-1-path :no-follow-links)))
+      (is (true? (f/same-file? file-1-path link-1-path)))
+      (is (true? (f/exists? link-2-path :no-follow-links)))
+      (is (true? (f/same-file? file-2-path link-2-path))))))
 
 ; new-byte-channel
