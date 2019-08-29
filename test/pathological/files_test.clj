@@ -3274,7 +3274,6 @@
             (f/read-all-lines (p/path target-path "/directory2/file3")))))))
 
 (deftest populate-file-tree
-  ; TODO: allow overrides of options on a per path basis
   ; TODO: handle type mismatches
   ; TODO: handle errors other than file already exists
 
@@ -4034,6 +4033,32 @@
       (is (= ["Line 1" "Line 2"] (f/read-all-lines file-1)))
       (is (= ["Line 5" "Line 6"] (f/read-all-lines file-2)))))
 
+  (testing (str "allows option to be overridden on a file by file basis "
+             "for top level files")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-initial-content ["Line 1" "Line 2"]
+          file-1-updated-content ["Line 3" "Line 4"]
+          file-2-initial-content ["Line 5" "Line 6"]
+          file-2-updated-content ["Line 7" "Line 8"]
+
+          file-1 (p/path test-file-system "/file-1")
+          file-2 (p/path test-file-system "/file-2")]
+      (f/write-lines file-1 file-1-initial-content)
+      (f/write-lines file-2 file-2-initial-content)
+
+      (f/populate-file-tree root-path
+        [[:file-1 {:content   file-1-updated-content
+                   :on-exists :overwrite}]
+         [:file-2 {:content file-2-updated-content}]]
+        :on-entry-exists :skip)
+
+      (is (= ["Line 3" "Line 4"] (f/read-all-lines file-1)))
+      (is (= ["Line 5" "Line 6"] (f/read-all-lines file-2)))))
+
   (testing "throws and aborts on existing top level symbolic links by default"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
@@ -4132,6 +4157,38 @@
       (is (true? (f/symbolic-link? symlink-2-path)))
       (is (= file-2-path (f/read-symbolic-link symlink-2-path)))))
 
+  (testing (str "allows option to be overridden on a symbolic link by "
+             "symbolic link basis for top level symbolic links")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          file-2-path (p/path test-file-system "/file-2")
+          symlink-1-path (p/path test-file-system "/symlink-1")
+          symlink-2-path (p/path test-file-system "/symlink-2")]
+      (f/create-symbolic-link symlink-1-path file-1-path)
+      (f/create-symbolic-link symlink-2-path file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:file-1 {:content ["Line 1" "Line 2"]}]
+         [:file-2 {:content ["Line 3" "Line 4"]}]
+         [:symlink-1 {:type      :symbolic-link
+                      :target    "/file-2"
+                      :on-exists :overwrite}]
+         [:symlink-2 {:type   :symbolic-link
+                      :target "/file-2"}]]
+        :on-entry-exists :skip)
+
+      (is (true? (f/exists? file-1-path)))
+      (is (true? (f/exists? file-2-path)))
+
+      (is (true? (f/symbolic-link? symlink-1-path)))
+      (is (= file-2-path (f/read-symbolic-link symlink-1-path)))
+      (is (true? (f/symbolic-link? symlink-2-path)))
+      (is (= file-1-path (f/read-symbolic-link symlink-2-path)))))
+
   (testing "throws and aborts on existing top level links by default"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
@@ -4227,6 +4284,39 @@
       (is (true? (f/same-file? file-1-path link-1-path)))
       (is (true? (f/exists? link-2-path :no-follow-links)))
       (is (true? (f/same-file? file-2-path link-2-path)))))
+
+  (testing (str "allows option to be overridden on a link by link basis "
+             "for top level links")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          file-2-path (p/path test-file-system "/file-2")
+          link-1-path (p/path test-file-system "/link-1")
+          link-2-path (p/path test-file-system "/link-2")]
+      (f/create-file file-1-path)
+      (f/create-link link-1-path file-1-path)
+      (f/create-file file-2-path)
+      (f/create-link link-2-path file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:file-2 {:content ["Line 3" "Line 4"]}]
+         [:link-1 {:type      :link
+                   :target    "/file-2"
+                   :on-exists :overwrite}]
+         [:link-2 {:type   :link
+                   :target "/file-1"}]]
+        :on-entry-exists :skip)
+
+      (is (true? (f/exists? file-1-path)))
+      (is (true? (f/exists? file-2-path)))
+
+      (is (true? (f/exists? link-1-path :no-follow-links)))
+      (is (true? (f/same-file? file-2-path link-1-path)))
+      (is (true? (f/exists? link-2-path :no-follow-links)))
+      (is (true? (f/same-file? file-1-path link-2-path)))))
 
   (testing "throws and aborts on existing top level directories by default"
     (let [test-file-system
@@ -4347,6 +4437,43 @@
       (is (false? (f/exists? directory-1-file-2-path)))
       (is (true? (f/exists? directory-2-path)))))
 
+  (testing (str "allows option to be overridden on a directory by directory "
+             "basis for top level directories")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          directory-1-path (p/path test-file-system "/directory-1")
+          directory-1-file-1-path
+          (p/path test-file-system "/directory-1/file-1")
+          directory-1-file-2-path
+          (p/path test-file-system "/directory-1/file-2")
+          directory-2-path (p/path test-file-system "/directory-2")
+          directory-2-file-1-path
+          (p/path test-file-system "/directory-2/file-1")
+          directory-2-file-2-path
+          (p/path test-file-system "/directory-2/file-2")]
+
+      (f/create-directory directory-2-path)
+      (f/create-directory directory-1-path)
+      (f/create-file directory-1-file-1-path)
+      (f/create-file directory-2-file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:directory-1
+          [:file-2 {:content ["Line 1" "Line 2"]}]]
+         [:directory-2 {:on-exists :merge}
+          [:file-2 {:content ["Line 3" "Line 4"]}]]]
+        :on-directory-exists :skip)
+
+      (is (true? (f/exists? directory-1-path)))
+      (is (true? (f/exists? directory-1-file-1-path)))
+      (is (false? (f/exists? directory-1-file-2-path)))
+      (is (true? (f/exists? directory-2-path)))
+      (is (true? (f/exists? directory-1-file-1-path)))
+      (is (true? (f/exists? directory-2-file-2-path)))))
+
   (testing "throws and aborts on existing nested files by default"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
@@ -4442,6 +4569,37 @@
         :on-directory-exists :merge)
 
       (is (= ["Line 1" "Line 2"] (f/read-all-lines file-1)))
+      (is (= ["Line 5" "Line 6"] (f/read-all-lines file-2)))))
+
+  (testing (str "allows option to be overridden on a file by file basis for "
+             "nested files")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-initial-content ["Line 1" "Line 2"]
+          file-1-updated-content ["Line 3" "Line 4"]
+          file-2-initial-content ["Line 5" "Line 6"]
+          file-2-updated-content ["Line 7" "Line 8"]
+
+          file-1 (p/path test-file-system "/some/path/to/file-1")
+          file-2 (p/path test-file-system "/some/path/to/file-2")]
+      (f/create-directories (p/parent file-1))
+      (f/write-lines file-1 file-1-initial-content)
+      (f/write-lines file-2 file-2-initial-content)
+
+      (f/populate-file-tree root-path
+        [[:some
+          [:path
+           [:to
+            [:file-1 {:content   file-1-updated-content
+                      :on-exists :overwrite}]
+            [:file-2 {:content file-2-updated-content}]]]]]
+        :on-entry-exists :skip
+        :on-directory-exists :merge)
+
+      (is (= ["Line 3" "Line 4"] (f/read-all-lines file-1)))
       (is (= ["Line 5" "Line 6"] (f/read-all-lines file-2)))))
 
   (testing "throws and aborts on existing nested symbolic links by default"
@@ -4561,6 +4719,43 @@
       (is (true? (f/symbolic-link? symlink-2-path)))
       (is (= file-2-path (f/read-symbolic-link symlink-2-path)))))
 
+  (testing (str "allows option to be overridden on a symbolic link by "
+             "symbolic link basis for nested symbolic links")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          file-2-path (p/path test-file-system "/file-2")
+          symlink-1-path (p/path test-file-system "/some/path/to/symlink-1")
+          symlink-2-path (p/path test-file-system "/some/path/to/symlink-2")]
+      (f/create-directories (p/parent symlink-1-path))
+      (f/create-symbolic-link symlink-1-path file-1-path)
+      (f/create-symbolic-link symlink-2-path file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:file-1 {:content ["Line 1" "Line 2"]}]
+         [:file-2 {:content ["Line 3" "Line 4"]}]
+         [:some
+          [:path
+           [:to
+            [:symlink-1 {:type      :symbolic-link
+                         :target    "/file-2"
+                         :on-exists :overwrite}]
+            [:symlink-2 {:type   :symbolic-link
+                         :target "/file-2"}]]]]]
+        :on-entry-exists :skip
+        :on-directory-exists :merge)
+
+      (is (true? (f/exists? file-1-path)))
+      (is (true? (f/exists? file-2-path)))
+
+      (is (true? (f/symbolic-link? symlink-1-path)))
+      (is (= file-2-path (f/read-symbolic-link symlink-1-path)))
+      (is (true? (f/symbolic-link? symlink-2-path)))
+      (is (= file-1-path (f/read-symbolic-link symlink-2-path)))))
+
   (testing "throws and aborts on existing top level links by default"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
@@ -4674,6 +4869,80 @@
       (is (true? (f/exists? link-1-path :no-follow-links)))
       (is (true? (f/same-file? file-1-path link-1-path)))
       (is (true? (f/exists? link-2-path :no-follow-links)))
-      (is (true? (f/same-file? file-2-path link-2-path))))))
+      (is (true? (f/same-file? file-2-path link-2-path)))))
+
+  (testing (str "allows option to be overridden on a link by link "
+             "basis for nested links")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          file-1-path (p/path test-file-system "/file-1")
+          file-2-path (p/path test-file-system "/file-2")
+          link-1-path (p/path test-file-system "/some/path/to/link-1")
+          link-2-path (p/path test-file-system "/some/path/to/link-2")]
+      (f/create-directories (p/parent link-1-path))
+      (f/create-file file-1-path)
+      (f/create-link link-1-path file-1-path)
+      (f/create-link link-2-path file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:file-2 {:content ["Line 3" "Line 4"]}]
+         [:some
+          [:path
+           [:to
+            [:link-1 {:type      :link
+                      :target    "/file-2"
+                      :on-exists :overwrite}]
+            [:link-2 {:type   :link
+                      :target "/file-2"}]]]]]
+        :on-entry-exists :skip
+        :on-directory-exists :merge)
+
+      (is (true? (f/exists? file-1-path)))
+      (is (true? (f/exists? file-2-path)))
+
+      (is (true? (f/exists? link-1-path :no-follow-links)))
+      (is (true? (f/same-file? file-2-path link-1-path)))
+      (is (true? (f/exists? link-2-path :no-follow-links)))
+      (is (true? (f/same-file? file-1-path link-2-path)))))
+
+  (testing (str "allows option to be overridden on a directory by directory "
+             "basis for nested directories")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          directory-1-path (p/path test-file-system "/some/directory-1")
+          directory-1-file-1-path
+          (p/path test-file-system "/some/directory-1/file-1")
+          directory-1-file-2-path
+          (p/path test-file-system "/some/directory-1/file-2")
+          directory-2-path (p/path test-file-system "/some/directory-2")
+          directory-2-file-1-path
+          (p/path test-file-system "/some/directory-2/file-1")
+          directory-2-file-2-path
+          (p/path test-file-system "/some/directory-2/file-2")]
+      (f/create-directories directory-2-path)
+      (f/create-directories directory-1-path)
+      (f/create-file directory-1-file-1-path)
+      (f/create-file directory-2-file-1-path)
+
+      (f/populate-file-tree root-path
+        [[:some
+          [:directory-1 {:on-exists :skip}
+           [:file-2 {:content ["Line 1" "Line 2"]}]]
+          [:directory-2
+           [:file-2 {:content ["Line 3" "Line 4"]}]]]]
+        :on-directory-exists :merge)
+
+      (is (true? (f/exists? directory-1-path)))
+      (is (true? (f/exists? directory-1-file-1-path)))
+      (is (false? (f/exists? directory-1-file-2-path)))
+      (is (true? (f/exists? directory-2-path)))
+      (is (true? (f/exists? directory-2-file-1-path)))
+      (is (true? (f/exists? directory-2-file-2-path))))))
 
 ; new-byte-channel

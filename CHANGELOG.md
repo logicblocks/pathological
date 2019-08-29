@@ -10,6 +10,8 @@ and this project adheres to
 ## [Unreleased]
 ### Added
 - support for character sets other than UTF-8 in `populate-file-tree`.
+- support for entry by entry overrides of existing entry handling in
+  `populate-file-tree`.
 
 ### Fixed
 - issue where options passed to `populate-file-tree` would not be applied to

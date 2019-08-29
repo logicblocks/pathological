@@ -528,22 +528,23 @@
                   (apply populate-file-tree path rest
                     (flatten (into [] options)))))
 
-              file-attributes (get attributes :file-attributes [])]
+              file-attributes (get attributes :file-attributes [])
+              on-exists (get attributes :on-exists on-directory-exists)]
           (try
             (create-fn path file-attributes)
             (create-entries-fn path rest)
             (catch FileAlreadyExistsException exception
               (cond
-                (= :merge on-directory-exists)
+                (= :merge on-exists)
                 (create-entries-fn path rest)
 
-                (= :overwrite on-directory-exists)
+                (= :overwrite on-exists)
                 (do
                   (delete-recursively path)
                   (create-fn path file-attributes)
                   (create-entries-fn path rest))
 
-                (= :skip on-directory-exists)
+                (= :skip on-exists)
                 nil
 
                 :else (throw exception)))))
@@ -572,16 +573,17 @@
                           (u/->bytes content charset))
 
                         :else content)
-              file-attributes (get attributes :file-attributes [])]
+              file-attributes (get attributes :file-attributes [])
+              on-exists (get attributes :on-exists on-entry-exists)]
           (try
             (create-fn path file-attributes)
             (write-fn path content)
             (catch FileAlreadyExistsException exception
               (cond
-                (= :skip on-entry-exists)
+                (= :skip on-exists)
                 nil
 
-                (= :overwrite on-entry-exists)
+                (= :overwrite on-exists)
                 (do
                   (delete path)
                   (create-fn path file-attributes)
@@ -597,18 +599,20 @@
                     (create-symbolic-link path target file-attributes)
                     (apply create-symbolic-link path target file-attributes))))
               target (:target attributes)
-              file-attributes (get attributes :file-attributes [])]
+              file-attributes (get attributes :file-attributes [])
+              on-exists (get attributes :on-exists on-entry-exists)]
           (assert target (str "Attribute :target missing for path: " path))
           (try
             (create-fn path target file-attributes)
             (catch FileAlreadyExistsException exception
               (cond
-                (= :overwrite on-entry-exists)
+                (= :skip on-exists)
+                nil
+
+                (= :overwrite on-exists)
                 (do
                   (delete path)
                   (create-fn path target file-attributes))
-
-                (= :skip on-entry-exists) nil
 
                 :else (throw exception)))))
 
@@ -617,17 +621,19 @@
               create-fn
               (fn [path target]
                 (create-link path
-                  (p/path (p/file-system path) target)))]
+                  (p/path (p/file-system path) target)))
+              on-exists (get attributes :on-exists on-entry-exists)]
           (assert target (str "Attribute :target missing for path: " path))
           (try
             (create-fn path target)
             (catch FileAlreadyExistsException exception
               (cond
-                (= :overwrite on-entry-exists)
+                (= :skip on-exists)
+                nil
+
+                (= :overwrite on-exists)
                 (do
                   (delete path)
                   (create-fn path target))
-
-                (= :skip on-entry-exists) nil
 
                 :else (throw exception)))))))))
