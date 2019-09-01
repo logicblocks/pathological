@@ -1,5 +1,5 @@
 (ns pathological.files
-  (:refer-clojure :exclude [find list])
+  (:refer-clojure :exclude [find list type])
   (:require
     [clojure.string :as string]
     [clojure.java.io :as io]
@@ -68,7 +68,7 @@
 
 (defmulti ^:private do-create-temp-file
   (fn [first second & _]
-    [(type first) (type second)]))
+    [(clojure.core/type first) (clojure.core/type second)]))
 
 (defmethod ^:private do-create-temp-file [Path String]
   [^Path path prefix suffix & options]
@@ -87,7 +87,7 @@
   (apply do-create-temp-file args))
 
 (defmulti ^:private do-create-temp-directory
-  (fn [first & _] (type first)))
+  (fn [first & _] (clojure.core/type first)))
 
 (defmethod ^:private do-create-temp-directory Path
   [^Path path prefix & options]
@@ -178,7 +178,8 @@
   (Files/deleteIfExists path))
 
 (defmulti ^:private do-copy
-  (fn [source destination _] [(type source) (type destination)]))
+  (fn [source destination _]
+    [(clojure.core/type source) (clojure.core/type destination)]))
 
 (defmethod ^:private do-copy [Path Path]
   [^Path source ^Path destination
@@ -506,16 +507,31 @@
     (map? first)
     [(assoc first :type :file) second]))
 
+(defn- determine-resolution-strategy [new-type existing-type strategies]
+  (if (keyword? strategies)
+    strategies
+    (let [lookups
+          [[new-type existing-type]
+           [new-type :*]
+           [:* existing-type]
+           [:* :*]]]
+      (first (remove nil? (map #(get strategies %) lookups))))))
+
+(defn type [^Path path & options]
+  (cond
+    (apply directory? path options) :directory
+    (apply regular-file? path options) :file
+    (symbolic-link? path) :symbolic-link
+    :else nil))
+
 (defn populate-file-tree
   [^Path path definition & {:as options}]
-  (let [{:keys [on-entry-exists
-                on-directory-exists]
-         :or   {on-entry-exists     :throw
-                on-directory-exists :throw}} options]
+  (let [on-exists (merge {[:* :*] :throw} (:on-exists options))]
     (doseq [[name & rest] definition
             :let [[attributes rest] (parse-definition rest)
-                  path (p/path path (clojure.core/name name))]]
-      (condp = (:type attributes)
+                  path (p/path path (clojure.core/name name))
+                  new-type (:type attributes)]]
+      (condp = new-type
         :directory
         (let [create-fn
               (fn [path file-attributes]
@@ -529,25 +545,29 @@
                     (flatten (into [] options)))))
 
               file-attributes (get attributes :file-attributes [])
-              on-exists (get attributes :on-exists on-directory-exists)]
+              resolution-strategies (get attributes :on-exists on-exists)]
           (try
             (create-fn path file-attributes)
             (create-entries-fn path rest)
             (catch FileAlreadyExistsException exception
-              (cond
-                (= :merge on-exists)
-                (create-entries-fn path rest)
+              (let [existing-type (type path :no-follow-links)
+                    resolution-strategy
+                    (determine-resolution-strategy
+                      new-type existing-type resolution-strategies)]
+                (cond
+                  (= :merge resolution-strategy)
+                  (create-entries-fn path rest)
 
-                (= :overwrite on-exists)
-                (do
-                  (delete-recursively path)
-                  (create-fn path file-attributes)
-                  (create-entries-fn path rest))
+                  (= :overwrite resolution-strategy)
+                  (do
+                    (delete-recursively path)
+                    (create-fn path file-attributes)
+                    (create-entries-fn path rest))
 
-                (= :skip on-exists)
-                nil
+                  (= :skip resolution-strategy)
+                  nil
 
-                :else (throw exception)))))
+                  :else (throw exception))))))
 
         :file
         (let [create-fn
@@ -574,22 +594,26 @@
 
                         :else content)
               file-attributes (get attributes :file-attributes [])
-              on-exists (get attributes :on-exists on-entry-exists)]
+              resolution-strategies (get attributes :on-exists on-exists)]
           (try
             (create-fn path file-attributes)
             (write-fn path content)
             (catch FileAlreadyExistsException exception
-              (cond
-                (= :skip on-exists)
-                nil
+              (let [existing-type (type path :no-follow-links)
+                    resolution-strategy
+                    (determine-resolution-strategy
+                      new-type existing-type resolution-strategies)]
+                (cond
+                  (= :skip resolution-strategy)
+                  nil
 
-                (= :overwrite on-exists)
-                (do
-                  (delete path)
-                  (create-fn path file-attributes)
-                  (write-fn path content))
+                  (= :overwrite resolution-strategy)
+                  (do
+                    (delete path)
+                    (create-fn path file-attributes)
+                    (write-fn path content))
 
-                :else (throw exception)))))
+                  :else (throw exception))))))
 
         :symbolic-link
         (let [create-fn
@@ -600,21 +624,25 @@
                     (apply create-symbolic-link path target file-attributes))))
               target (:target attributes)
               file-attributes (get attributes :file-attributes [])
-              on-exists (get attributes :on-exists on-entry-exists)]
+              resolution-strategies (get attributes :on-exists on-exists)]
           (assert target (str "Attribute :target missing for path: " path))
           (try
             (create-fn path target file-attributes)
             (catch FileAlreadyExistsException exception
-              (cond
-                (= :skip on-exists)
-                nil
+              (let [existing-type (type path :no-follow-links)
+                    resolution-strategy
+                    (determine-resolution-strategy
+                      new-type existing-type resolution-strategies)]
+                (cond
+                  (= :skip resolution-strategy)
+                  nil
 
-                (= :overwrite on-exists)
-                (do
-                  (delete path)
-                  (create-fn path target file-attributes))
+                  (= :overwrite resolution-strategy)
+                  (do
+                    (delete path)
+                    (create-fn path target file-attributes))
 
-                :else (throw exception)))))
+                  :else (throw exception))))))
 
         :link
         (let [target (:target attributes)
@@ -622,18 +650,22 @@
               (fn [path target]
                 (create-link path
                   (p/path (p/file-system path) target)))
-              on-exists (get attributes :on-exists on-entry-exists)]
+              resolution-strategies (get attributes :on-exists on-exists)]
           (assert target (str "Attribute :target missing for path: " path))
           (try
             (create-fn path target)
             (catch FileAlreadyExistsException exception
-              (cond
-                (= :skip on-exists)
-                nil
+              (let [existing-type (type path :no-follow-links)
+                    resolution-strategy
+                    (determine-resolution-strategy
+                      new-type existing-type resolution-strategies)]
+                (cond
+                  (= :skip resolution-strategy)
+                  nil
 
-                (= :overwrite on-exists)
-                (do
-                  (delete path)
-                  (create-fn path target))
+                  (= :overwrite resolution-strategy)
+                  (do
+                    (delete path)
+                    (create-fn path target))
 
-                :else (throw exception)))))))))
+                  :else (throw exception))))))))))
