@@ -575,8 +575,10 @@
                   (create-file path file-attributes)
                   (apply create-file path file-attributes)))
               write-fn
-              (fn [path content]
-                (io/copy content (new-output-stream path)))
+              (fn [path content & options]
+                (with-open [output-stream
+                            (apply new-output-stream path options)]
+                  (io/copy content output-stream)))
 
               charset (get attributes :charset :utf-8)
               content (get attributes :content "")
@@ -603,6 +605,9 @@
                     (determine-resolution-strategy
                       new-type existing-type resolution-strategies)]
                 (cond
+                  (= :append resolution-strategy)
+                  (write-fn path content :append)
+
                   (= :skip resolution-strategy)
                   nil
 

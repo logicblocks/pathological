@@ -13,6 +13,7 @@ and this project adheres to
 - support for entry by entry overrides of existing entry handling in
   `populate-file-tree`.
 - support for handling type mismatches in `populate-file-tree`.
+- support for appending to existing files in `populate-file-tree`.
 
 ### Fixed
 - issue where options passed to `populate-file-tree` would not be applied to

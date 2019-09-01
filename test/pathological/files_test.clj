@@ -4042,8 +4042,8 @@
                     (p/path test-file-system other-path))))))
 
         (testing (str "allows on-exists handling to be overridden on an"
-                     " entry by entry basis when entry of type " existing-type
-                     " exists and definition includes type " new-type)
+                   " entry by entry basis when entry of type " existing-type
+                   " exists and definition includes type " new-type)
           (let [test-file-system
                 (new-in-memory-file-system (random-file-system-name))
 
@@ -4091,6 +4091,31 @@
       (is (true? (f/exists? directory-1-path)))
       (is (true? (f/exists? directory-1-file-1-path)))
       (is (true? (f/exists? directory-1-file-2-path)))
-      (is (true? (f/exists? directory-2-path))))))
+      (is (true? (f/exists? directory-2-path)))))
+
+  (testing (str "appends contents to existing files and continues "
+             "when requested")
+    (let [test-file-system
+          (new-in-memory-file-system (random-file-system-name))
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/some/file-1")
+          path-2 (p/path test-file-system "/file-2")]
+      (f/create-directories (p/parent path-1))
+      (f/write-lines path-1 ["Line 1" "Line 2"])
+
+      (f/populate-file-tree root-path
+        [[:some
+          [:file-1 {:content ["Line 3" "Line 4"]}]]
+         [:file-2 {:content ["Line 5" "Line 6"]}]]
+        :on-exists {[:directory :directory] :append
+                    [:file :file]           :append})
+
+      (is (= ["Line 1" "Line 2"
+              "Line 3" "Line 4"]
+            (f/read-all-lines path-1)))
+      (is (= ["Line 5" "Line 6"]
+            (f/read-all-lines path-2))))))
 
 ; new-byte-channel
