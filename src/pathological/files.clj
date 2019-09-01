@@ -510,12 +510,11 @@
 (defn- determine-resolution-strategy [new-type existing-type strategies]
   (if (keyword? strategies)
     strategies
-    (let [lookups
-          [[new-type existing-type]
-           [new-type :*]
-           [:* existing-type]
-           [:* :*]]]
-      (first (remove nil? (map #(get strategies %) lookups))))))
+    (or
+      (get strategies [new-type existing-type])
+      (get strategies [new-type :*])
+      (get strategies [:* existing-type])
+      (get strategies [:* :*]))))
 
 (defn type [^Path path & options]
   (cond
@@ -555,7 +554,7 @@
                     (determine-resolution-strategy
                       new-type existing-type resolution-strategies)]
                 (cond
-                  (= :merge resolution-strategy)
+                  (= :append resolution-strategy)
                   (create-entries-fn path rest)
 
                   (= :overwrite resolution-strategy)

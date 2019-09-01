@@ -17,6 +17,9 @@ and this project adheres to
 ### Fixed
 - issue where options passed to `populate-file-tree` would not be applied to
   nested entries.
+  
+### Changed
+- `:merge` on-exists handling type to `:append` (breaking).
 
 ## [0.1.9] — 2019-08-28
 ### Added
