@@ -3824,42 +3824,115 @@
             (f/read-attribute directory-2-path
               "owner:owner" :no-follow-links)))))
 
-  (testing "throws and aborts on existing files by default"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+  (let [initial-target-path "/initial-target"
+        new-target-path "/new-target"
+        existing-path "/some/existing"
+        other-path "other"
 
-          root-path (p/path test-file-system "/")
+        existing-creators
+        {:directory
+         (fn [path]
+           (f/create-directories path))
+         :file
+         (fn [path]
+           (let [parent (p/parent path)]
+             (f/create-directories parent)
+             (f/create-file path)))
+         :symbolic-link
+         (fn [path]
+           (let [parent (p/parent path)
+                 initial-target
+                 (p/path (p/file-system path) initial-target-path)]
+             (f/create-directories parent)
+             (f/create-file initial-target)
+             (f/create-symbolic-link path initial-target)))
+         :link
+         (fn [path]
+           (let [parent (p/parent path)
+                 initial-target
+                 (p/path (p/file-system path) initial-target-path)]
+             (f/create-directories parent)
+             (f/create-file initial-target)
+             (f/create-link path initial-target)))}
 
-          file-1 (p/path test-file-system "/some/file-1")
-          file-2 (p/path test-file-system "/file-2")]
-      (f/create-directory (p/parent file-1))
-      (f/create-file file-1)
+        new-creators
+        {:directory
+         (fn [_])
+         :file
+         (fn [_])
+         :symbolic-link
+         (fn [path]
+           (let [new-target
+                 (p/path (p/file-system path) new-target-path)]
+             (f/create-file new-target)))
+         :link
+         (fn [path]
+           (let [new-target
+                 (p/path (p/file-system path) new-target-path)]
+             (f/create-file new-target)))}
 
-      (is (thrown? FileAlreadyExistsException
-            (f/populate-file-tree root-path
-              [[:some
-                [:file-1 {:content ["Line 1" "Line 2"]}]]
-               [:file-2 {:content ["Line 3" "Line 4"]}]])))
-      (is (true? (f/not-exists? file-2)))))
+        definitions
+        {:directory
+         [:some [:existing {:type :directory}]]
+         :file
+         [:some [:existing {:content ["Line 1" "Line 2"]}]]
+         :symbolic-link
+         [:some [:existing {:type :symbolic-link :target new-target-path}]]
+         :link
+         [:some [:existing {:type :link :target new-target-path}]]}
 
-  (testing "throws and aborts on existing files when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+        other-definition
+        [:other {:content ["Line 3" "Line 4"]}]
 
-          root-path (p/path test-file-system "/")
+        detected-existing-type
+        {:directory     :directory
+         :symbolic-link :symbolic-link
+         :file          :file
+         :link          :file}]
+    (doseq [new-type [:directory :file :symbolic-link :link]
+            existing-type [:directory :file :symbolic-link :link]]
+      (let [default-on-exists
+            (if-not (and (= new-type :directory) (= existing-type :directory))
+              {[:directory :directory] :merge}
+              {})]
+        (testing (str "throws and aborts when entry of type " existing-type
+                   " exists and definition includes type " new-type
+                   " by default")
+          (let [test-file-system
+                (new-in-memory-file-system (random-file-system-name))
+                subject-path (p/path test-file-system existing-path)]
+            ((existing-creators existing-type) subject-path)
+            ((new-creators new-type) subject-path)
 
-          file-1 (p/path test-file-system "/some/file-1")
-          file-2 (p/path test-file-system "/file-2")]
-      (f/create-directory (p/parent file-1))
-      (f/create-file file-1)
+            (is (thrown? FileAlreadyExistsException
+                  (f/populate-file-tree (p/path test-file-system "/")
+                    [(definitions new-type) other-definition]
+                    :on-exists default-on-exists)))
 
-      (is (thrown? FileAlreadyExistsException
-            (f/populate-file-tree root-path
-              [[:some
-                [:file-1 {:content ["Line 1" "Line 2"]}]]
-               [:file-2 {:content ["Line 3" "Line 4"]}]]
-              :on-exists {[:file :file] :throw})))
-      (is (true? (f/not-exists? file-2)))))
+            (is (true? (f/not-exists?
+                         (p/path test-file-system other-path)
+                         :no-follow-links)))))
+
+        (testing (str "throws and aborts when entry of type " existing-type
+                   " exists and definition includes type " new-type
+                   " when requested")
+          (let [test-file-system
+                (new-in-memory-file-system (random-file-system-name))
+                subject-path (p/path test-file-system existing-path)]
+            ((existing-creators existing-type) subject-path)
+            ((new-creators new-type) subject-path)
+
+            (is (thrown? FileAlreadyExistsException
+                  (f/populate-file-tree (p/path test-file-system "/")
+                    [(definitions new-type) other-definition]
+                    :on-exists
+                    (merge default-on-exists
+                      {[new-type (detected-existing-type existing-type)]
+                       :throw}))))
+
+            (is (true? (f/not-exists?
+                         (p/path test-file-system other-path)
+                         :no-follow-links))))))))
 
   (testing "overwrites existing files and continues when requested"
     (let [test-file-system
@@ -3938,53 +4011,6 @@
 
       (is (= ["Line 3" "Line 4"] (f/read-all-lines file-1)))
       (is (= ["Line 5" "Line 6"] (f/read-all-lines file-2)))))
-
-  (testing "throws and aborts on existing symbolic links by default"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")
-
-          file-1-path (p/path test-file-system "/file-1")
-          symlink-1-path (p/path test-file-system "/some/symlink-1")
-          symlink-2-path (p/path test-file-system "/symlink-2")]
-      (f/create-directory (p/parent symlink-1-path))
-      (f/create-symbolic-link symlink-1-path file-1-path)
-
-      (is (thrown? FileAlreadyExistsException
-            (f/populate-file-tree root-path
-              [[:file-1 {:content ["Line 1" "Line 2"]}]
-               [:file-2 {:content ["Line 3" "Line 4"]}]
-               [:some
-                [:symlink-1 {:type :symbolic-link :target "/file-1"}]]
-               [:symlink-2 {:type :symbolic-link :target "/file-2"}]]
-              :on-exists {[:directory :directory] :merge})))
-
-      (is (true? (f/not-exists? symlink-2-path)))))
-
-  (testing "throws and aborts on existing symbolic links when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")
-
-          file-1-path (p/path test-file-system "/file-1")
-          symlink-1-path (p/path test-file-system "/some/symlink-1")
-          symlink-2-path (p/path test-file-system "/symlink-2")]
-      (f/create-directory (p/parent symlink-1-path))
-      (f/create-symbolic-link symlink-1-path file-1-path)
-
-      (is (thrown? FileAlreadyExistsException
-            (f/populate-file-tree root-path
-              [[:file-1 {:content ["Line 1" "Line 2"]}]
-               [:file-2 {:content ["Line 3" "Line 4"]}]
-               [:some
-                [:symlink-1 {:type :symbolic-link :target "/file-1"}]]
-               [:symlink-2 {:type :symbolic-link :target "/file-2"}]]
-              :on-exists {[:directory :directory]         :merge
-                          [:symbolic-link :symbolic-link] :throw})))
-
-      (is (true? (f/not-exists? symlink-2-path)))))
 
   (testing "overwrites existing symbolic links and continues when requested"
     (let [test-file-system
@@ -4081,53 +4107,6 @@
       (is (true? (f/symbolic-link? symlink-2-path)))
       (is (= file-1-path (f/read-symbolic-link symlink-2-path)))))
 
-  (testing "throws and aborts on existing links by default"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")
-
-          file-1-path (p/path test-file-system "/file-1")
-          link-1-path (p/path test-file-system "/some/link-1")
-          link-2-path (p/path test-file-system "/link-2")]
-      (f/create-file file-1-path)
-      (f/create-directory (p/parent link-1-path))
-      (f/create-link link-1-path file-1-path)
-
-      (is (thrown? FileAlreadyExistsException
-            (f/populate-file-tree root-path
-              [[:file-2 {:content ["Line 3" "Line 4"]}]
-               [:some
-                [:link-1 {:type :link :target "/file-1"}]]
-               [:link-2 {:type :link :target "/file-2"}]]
-              :on-exists {[:directory :directory] :merge})))
-
-      (is (true? (f/not-exists? link-2-path :no-follow-links)))))
-
-  (testing "throws and aborts on existing links when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")
-
-          file-1-path (p/path test-file-system "/file-1")
-          link-1-path (p/path test-file-system "/some/link-1")
-          link-2-path (p/path test-file-system "/link-2")]
-      (f/create-file file-1-path)
-      (f/create-directory (p/parent link-1-path))
-      (f/create-link link-1-path file-1-path)
-
-      (is (thrown? FileAlreadyExistsException
-            (f/populate-file-tree root-path
-              [[:file-2 {:content ["Line 3" "Line 4"]}]
-               [:some
-                [:link-1 {:type :link :target "/file-1"}]]
-               [:link-2 {:type :link :target "/file-2"}]]
-              :on-exists {[:directory :directory] :merge
-                          [:link :file]           :throw})))
-
-      (is (true? (f/not-exists? link-2-path :no-follow-links)))))
-
   (testing "overwrites existing links and continues when requested"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
@@ -4158,7 +4137,7 @@
       (is (true? (f/exists? link-2-path :no-follow-links)))
       (is (true? (f/same-file? file-2-path link-2-path)))))
 
-  (testing "skips existing top level links and continues when requested"
+  (testing "skips existing links and continues when requested"
     (let [test-file-system
           (new-in-memory-file-system (random-file-system-name))
 
@@ -4221,43 +4200,6 @@
       (is (true? (f/same-file? file-2-path link-1-path)))
       (is (true? (f/exists? link-2-path :no-follow-links)))
       (is (true? (f/same-file? file-1-path link-2-path)))))
-
-  (testing "throws and aborts on existing directories by default"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")
-
-          directory-1-path (p/path test-file-system "/some/directory-1")
-          directory-2-path (p/path test-file-system "/directory-2")]
-      (f/create-directories directory-1-path)
-
-      (is (thrown? FileAlreadyExistsException
-            (f/populate-file-tree root-path
-              [[:some
-                [:directory-1 {:type :directory}]]
-               [:directory-2 {:type :directory}]])))
-
-      (is (true? (f/not-exists? directory-2-path)))))
-
-  (testing "throws and aborts on existing directories when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")
-
-          directory-1-path (p/path test-file-system "/some/directory-1")
-          directory-2-path (p/path test-file-system "/directory-2")]
-      (f/create-directories directory-1-path)
-
-      (is (thrown? FileAlreadyExistsException
-            (f/populate-file-tree root-path
-              [[:some
-                [:directory-1 {:type :directory}]]
-               [:directory-2 {:type :directory}]]
-              :on-exists {[:directory :directory] :throw})))
-
-      (is (true? (f/not-exists? directory-2-path)))))
 
   (testing (str "appends entries to existing directories and continues "
              "when requested")
@@ -4383,49 +4325,6 @@
       (is (true? (f/exists? directory-1-file-1-path)))
       (is (true? (f/exists? directory-2-file-2-path)))))
 
-  (testing (str "throws by default when definition includes a file entry "
-             "and existing entry is a directory")
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")
-
-          existing-path (p/path test-file-system "/some/existing-entry")
-          other-path (p/path test-file-system "/some/other-entry")]
-      (f/create-directories existing-path)
-
-      (is (thrown? FileAlreadyExistsException
-            (f/populate-file-tree root-path
-              [[:some
-                [:existing-entry {:content ["Line 1" "Line 2"]}]
-                [:other-entry {:content ["Line 3" "Line 4"]}]]]
-              :on-exists {[:directory :directory] :merge
-                          [:file :file]           :overwrite})))
-
-      (is (true? (f/not-exists? other-path)))))
-
-  (testing (str "throws when requested when definition includes a file entry "
-             "and existing entry is a directory")
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")
-
-          existing-path (p/path test-file-system "/some/existing-entry")
-          other-path (p/path test-file-system "/some/other-entry")]
-      (f/create-directories existing-path)
-
-      (is (thrown? FileAlreadyExistsException
-            (f/populate-file-tree root-path
-              [[:some
-                [:existing-entry {:content ["Line 1" "Line 2"]}]
-                [:other-entry {:content ["Line 3" "Line 4"]}]]]
-              :on-exists {[:directory :directory] :merge
-                          [:file :file]           :overwrite
-                          [:file :directory]      :throw})))
-
-      (is (true? (f/not-exists? other-path)))))
-
   (testing (str "skips existing entry when definition includes a file entry "
              "and existing entry is a directory when requested")
     (let [test-file-system
@@ -4474,49 +4373,6 @@
       (is (= ["Line 3" "Line 4"]
             (f/read-all-lines other-path)))))
 
-  (testing (str "throws by default when definition includes a symbolic link "
-             "entry and existing entry is a directory")
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")
-
-          existing-path (p/path test-file-system "/some/existing-entry")
-          other-path (p/path test-file-system "/some/other-entry")]
-      (f/create-directories existing-path)
-
-      (is (thrown? FileAlreadyExistsException
-            (f/populate-file-tree root-path
-              [[:some
-                [:existing-entry {:type :symbolic-link :target "/some"}]
-                [:other-entry {:type :symbolic-link :target "/some"}]]]
-              :on-exists {[:directory :directory]         :merge
-                          [:symbolic-link :symbolic-link] :overwrite})))
-
-      (is (true? (f/not-exists? other-path)))))
-
-  (testing (str "throws when requested when definition includes a "
-             "symbolic link entry and existing entry is a directory")
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")
-
-          existing-path (p/path test-file-system "/some/existing-entry")
-          other-path (p/path test-file-system "/some/other-entry")]
-      (f/create-directories existing-path)
-
-      (is (thrown? FileAlreadyExistsException
-            (f/populate-file-tree root-path
-              [[:some
-                [:existing-entry {:type :symbolic-link :target "/some"}]
-                [:other-entry {:type :symbolic-link :target "/some"}]]]
-              :on-exists {[:directory :directory]         :merge
-                          [:symbolic-link :symbolic-link] :overwrite
-                          [:symbolic-link :directory]     :throw})))
-
-      (is (true? (f/not-exists? other-path)))))
-
   (testing (str "skips existing entry when definition includes a symbolic "
              "link entry and existing entry is a directory when requested")
     (let [test-file-system
@@ -4564,51 +4420,6 @@
             (f/read-symbolic-link existing-path)))
       (is (= (p/path test-file-system "/some")
             (f/read-symbolic-link other-path)))))
-
-  (testing (str "throws by default when definition includes a link entry and "
-             "existing entry is a directory")
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")
-
-          existing-path (p/path test-file-system "/some/existing-entry")
-          other-path (p/path test-file-system "/some/other-entry")]
-      (f/create-directories existing-path)
-
-      (is (thrown? FileAlreadyExistsException
-            (f/populate-file-tree root-path
-              [[:target-file {:content "Target"}]
-               [:some
-                [:existing-entry {:type :link :target "/target-file"}]
-                [:other-entry {:type :link :target "/target-file"}]]]
-              :on-exists {[:directory :directory] :merge
-                          [:link :link]           :overwrite})))
-
-      (is (true? (f/not-exists? other-path)))))
-
-  (testing (str "throws when requested when definition includes a link entry "
-             "and existing entry is a directory")
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
-
-          root-path (p/path test-file-system "/")
-
-          existing-path (p/path test-file-system "/some/existing-entry")
-          other-path (p/path test-file-system "/some/other-entry")]
-      (f/create-directories existing-path)
-
-      (is (thrown? FileAlreadyExistsException
-            (f/populate-file-tree root-path
-              [[:target-file {:content "Target"}]
-               [:some
-                [:existing-entry {:type :link :target "/target-file"}]
-                [:other-entry {:type :link :target "/target-file"}]]]
-              :on-exists {[:directory :directory] :merge
-                          [:link :file]           :overwrite
-                          [:link :directory]      :throw})))
-
-      (is (true? (f/not-exists? other-path)))))
 
   (testing (str "skips existing entry when definition includes a link entry "
              "and existing entry is a directory when requested")
