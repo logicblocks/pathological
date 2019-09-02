@@ -4573,5 +4573,3 @@
             (f/read-all-lines path-1)))
       (is (= ["Line 5" "Line 6"]
             (f/read-all-lines path-2))))))
-
-; new-byte-channel
