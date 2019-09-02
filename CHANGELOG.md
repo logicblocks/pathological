@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+
+## [0.1.10] — 2019-09-02
 ### Added
 - support for character sets other than UTF-8 in `populate-file-tree`.
 - support for entry by entry overrides of existing entry handling in
@@ -136,4 +138,5 @@ and this project adheres to
 [0.1.7]: https://github.com/logicblocks/pathological/compare/0.1.6...0.1.7
 [0.1.8]: https://github.com/logicblocks/pathological/compare/0.1.7...0.1.8
 [0.1.9]: https://github.com/logicblocks/pathological/compare/0.1.8...0.1.9
-[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.9...HEAD
+[0.1.10]: https://github.com/logicblocks/pathological/compare/0.1.9...0.1.10
+[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.10...HEAD
