@@ -14,12 +14,15 @@ and this project adheres to
   `populate-file-tree`.
 - support for handling type mismatches in `populate-file-tree`.
 - support for appending to existing files in `populate-file-tree`.
+- support for keyword `:on-exists` values in `populate-file-tree`.
 
 ### Fixed
 - issue where options passed to `populate-file-tree` would not be applied to
   nested entries.
   
 ### Changed
+- `:on-entry-exists` and `:on-directory-exists` to `:on-exists` taking a map
+  from new type to existing type on `populate-file-tree` (breaking).
 - `:merge` on-exists handling type to `:append` (breaking).
 
 ## [0.1.9] — 2019-08-28

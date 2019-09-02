@@ -3876,24 +3876,28 @@
         definitions
         {:directory
          (fn [& {:as overrides}]
-           [:some [:existing
-                   (merge (or overrides {})
-                     {:type :directory})]])
+           [:some {:on-exists :append}
+            [:existing
+             (merge (or overrides {})
+               {:type :directory})]])
          :file
          (fn [& {:as overrides}]
-           [:some [:existing
-                   (merge (or overrides {})
-                     {:content file-content})]])
+           [:some {:on-exists :append}
+            [:existing
+             (merge (or overrides {})
+               {:content file-content})]])
          :symbolic-link
          (fn [& {:as overrides}]
-           [:some [:existing
-                   (merge (or overrides {})
-                     {:type :symbolic-link :target new-target-path})]])
+           [:some {:on-exists :append}
+            [:existing
+             (merge (or overrides {})
+               {:type :symbolic-link :target new-target-path})]])
          :link
          (fn [& {:as overrides}]
-           [:some [:existing
-                   (merge (or overrides {})
-                     {:type :link :target new-target-path})]])}
+           [:some {:on-exists :append}
+            [:existing
+             (merge (or overrides {})
+               {:type :link :target new-target-path})]])}
 
         existing-checks
         {:directory
@@ -3953,116 +3957,568 @@
          :link          :file}]
     (doseq [new-type [:directory :file :symbolic-link :link]
             existing-type [:directory :file :symbolic-link :link]]
-      (let [default-on-exists
-            (if-not (= [:directory :directory] [new-type existing-type])
-              {[:directory :directory] :append}
-              {})]
+      (testing (str "throws and aborts when entry of type " existing-type
+                 " exists and definition includes type " new-type
+                 " by default")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
 
-        (testing (str "throws and aborts when entry of type " existing-type
-                   " exists and definition includes type " new-type
-                   " by default")
-          (let [test-file-system
-                (new-in-memory-file-system (random-file-system-name))
-                subject-path (p/path test-file-system existing-path)]
-            ((existing-creators existing-type) subject-path)
-            ((new-creators new-type) subject-path)
+          (is (thrown? FileAlreadyExistsException
+                (f/populate-file-tree (p/path test-file-system "/")
+                  [((definitions new-type)) other-definition])))
 
-            (is (thrown? FileAlreadyExistsException
-                  (f/populate-file-tree (p/path test-file-system "/")
-                    [((definitions new-type)) other-definition]
-                    :on-exists default-on-exists)))
+          (is (true? (f/not-exists?
+                       (p/path test-file-system other-path)
+                       :no-follow-links)))))
 
-            (is (true? (f/not-exists?
-                         (p/path test-file-system other-path)
-                         :no-follow-links)))))
+      (testing (str "throws and aborts when entry of type " existing-type
+                 " exists and definition includes type " new-type
+                 " when throw requested")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
 
-        (testing (str "throws and aborts when entry of type " existing-type
-                   " exists and definition includes type " new-type
-                   " when requested")
-          (let [test-file-system
-                (new-in-memory-file-system (random-file-system-name))
-                subject-path (p/path test-file-system existing-path)]
-            ((existing-creators existing-type) subject-path)
-            ((new-creators new-type) subject-path)
+          (is (thrown? FileAlreadyExistsException
+                (f/populate-file-tree (p/path test-file-system "/")
+                  [((definitions new-type)) other-definition]
+                  :on-exists
+                  {[new-type (detected-existing-type existing-type)]
+                   :throw})))
 
-            (is (thrown? FileAlreadyExistsException
-                  (f/populate-file-tree (p/path test-file-system "/")
-                    [((definitions new-type)) other-definition]
-                    :on-exists
-                    (merge default-on-exists
-                      {[new-type (detected-existing-type existing-type)]
-                       :throw}))))
+          (is (true? (f/not-exists?
+                       (p/path test-file-system other-path)
+                       :no-follow-links)))))
 
-            (is (true? (f/not-exists?
-                         (p/path test-file-system other-path)
-                         :no-follow-links)))))
+      (testing (str "overwrites entry and continues when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type "when overwrite requested")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
 
-        (testing (str "overwrites entry and continues when entry of type "
-                   existing-type " exists and definition includes type "
-                   new-type "when requested")
-          (let [test-file-system
-                (new-in-memory-file-system (random-file-system-name))
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
 
-                subject-path (p/path test-file-system existing-path)]
-            ((existing-creators existing-type) subject-path)
-            ((new-creators new-type) subject-path)
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type)) other-definition]
+            :on-exists
+            {[new-type (detected-existing-type existing-type)]
+             :overwrite})
 
-            (f/populate-file-tree (p/path test-file-system "/")
-              [((definitions new-type)) other-definition]
-              :on-exists
-              (merge default-on-exists
-                {[new-type (detected-existing-type existing-type)]
-                 :overwrite}))
+          (is (true? ((new-checks new-type) subject-path))
+            (str "New check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
 
-            (is (true? ((new-checks new-type) subject-path)))
-            (is (= other-content
-                  (f/read-all-lines
-                    (p/path test-file-system other-path))))))
+      (testing (str "overwrites entry and continues when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type "when append requested")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
 
-        (testing (str "skips entry and continues when entry of type "
-                   existing-type " exists and definition includes type "
-                   new-type "when requested")
-          (let [test-file-system
-                (new-in-memory-file-system (random-file-system-name))
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
 
-                subject-path (p/path test-file-system existing-path)]
-            ((existing-creators existing-type) subject-path)
-            ((new-creators new-type) subject-path)
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type)) other-definition]
+            :on-exists
+            {[new-type (detected-existing-type existing-type)]
+             :append})
 
-            (f/populate-file-tree (p/path test-file-system "/")
-              [((definitions new-type)) other-definition]
-              :on-exists
-              (merge default-on-exists
-                {[new-type (detected-existing-type existing-type)]
-                 :skip}))
+          (is (true? ((new-checks new-type) subject-path))
+            (str "New check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
 
-            (is (true? ((existing-checks existing-type) subject-path)))
-            (is (= other-content
-                  (f/read-all-lines
-                    (p/path test-file-system other-path))))))
+      (testing (str "skips entry and continues when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type "when skip requested")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
 
-        (testing (str "allows on-exists handling to be overridden on an"
-                   " entry by entry basis when entry of type " existing-type
-                   " exists and definition includes type " new-type)
-          (let [test-file-system
-                (new-in-memory-file-system (random-file-system-name))
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
 
-                subject-path (p/path test-file-system existing-path)]
-            ((existing-creators existing-type) subject-path)
-            ((new-creators new-type) subject-path)
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type)) other-definition]
+            :on-exists
+            {[new-type (detected-existing-type existing-type)]
+             :skip})
 
-            (f/populate-file-tree (p/path test-file-system "/")
-              [((definitions new-type) :on-exists :overwrite)
-               other-definition]
-              :on-exists
-              (merge default-on-exists
-                {[new-type (detected-existing-type existing-type)]
-                 :skip}))
+          (is (true? ((existing-checks existing-type) subject-path))
+            (str "Existing check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
 
-            (is (true? ((new-checks new-type) subject-path)))
-            (is (= other-content
-                  (f/read-all-lines
-                    (p/path test-file-system other-path)))))))))
+      (testing (str "allows on-exists handling to be overridden on an"
+                 " entry by entry basis when entry of type " existing-type
+                 " exists and definition includes type " new-type)
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type) :on-exists :overwrite)
+             other-definition]
+            :on-exists
+            {[new-type (detected-existing-type existing-type)]
+             :skip})
+
+          (is (true? ((new-checks new-type) subject-path))
+            (str "New check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "throws for all existing types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type " and on-exists has wildcard throw for "
+                 "existing type")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (is (thrown? FileAlreadyExistsException
+                (f/populate-file-tree (p/path test-file-system "/")
+                  [((definitions new-type)) other-definition]
+                  :on-exists
+                  {[new-type :*] :throw
+                   [:* :*]       :overwrite})))
+
+          (is (true? (f/not-exists?
+                       (p/path test-file-system other-path)
+                       :no-follow-links)))))
+
+      (testing (str "overwrites for all existing types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type " and on-exists has wildcard overwrite for "
+                 "existing type")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type)) other-definition]
+            :on-exists
+            {[new-type :*] :overwrite
+             [:* :*]       :throw})
+
+          (is (true? ((new-checks new-type) subject-path))
+            (str "New check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "overwrites for all existing types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type " and on-exists has wildcard append for "
+                 "existing type")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type)) other-definition]
+            :on-exists
+            {[new-type :*] :append
+             [:* :*]       :throw})
+
+          (is (true? ((new-checks new-type) subject-path))
+            (str "New check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "skips for all existing types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type "and on-exists has wildcard skip for "
+                 "existing type")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type)) other-definition]
+            :on-exists
+            {[new-type :*] :skip
+             [:* :*]       :throw})
+
+          (is (true? ((existing-checks existing-type) subject-path))
+            (str "Existing check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "allows on-exists handling to be overridden on an"
+                 " entry by entry basis when entry of type " existing-type
+                 " exists and definition includes type " new-type
+                 " and on-exists has wildcard for existing type")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type) :on-exists :overwrite)
+             other-definition]
+            :on-exists
+            {[new-type :*] :skip
+             [:* :*]       :throw})
+
+          (is (true? ((new-checks new-type) subject-path))
+            (str "New check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "throws for all new types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type " and on-exists has wildcard throw for "
+                 "new type")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (is (thrown? FileAlreadyExistsException
+                (f/populate-file-tree (p/path test-file-system "/")
+                  [((definitions new-type)) other-definition]
+                  :on-exists
+                  {[:* (detected-existing-type existing-type)] :throw
+                   [:* :*]                                     :overwrite})))
+
+          (is (true? (f/not-exists?
+                       (p/path test-file-system other-path)
+                       :no-follow-links)))))
+
+      (testing (str "overwrites for all new types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type " and on-exists has wildcard overwrite for "
+                 "new type")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type)) other-definition]
+            :on-exists
+            {[:* (detected-existing-type existing-type)] :overwrite
+             [:* :*]                                     :throw})
+
+          (is (true? ((new-checks new-type) subject-path))
+            (str "New check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "overwrites for all new types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type " and on-exists has wildcard append for "
+                 "new type")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type)) other-definition]
+            :on-exists
+            {[:* (detected-existing-type existing-type)] :append
+             [:* :*]                                     :throw})
+
+          (is (true? ((new-checks new-type) subject-path))
+            (str "New check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "skips for all new types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type "and on-exists has wildcard skip for "
+                 "new type")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type)) other-definition]
+            :on-exists
+            {[:* (detected-existing-type existing-type)] :skip
+             [:* :*]                                     :throw})
+
+          (is (true? ((existing-checks existing-type) subject-path))
+            (str "Existing check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "allows on-exists handling to be overridden on an"
+                 " entry by entry basis when entry of type " existing-type
+                 " exists and definition includes type " new-type
+                 " and on-exists has wildcard for new type")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type) :on-exists :overwrite)
+             other-definition]
+            :on-exists
+            {[:* (detected-existing-type existing-type)] :skip
+             [:* :*]                                     :throw})
+
+          (is (true? ((new-checks new-type) subject-path))
+            (str "New check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "throws for all types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type " and on-exists has wildcard throw for "
+                 "all types")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (is (thrown? FileAlreadyExistsException
+                (f/populate-file-tree (p/path test-file-system "/")
+                  [((definitions new-type)) other-definition]
+                  :on-exists
+                  {[:* :*] :throw})))
+
+          (is (true? (f/not-exists?
+                       (p/path test-file-system other-path)
+                       :no-follow-links)))))
+
+      (testing (str "overwrites for all types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type " and on-exists has wildcard overwrite for "
+                 "all types")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type)) other-definition]
+            :on-exists
+            {[:* :*] :overwrite})
+
+          (is (true? ((new-checks new-type) subject-path))
+            (str "New check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "overwrites for all types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type " and on-exists has wildcard append for "
+                 "all types")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type)) other-definition]
+            :on-exists
+            {[:* :*] :append})
+
+          (is (true? ((new-checks new-type) subject-path))
+            (str "New check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "skips for all types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type "and on-exists has wildcard skip for "
+                 "all types")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type)) other-definition]
+            :on-exists
+            {[:* :*] :skip})
+
+          (is (true? ((existing-checks existing-type) subject-path))
+            (str "Existing check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "allows on-exists handling to be overridden on an"
+                 " entry by entry basis when entry of type " existing-type
+                 " exists and definition includes type " new-type
+                 " and on-exists has wildcard for all types")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type) :on-exists :overwrite)
+             other-definition]
+            :on-exists
+            {[:* :*] :skip})
+
+          (is (true? ((new-checks new-type) subject-path))
+            (str "New check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "throws for all types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type " and on-exists is keyword throw")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (is (thrown? FileAlreadyExistsException
+                (f/populate-file-tree (p/path test-file-system "/")
+                  [((definitions new-type)) other-definition]
+                  :on-exists :throw)))
+
+          (is (true? (f/not-exists?
+                       (p/path test-file-system other-path)
+                       :no-follow-links)))))
+
+      (testing (str "overwrites for all types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type " and on-exists has keyword overwrite")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type)) other-definition]
+            :on-exists :overwrite)
+
+          (is (true? ((new-checks new-type) subject-path))
+            (str "New check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "overwrites for all types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type " and on-exists has keyword append")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type)) other-definition]
+            :on-exists :append)
+
+          (is (true? ((new-checks new-type) subject-path))
+            (str "New check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "skips for all types when entry of type "
+                 existing-type " exists and definition includes type "
+                 new-type "and on-exists has keyword skip")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type)) other-definition]
+            :on-exists :skip)
+
+          (is (true? ((existing-checks existing-type) subject-path))
+            (str "Existing check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))
+
+      (testing (str "allows on-exists handling to be overridden on an"
+                 " entry by entry basis when entry of type " existing-type
+                 " exists and definition includes type " new-type
+                 " and on-exists has keyword")
+        (let [test-file-system
+              (new-in-memory-file-system (random-file-system-name))
+
+              subject-path (p/path test-file-system existing-path)]
+          ((existing-creators existing-type) subject-path)
+          ((new-creators new-type) subject-path)
+
+          (f/populate-file-tree (p/path test-file-system "/")
+            [((definitions new-type) :on-exists :overwrite)
+             other-definition]
+            :on-exists :skip)
+
+          (is (true? ((new-checks new-type) subject-path))
+            (str "New check failed for: " [new-type existing-type]))
+          (is (= other-content
+                (f/read-all-lines
+                  (p/path test-file-system other-path))))))))
 
   (testing (str "appends entries to existing directories and continues "
              "when requested")

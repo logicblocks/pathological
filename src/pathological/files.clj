@@ -508,13 +508,21 @@
     [(assoc first :type :file) second]))
 
 (defn- determine-resolution-strategy [new-type existing-type strategies]
-  (if (keyword? strategies)
-    strategies
-    (or
-      (get strategies [new-type existing-type])
-      (get strategies [new-type :*])
-      (get strategies [:* existing-type])
-      (get strategies [:* :*]))))
+  (let [resolution-strategy
+        (if (keyword? strategies)
+          strategies
+          (or
+            (get strategies [new-type existing-type])
+            (get strategies [new-type :*])
+            (get strategies [:* existing-type])
+            (get strategies [:* :*])))]
+    (if (= :append resolution-strategy)
+      (if (or
+            (= [:directory :directory] [new-type existing-type])
+            (= [:file :file] [new-type existing-type]))
+        :append
+        :overwrite)
+      resolution-strategy)))
 
 (defn type [^Path path & options]
   (cond
@@ -525,7 +533,10 @@
 
 (defn populate-file-tree
   [^Path path definition & {:as options}]
-  (let [on-exists (merge {[:* :*] :throw} (:on-exists options))]
+  (let [on-exists (:on-exists options)
+        on-exists (if-not (keyword? on-exists)
+                    (merge {[:* :*] :throw} on-exists)
+                    on-exists)]
     (doseq [[name & rest] definition
             :let [[attributes rest] (parse-definition rest)
                   path (p/path path (clojure.core/name name))
@@ -606,7 +617,7 @@
                       new-type existing-type resolution-strategies)]
                 (cond
                   (= :append resolution-strategy)
-                  (write-fn path content :append)
+                  (write-fn path content :append :no-follow-links)
 
                   (= :skip resolution-strategy)
                   nil
