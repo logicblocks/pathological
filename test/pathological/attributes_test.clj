@@ -7,21 +7,14 @@
     [pathological.principals :as pr]
     [pathological.attributes :as a]
     [pathological.utils :as u]
-
-    [pathological.testing
-     :refer [random-file-system-name
-             new-in-memory-file-system
-             unix-configuration
-             windows-configuration]])
+    [pathological.testing :as t])
   (:import [java.util Arrays]))
 
 (deftest basic-set-last-modified-time
   (testing "sets string last modified time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -40,10 +33,8 @@
 
   (testing "sets file time last modified time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -64,10 +55,8 @@
 (deftest basic-set-last-access-time
   (testing "sets string last access time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -86,10 +75,8 @@
 
   (testing "sets file time last access time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -110,10 +97,8 @@
 (deftest basic-set-creation-time
   (testing "sets string creation time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -132,10 +117,8 @@
 
   (testing "sets file time last access time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -156,10 +139,8 @@
 (deftest basic-set-times
   (testing "sets string times on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -186,10 +167,8 @@
 
   (testing "sets file time last access time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -220,10 +199,8 @@
 (deftest basic-reload
   (testing "returns an updated view"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -242,10 +219,8 @@
 (deftest owner-set-owner
   (testing "sets user principle owner on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:owner}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:owner})
 
           path (p/path test-file-system "/file")
 
@@ -261,10 +236,8 @@
 (deftest owner-reload
   (testing "returns an updated view"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:owner}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:owner})
 
           path (p/path test-file-system "/file")
 
@@ -283,10 +256,8 @@
 (deftest posix-set-last-modified-time
   (testing "sets string last modified time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -305,10 +276,8 @@
 
   (testing "sets file time last modified time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -329,10 +298,8 @@
 (deftest posix-set-last-access-time
   (testing "sets string last access time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -351,10 +318,8 @@
 
   (testing "sets file time last access time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -375,10 +340,8 @@
 (deftest posix-set-creation-time
   (testing "sets string creation time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -397,10 +360,8 @@
 
   (testing "sets file time last access time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -421,10 +382,8 @@
 (deftest posix-set-times
   (testing "sets string times on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -451,10 +410,8 @@
 
   (testing "sets file time last access time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -485,10 +442,8 @@
 (deftest posix-set-owner
   (testing "sets user principle owner on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -504,10 +459,8 @@
 (deftest posix-set-group
   (testing "sets group principle group on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -523,10 +476,8 @@
 (deftest posix-set-permissions
   (testing "sets string permissions on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -548,10 +499,8 @@
 
   (testing "sets keyword set permissions on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -572,10 +521,8 @@
 
   (testing "sets permission set permissions on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -596,10 +543,8 @@
 (deftest posix-reload
   (testing "returns an updated view"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -618,10 +563,8 @@
 (deftest dos-set-last-modified-time
   (testing "sets string last modified time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C:\\file")
 
@@ -640,10 +583,8 @@
 
   (testing "sets file time last modified time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C:\\file")
 
@@ -664,10 +605,8 @@
 (deftest dos-set-last-access-time
   (testing "sets string last access time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C:\\file")
 
@@ -686,10 +625,8 @@
 
   (testing "sets file time last access time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C:\\file")
 
@@ -710,10 +647,8 @@
 (deftest dos-set-creation-time
   (testing "sets string creation time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C:\\file")
 
@@ -732,10 +667,8 @@
 
   (testing "sets file time last access time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C:\\file")
 
@@ -756,10 +689,8 @@
 (deftest dos-set-times
   (testing "sets string times on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C:\\file")
 
@@ -786,10 +717,8 @@
 
   (testing "sets file time last access time on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C:\\file")
 
@@ -819,10 +748,8 @@
 
 (deftest dos-set-read-only
   (let [test-file-system
-        (new-in-memory-file-system
-          (random-file-system-name)
-          (windows-configuration
-            :attribute-views #{:dos}))
+        (t/new-windows-in-memory-file-system
+          :attribute-views #{:dos})
 
         path (p/path test-file-system "C:\\file")
 
@@ -837,10 +764,8 @@
 
 (deftest dos-set-hidden
   (let [test-file-system
-        (new-in-memory-file-system
-          (random-file-system-name)
-          (windows-configuration
-            :attribute-views #{:dos}))
+        (t/new-windows-in-memory-file-system
+          :attribute-views #{:dos})
 
         path (p/path test-file-system "C:\\file")
 
@@ -855,10 +780,8 @@
 
 (deftest dos-set-system
   (let [test-file-system
-        (new-in-memory-file-system
-          (random-file-system-name)
-          (windows-configuration
-            :attribute-views #{:dos}))
+        (t/new-windows-in-memory-file-system
+          :attribute-views #{:dos})
 
         path (p/path test-file-system "C:\\file")
 
@@ -873,10 +796,8 @@
 
 (deftest dos-set-archive
   (let [test-file-system
-        (new-in-memory-file-system
-          (random-file-system-name)
-          (windows-configuration
-            :attribute-views #{:dos}))
+        (t/new-windows-in-memory-file-system
+          :attribute-views #{:dos})
 
         path (p/path test-file-system "C:\\file")
 
@@ -892,10 +813,8 @@
 (deftest dos-reload
   (testing "returns an updated view"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C:\\file")
 
@@ -914,10 +833,8 @@
 (deftest user-defined-write-attribute
   (testing "writes string custom attribute on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:user}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:user})
 
           path (p/path test-file-system "/file")
 
@@ -937,10 +854,8 @@
 
   (testing "writes bytes custom attribute on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:user}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:user})
 
           path (p/path test-file-system "/file")
 
@@ -960,10 +875,8 @@
 
   (testing "writes byte buffer custom attribute on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:user}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:user})
 
           path (p/path test-file-system "/file")
 
@@ -985,10 +898,8 @@
 (deftest user-defined-delete-attribute
   (testing "deletes custom attribute on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:user}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:user})
 
           path (p/path test-file-system "/file")
 
@@ -1010,10 +921,8 @@
 (deftest user-defined-reload
   (testing "returns an updated view"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:user}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:user})
 
           path (p/path test-file-system "/file")
 
@@ -1038,10 +947,8 @@
 (deftest acl-set-owner
   (testing "sets user principle owner on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:acl}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:acl})
 
           path (p/path test-file-system "/file")
 
@@ -1057,10 +964,8 @@
 (deftest acl-set-acl
   (testing "sets acl entry list acl on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:acl}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:acl})
 
           path (p/path test-file-system "/file")
 
@@ -1092,10 +997,8 @@
 
   (testing "sets map list acl on path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:acl}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:acl})
 
           path (p/path test-file-system "/file")
 
@@ -1119,10 +1022,8 @@
 (deftest acl-reload
   (testing "returns an updated view"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:acl}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:acl})
 
           path (p/path test-file-system "C:\\file")
 

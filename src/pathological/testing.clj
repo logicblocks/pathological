@@ -2,13 +2,13 @@
   (:refer-clojure :exclude [name])
   (:require
     [pathological.files :as f]
-    [pathological.file-systems :as fs])
+    [pathological.paths :as p])
   (:import
     [com.google.common.jimfs Configuration
-     Feature
-     Jimfs
-     PathNormalization
-     PathType]
+                             Feature
+                             Jimfs
+                             PathNormalization
+                             PathType]
     [java.util UUID]))
 
 (def ^:dynamic *features*
@@ -106,46 +106,41 @@
                   builder)]
     (.build builder)))
 
-(defn unix-configuration
-  [& {:as overrides}]
-  (configuration
-    (merge
-      {:path-type         :unix
-       :roots             ["/"]
-       :working-directory "/"
-       :attribute-views   #{:basic :owner :posix :unix}
-       :features          #{:links
-                            :symbolic-links
-                            :secure-directory-stream
-                            :file-channel}}
-      overrides)))
+(def unix-defaults
+  {:path-type         :unix
+   :roots             ["/"]
+   :working-directory "/"
+   :attribute-views   #{:basic :owner :posix :unix}
+   :features          #{:links
+                        :symbolic-links
+                        :secure-directory-stream
+                        :file-channel}})
 
-(defn windows-configuration
-  [& {:as overrides}]
-  (configuration
-    (merge
-      {:path-type                          :windows
-       :roots                              ["C:\\"]
-       :working-directory                  "C:\\"
-       :name-canonical-normalization       #{:case-fold-ascii}
-       :path-equality-uses-canonical-form? true
-       :attribute-views                    #{:basic}
-       :features                           #{:links
-                                             :symbolic-links
-                                             :file-channel}}
-      overrides)))
+(def windows-defaults
+  {:path-type                          :windows
+   :roots                              ["C:\\"]
+   :working-directory                  "C:\\"
+   :name-canonical-normalization       #{:case-fold-ascii}
+   :path-equality-uses-canonical-form? true
+   :attribute-views                    #{:basic}
+   :features                           #{:links
+                                         :symbolic-links
+                                         :file-channel}})
 
 (defn new-in-memory-file-system
-  ([] (new-in-memory-file-system (random-file-system-name)))
-  ([name] (new-in-memory-file-system name (unix-configuration)))
-  ([name configuration] (new-in-memory-file-system name configuration []))
-  ([name configuration definition]
-    (let [file-system (Jimfs/newFileSystem name configuration)]
-      (f/populate-file-tree
-        (first (fs/root-directories file-system))
-        definition)
-      file-system))
-  ([name configuration path definition]
-    (let [file-system (Jimfs/newFileSystem name configuration)]
-      (f/populate-file-tree path definition)
-      file-system)))
+  [options]
+  (let [{:keys [name working-directory contents]
+         :or   {name     (random-file-system-name)
+                contents []}} options
+
+        configuration (configuration options)
+        file-system (Jimfs/newFileSystem name configuration)
+        working-path (p/path file-system working-directory)]
+    (f/populate-file-tree working-path contents)
+    file-system))
+
+(defn new-unix-in-memory-file-system [& {:as overrides}]
+  (new-in-memory-file-system (merge unix-defaults overrides)))
+
+(defn new-windows-in-memory-file-system [& {:as overrides}]
+  (new-in-memory-file-system (merge windows-defaults overrides)))

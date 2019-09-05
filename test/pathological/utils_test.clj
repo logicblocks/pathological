@@ -5,10 +5,7 @@
     [pathological.utils :as u]
     [pathological.attributes :as a]
     [pathological.principals :as pr]
-
-    [pathological.testing
-     :refer [random-file-system-name
-             new-in-memory-file-system]])
+    [pathological.testing :as t])
   (:import [java.nio.file.attribute PosixFilePermission
             PosixFilePermissions]))
 
@@ -214,24 +211,21 @@
             (u/->posix-file-permissions "rwxr--r--")))))
 
   (testing "converts owner attribute from user principal"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
           user-principal (pr/->user-principal test-file-system "some-user")]
       (is (= user-principal
             (u/<-attribute-value "owner:owner"
               (:underlying user-principal))))))
 
   (testing "converts group attribute from group principal"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
           group-principal (pr/->group-principal test-file-system "some-group")]
       (is (= group-principal
             (u/<-attribute-value "posix:group"
               (:underlying group-principal))))))
 
   (testing "converts group attribute from group principal"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
           user-principal
           (pr/->user-principal test-file-system "some-user")]
       (is (= [{:type        :allow

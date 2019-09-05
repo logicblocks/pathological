@@ -6,23 +6,16 @@
     [pathological.file-systems :as fs]
     [pathological.files :as f]
     [pathological.paths :as p]
-
-    [pathological.testing
-     :refer [random-file-system-name
-             new-in-memory-file-system
-             unix-configuration
-             windows-configuration]])
+    [pathological.testing :as t])
   (:import [java.nio.file.attribute AclFileAttributeView
-            BasicFileAttributeView]))
+                                    BasicFileAttributeView]))
 
 (deftest supports-file-attribute-view
   (testing "for keyword"
     (testing "returns true when file attribute view is supported"
       (let [test-file-system
-            (new-in-memory-file-system
-              (random-file-system-name)
-              (unix-configuration
-                :attribute-views #{:basic :owner :posix}))
+            (t/new-unix-in-memory-file-system
+              :attribute-views #{:basic :owner :posix})
 
             file-store (first (fs/file-stores test-file-system))]
         (is (true? (fst/supports-file-attribute-view
@@ -30,10 +23,8 @@
 
     (testing "returns false when file attribute view is not supported"
       (let [test-file-system
-            (new-in-memory-file-system
-              (random-file-system-name)
-              (unix-configuration
-                :attribute-views #{:basic :owner :posix}))
+            (t/new-unix-in-memory-file-system
+              :attribute-views #{:basic :owner :posix})
 
             file-store (first (fs/file-stores test-file-system))]
         (is (false? (fst/supports-file-attribute-view
@@ -42,10 +33,8 @@
   (testing "for string"
     (testing "returns true when file attribute view is supported"
       (let [test-file-system
-            (new-in-memory-file-system
-              (random-file-system-name)
-              (unix-configuration
-                :attribute-views #{:basic :owner :posix}))
+            (t/new-unix-in-memory-file-system
+              :attribute-views #{:basic :owner :posix})
 
             file-store (first (fs/file-stores test-file-system))]
         (is (true? (fst/supports-file-attribute-view
@@ -53,10 +42,8 @@
 
     (testing "returns false when file attribute view is not supported"
       (let [test-file-system
-            (new-in-memory-file-system
-              (random-file-system-name)
-              (unix-configuration
-                :attribute-views #{:basic :owner :posix}))
+            (t/new-unix-in-memory-file-system
+              :attribute-views #{:basic :owner :posix})
 
             file-store (first (fs/file-stores test-file-system))]
         (is (false? (fst/supports-file-attribute-view
@@ -65,10 +52,8 @@
   (testing "for class"
     (testing "returns true when file attribute view is supported"
       (let [test-file-system
-            (new-in-memory-file-system
-              (random-file-system-name)
-              (unix-configuration
-                :attribute-views #{:basic :owner :posix}))
+            (t/new-unix-in-memory-file-system
+              :attribute-views #{:basic :owner :posix})
 
             file-store (first (fs/file-stores test-file-system))]
         (is (true? (fst/supports-file-attribute-view
@@ -76,10 +61,8 @@
 
     (testing "returns false when file attribute view is not supported"
       (let [test-file-system
-            (new-in-memory-file-system
-              (random-file-system-name)
-              (unix-configuration
-                :attribute-views #{:basic :owner :posix}))
+            (t/new-unix-in-memory-file-system
+              :attribute-views #{:basic :owner :posix})
 
             file-store (first (fs/file-stores test-file-system))]
         (is (false? (fst/supports-file-attribute-view
@@ -88,10 +71,8 @@
 (deftest reload
   (testing "returns an updated file store"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic :owner :posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic :owner :posix})
 
           file-store-before (first (fs/file-stores test-file-system))
           _ (f/write-lines (p/path test-file-system "/file")

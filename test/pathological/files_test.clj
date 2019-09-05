@@ -11,12 +11,7 @@
     [pathological.attribute-specs :as as]
     [pathological.attributes :as a]
     [pathological.utils :as u]
-
-    [pathological.testing
-     :refer [random-file-system-name
-             new-in-memory-file-system
-             unix-configuration
-             windows-configuration]])
+    [pathological.testing :as t])
   (:import
     [java.util Arrays]
     [java.time Instant]
@@ -45,7 +40,7 @@
 (deftest create-directories
   (testing "creates all directories in path"
     (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+          (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/some/very/nested/path/")]
       (f/create-directories path)
@@ -53,8 +48,7 @@
       (is (true? (Files/exists path (u/->link-options-array []))))))
 
   (testing "applies supplied file attributes when creating directories"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/some/very/nested/path/")]
       (f/create-directories path
@@ -71,8 +65,7 @@
 
 (deftest create-directory
   (testing "creates single directory"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/path/")]
       (f/create-directory path)
@@ -80,8 +73,7 @@
       (is (true? (Files/exists path (u/->link-options-array []))))))
 
   (testing "applies supplied file attributes when creating directory"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/path/")]
       (f/create-directory path
@@ -98,8 +90,7 @@
 
   (testing (str "allows file attributes to be provided as a map when "
              "creating directory")
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/some-directory")
           user (pr/->user-principal test-file-system "some-user")]
@@ -116,8 +107,7 @@
 
 (deftest create-file
   (testing "creates a file"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/some-file")]
       (f/create-file path)
@@ -125,8 +115,7 @@
       (is (true? (Files/exists path (u/->link-options-array []))))))
 
   (testing "applies supplied file attributes when creating file"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/some-file")]
       (f/create-file path
@@ -142,8 +131,7 @@
         (is (= "rwxrw-rw-" posix-file-permission-string)))))
 
   (testing "allows file attributes to be provided as a map when creating file"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/some-file")
           user (pr/->user-principal test-file-system "some-user")]
@@ -160,8 +148,7 @@
 
 (deftest create-symbolic-link
   (testing "creates a symbolic link"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           target-path (p/path test-file-system "/target")
           link-path (p/path test-file-system "/link")]
@@ -174,8 +161,7 @@
       (is (true? (Files/isSymbolicLink link-path)))))
 
   (testing "applies supplied file attributes when creating symbolic link"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           target-path (p/path test-file-system "/target")
           link-path (p/path test-file-system "/link")]
@@ -198,8 +184,7 @@
 
   (testing (str "allows file attributes to be provided as a map when creating "
              "symbolic link")
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           target-path (p/path test-file-system "/target")
           link-path (p/path test-file-system "/link")
@@ -220,8 +205,7 @@
 
 (deftest create-link
   (testing "creates a link"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           target-path (p/path test-file-system "/target")
           link-path (p/path test-file-system "/link")]
@@ -234,8 +218,7 @@
       (is (true? (Files/isSameFile link-path target-path)))))
 
   (testing "fails if the link target does not exist"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           target-path (p/path test-file-system "/target")
           link-path (p/path test-file-system "/link")]
@@ -245,9 +228,8 @@
 (deftest create-temp-file
   (testing "creates a temporary file in the specified path"
     (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name)
-            (unix-configuration)
-            [[:temporary {:type :directory}]])
+          (t/new-unix-in-memory-file-system
+            :contents [[:temporary {:type :directory}]])
 
           prefix "pre-"
           suffix "-post"
@@ -268,9 +250,8 @@
 
   (testing "applies the provided file attributes when using a path"
     (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name)
-            (unix-configuration)
-            [[:temporary {:type :directory}]])
+          (t/new-unix-in-memory-file-system
+            :contents [[:temporary {:type :directory}]])
 
           prefix "pre-"
           suffix "-post"
@@ -313,9 +294,8 @@
 (deftest create-temp-directory
   (testing "creates a temporary directory in the specified path"
     (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name)
-            (unix-configuration)
-            [[:temporary {:type :directory}]])
+          (t/new-unix-in-memory-file-system
+            :contents [[:temporary {:type :directory}]])
 
           prefix "pre-"
 
@@ -333,9 +313,8 @@
 
   (testing "applies the provided file attributes when using a path"
     (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name)
-            (unix-configuration)
-            [[:temporary {:type :directory}]])
+          (t/new-unix-in-memory-file-system
+            :contents [[:temporary {:type :directory}]])
 
           prefix "pre-"
 
@@ -372,8 +351,7 @@
 
 (deftest read-symbolic-link
   (testing "returns the path of the link target"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           target-path (p/path test-file-system "/target")
           link-path (p/path test-file-system "/link")]
@@ -384,8 +362,7 @@
 
 (deftest write-lines
   (testing "writes the provided lines to the path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/path/to/file")
           content ["Line 1" "Line 2" "Line 3"]]
@@ -396,8 +373,7 @@
       (is (= content (Files/readAllLines path)))))
 
   (testing "uses the provided charset when writing"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/path/to/file")
           content ["Line 1" "Line 2" "Line 3"]]
@@ -408,8 +384,7 @@
       (is (= content (Files/readAllLines path (StandardCharsets/UTF_16))))))
 
   (testing "uses the provided file options when writing"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           ^Path path (p/path test-file-system "/path/to/file")
 
@@ -428,8 +403,7 @@
 
 (deftest read-all-bytes
   (testing "reads all bytes from the file"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/path")
           content ["Line 1" "Line 2"]]
@@ -440,8 +414,7 @@
 
 (deftest read-all-lines
   (testing "reads all lines from the path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           ^Path path (p/path test-file-system "/path/to/file")
           content ["Line 1" "Line 2" "Line 3"]
@@ -454,8 +427,7 @@
       (is (= content (f/read-all-lines path)))))
 
   (testing "reads using the supplied charset"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           ^Path path (p/path test-file-system "/path/to/file")
           content ["Line 1" "Line 2" "Line 3"]
@@ -469,8 +441,7 @@
 
 (deftest lines
   (testing "returns a seq over all lines from path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")
           content ["Line 1" "Line 2" "Line 3"]]
@@ -481,8 +452,7 @@
         (is (= ["Line 1" "Line 2" "Line 3"] result)))))
 
   (testing "uses charset of UTF-8 by default"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")
           content ["\u4839" "\u3284"]]
@@ -491,8 +461,7 @@
       (is (= ["\u4839" "\u3284"] (f/lines path)))))
 
   (testing "uses provided charset when specified"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")
           content ["\u4839" "\u3284"]]
@@ -502,8 +471,7 @@
 
 (deftest find
   (testing "returns a seq of matching paths"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
 
@@ -525,8 +493,7 @@
             matches))))
 
   (testing "honours file visit options when supplied"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
 
@@ -558,8 +525,7 @@
             matches))))
 
   (testing "honours maximum depth option when supplied"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
 
@@ -583,8 +549,7 @@
 
 (deftest list
   (testing "returns a seq over all entries in a directory"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
           directory-path (p/path test-file-system "/directory-1")
@@ -612,8 +577,7 @@
 
 (deftest delete
   (testing "deletes a file"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file")]
       (f/create-file path)
@@ -623,8 +587,7 @@
       (is (false? (f/exists? path)))))
 
   (testing "deletes an empty directory"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/directory")]
       (f/create-directory path)
@@ -634,8 +597,7 @@
       (is (false? (f/exists? path)))))
 
   (testing "throws if a path does not exist"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file")]
       (is (thrown? NoSuchFileException
@@ -643,8 +605,7 @@
 
 (deftest delete-if-exists
   (testing "deletes a file when it exists and returns true"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file")]
       (f/create-file path)
@@ -653,8 +614,7 @@
       (is (false? (f/exists? path)))))
 
   (testing "deletes an empty directory when it exists and returns true"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file")]
       (f/create-directory path)
@@ -663,16 +623,14 @@
       (is (false? (f/exists? path)))))
 
   (testing "returns false when path does not exist"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file")]
       (is (false? (f/delete-if-exists path))))))
 
 (deftest copy
   (testing "copies a file"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           content ["Line 1" "Line 2"]
           source-path (p/path test-file-system "/source")
@@ -685,8 +643,7 @@
       (is (= content (f/read-all-lines destination-path)))))
 
   (testing "copies from an input stream"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           content ["Line 1" "Line 2"]
           destination-path (p/path test-file-system "/target")]
@@ -698,8 +655,7 @@
       (is (= content (f/read-all-lines destination-path)))))
 
   (testing "copies to an output stream"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           content ["Line 1" "Line 2"]
           source-path (p/path test-file-system "/source")]
@@ -713,8 +669,7 @@
               (.toString output-stream))))))
 
   (testing "copies file attributes when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           source-path (p/path test-file-system "/source")
           target-path (p/path test-file-system "/target")]
@@ -728,8 +683,7 @@
 
 (deftest move
   (testing "moves a file"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           content ["Line 1" "Line 2"]
           source-path (p/path test-file-system "/source")
@@ -743,8 +697,7 @@
       (is (false? (f/exists? source-path)))))
 
   (testing "retains file attributes"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           source-path (p/path test-file-system "/source")
           destination-path (p/path test-file-system "/target")]
@@ -758,8 +711,7 @@
       (is (false? (f/exists? source-path)))))
 
   (testing "replaces existing file when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           content ["Line 1" "Line 2"]
           source-path (p/path test-file-system "/source")
@@ -777,8 +729,7 @@
   (testing "uses an atomic move when requested"
     ; TODO: work out how to test this.
 
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           content ["Line 1" "Line 2"]
           source-path (p/path test-file-system "/source")
@@ -793,8 +744,7 @@
 
 (deftest size
   (testing "returns the size of the path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file")
           content ["Line 1" "Line 2"]]
@@ -804,8 +754,7 @@
 
 (deftest read-posix-file-permissions
   (testing "returns the posix file permissions on the provided path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file")]
       (f/create-file path
@@ -815,8 +764,7 @@
             (f/read-posix-file-permissions path)))))
 
   (testing "follows symbolic links by default"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")]
@@ -833,8 +781,7 @@
             (f/read-posix-file-permissions link)))))
 
   (testing "does not follow symbolic links when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")]
@@ -848,8 +795,7 @@
 
 (deftest set-posix-file-permissions
   (testing "sets posix file permissions on path using permissions set"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file")]
       (f/create-file path
@@ -863,8 +809,7 @@
 
 (deftest read-owner
   (testing "reads the owner of the path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file")]
       (f/create-file path)
@@ -875,8 +820,7 @@
               (:underlying user-principal))))))
 
   (testing "follows symbolic links by default"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")]
@@ -888,8 +832,7 @@
       (is (= "other" (:name (f/read-owner link))))))
 
   (testing "does not follow symbolic links when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")]
@@ -902,8 +845,7 @@
 
 (deftest set-owner
   (testing "sets the owner of the path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file")]
       (f/create-file path)
@@ -913,8 +855,7 @@
       (is (= "other" (:name (f/read-owner path))))))
 
   (testing "follows symbolic links"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")]
@@ -928,8 +869,7 @@
 
 (deftest read-last-modified-time
   (testing "returns the last modified time of the path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file")
 
@@ -947,8 +887,7 @@
               (.isBefore last-modified-instant after-instant))))))
 
   (testing "follows symbolic links by default"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")
@@ -969,8 +908,7 @@
               (.isBefore last-modified-instant after-instant))))))
 
   (testing "does not follow symbolic links when required"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")
@@ -991,8 +929,7 @@
 
 (deftest set-last-modified-time
   (testing "sets the last modified time of the path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file")
           last-modified "2019-05-04T22:10:10Z"]
@@ -1005,10 +942,8 @@
 (deftest read-file-attribute-view
   (testing "returns a view over basic file attributes"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -1042,10 +977,8 @@
 
   (testing "returns a view over owner file attributes"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:owner}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:owner})
 
           path (p/path test-file-system "/file")
 
@@ -1066,10 +999,8 @@
 
   (testing "returns a view over posix file attributes"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -1114,10 +1045,8 @@
 
   (testing "returns a view over dos file attributes"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C://file")
 
@@ -1159,10 +1088,8 @@
 
   (testing "returns a view over user file attributes"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:user}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:user})
 
           path (p/path test-file-system "/file")
 
@@ -1184,10 +1111,8 @@
 
   (testing "returns a view over acl file attributes"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:acl}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:acl})
 
           path (p/path test-file-system "/directory")
           user (pr/->user-principal test-file-system "some-user")
@@ -1228,10 +1153,8 @@
 
   (testing "follows symlinks by default"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")
@@ -1267,10 +1190,8 @@
 
   (testing "does not follow symlinks when requested"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")
@@ -1307,10 +1228,8 @@
 (deftest read-attribute
   (testing "gets string user defined attribute from the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:user}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:user})
 
           path (p/path test-file-system "/file")
 
@@ -1326,10 +1245,8 @@
 
   (testing "gets bytes user defined attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:user}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:user})
 
           path (p/path test-file-system "/file")
 
@@ -1345,10 +1262,8 @@
 
   (testing "gets byte buffer user defined attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:user}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:user})
 
           path (p/path test-file-system "/file")
 
@@ -1364,10 +1279,8 @@
 
   (testing "gets file time basic attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -1382,10 +1295,8 @@
 
   (testing "gets timestamp string basic attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -1400,10 +1311,8 @@
 
   (testing "gets user principal owner attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:owner}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:owner})
 
           path (p/path test-file-system "/file")
 
@@ -1417,10 +1326,8 @@
 
   (testing "gets group principal posix attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -1434,10 +1341,8 @@
 
   (testing "gets java permission set posix attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -1452,10 +1357,8 @@
 
   (testing "gets keyword permission set posix attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -1473,10 +1376,8 @@
 
   (testing "gets string permissions posix attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -1491,10 +1392,8 @@
 
   (testing "gets acl attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:acl}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:acl})
 
           path (p/path test-file-system "/file")
           user (pr/->user-principal test-file-system "some-user")
@@ -1525,10 +1424,8 @@
 
   (testing "gets boolean dos attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C:\\file")
 
@@ -1542,10 +1439,8 @@
 
   (testing "allows attribute spec map"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C:\\file")
 
@@ -1559,10 +1454,8 @@
 
   (testing "allows camel case attribute spec string"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -1576,10 +1469,8 @@
 
   (testing "follows links by default"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")
@@ -1596,10 +1487,8 @@
 
   (testing "does not follow links when requested"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")
@@ -1617,10 +1506,8 @@
 (deftest read-attributes
   (testing "gets user defined attributes from the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:user}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:user})
 
           path (p/path test-file-system "/file")
 
@@ -1647,10 +1534,8 @@
 
   (testing "gets basic attributes from the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -1675,10 +1560,8 @@
 
   (testing "gets owner attribute from the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:owner}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:owner})
 
           path (p/path test-file-system "/file")
 
@@ -1694,10 +1577,8 @@
 
   (testing "gets posix attributes from the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -1719,10 +1600,8 @@
 
   (testing "gets acl attributes from the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:acl}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:acl})
 
           path (p/path test-file-system "/file")
           user (pr/->user-principal test-file-system "some-user")
@@ -1762,10 +1641,8 @@
 
   (testing "gets dos attributes from the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C:\\file")
 
@@ -1788,10 +1665,8 @@
 
   (testing "allows attribute spec map"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C:\\file")
 
@@ -1814,10 +1689,8 @@
 
   (testing "allows camel case attribute spec string"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -1842,10 +1715,8 @@
 
   (testing "follows links by default"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")
@@ -1872,10 +1743,8 @@
 
   (testing "does not follow links when requested"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")
@@ -1906,10 +1775,8 @@
 (deftest set-attribute
   (testing "sets string user defined attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:user}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:user})
 
           path (p/path test-file-system "/file")
 
@@ -1925,10 +1792,8 @@
 
   (testing "sets bytes user defined attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:user}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:user})
 
           path (p/path test-file-system "/file")
 
@@ -1947,10 +1812,8 @@
 
   (testing "sets byte buffer user defined attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:user}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:user})
 
           path (p/path test-file-system "/file")
 
@@ -1971,10 +1834,8 @@
 
   (testing "sets file time basic attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -1991,10 +1852,8 @@
 
   (testing "sets timestamp string basic attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -2011,10 +1870,8 @@
 
   (testing "sets user principal owner attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:owner}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:owner})
 
           path (p/path test-file-system "/file")
 
@@ -2031,10 +1888,8 @@
 
   (testing "sets group principal posix attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -2051,10 +1906,8 @@
 
   (testing "sets java permission set posix attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -2071,10 +1924,8 @@
 
   (testing "sets keyword permission set posix attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -2095,10 +1946,8 @@
 
   (testing "sets string permissions posix attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:posix}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:posix})
 
           path (p/path test-file-system "/file")
 
@@ -2115,10 +1964,8 @@
 
   (testing "sets acl attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:acl}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:acl})
 
           path (p/path test-file-system "/file")
           user (pr/->user-principal test-file-system "some-user")
@@ -2144,10 +1991,8 @@
 
   (testing "sets boolean dos attribute on the path"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C:\\file")
 
@@ -2164,10 +2009,8 @@
 
   (testing "allows attribute spec map"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration
-              :attribute-views #{:dos}))
+          (t/new-windows-in-memory-file-system
+            :attribute-views #{:dos})
 
           path (p/path test-file-system "C:\\file")
 
@@ -2184,10 +2027,8 @@
 
   (testing "allows camel case attribute spec string"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           path (p/path test-file-system "/file")
 
@@ -2204,10 +2045,8 @@
 
   (testing "follows links by default"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")
@@ -2230,10 +2069,8 @@
 
   (testing "does not follow links when requested"
     (let [test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration
-              :attribute-views #{:basic}))
+          (t/new-unix-in-memory-file-system
+            :attribute-views #{:basic})
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")
@@ -2256,8 +2093,7 @@
 
 (deftest probe-content-type
   (testing "returns the content type of the path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.html")
           content ["<html></html>"]]
@@ -2268,8 +2104,7 @@
 
 (deftest exists?
   (testing "returns true when the path exists"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/some-file")]
       (f/create-file path)
@@ -2277,15 +2112,13 @@
       (is (true? (f/exists? path)))))
 
   (testing "returns false when the file does not exist"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/some-file")]
       (is (false? (f/exists? path)))))
 
   (testing "follows symbolic links by default"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           link1 (p/path test-file-system "/link1")
           link2 (p/path test-file-system "/link2")
@@ -2299,8 +2132,7 @@
       (is (false? (f/exists? link2)))))
 
   (testing "does not follow symbolic links when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           link1 (p/path test-file-system "/link1")
           link2 (p/path test-file-system "/link2")
@@ -2312,15 +2144,13 @@
 
 (deftest not-exists?
   (testing "returns true when the path does not exist"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/some-file")]
       (is (true? (f/not-exists? path)))))
 
   (testing "returns false when the path exists"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/some-file")]
       (f/create-file path)
@@ -2328,8 +2158,7 @@
       (is (false? (f/not-exists? path)))))
 
   (testing "follows symbolic links by default"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           link1 (p/path test-file-system "/link1")
           link2 (p/path test-file-system "/link2")
@@ -2343,8 +2172,7 @@
       (is (true? (f/not-exists? link2)))))
 
   (testing "does not follow symbolic links when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           link1 (p/path test-file-system "/link1")
           link2 (p/path test-file-system "/link2")
@@ -2356,8 +2184,7 @@
 
 (deftest regular-file?
   (testing "returns true when path is a regular file"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/some-file")]
       (f/create-file path)
@@ -2365,8 +2192,7 @@
       (is (true? (f/regular-file? path)))))
 
   (testing "returns false when path is not a regular file"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/some-directory")]
       (f/create-directory path)
@@ -2374,8 +2200,7 @@
       (is (false? (f/regular-file? path)))))
 
   (testing "follows links by default"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")]
@@ -2385,8 +2210,7 @@
       (is (true? (f/regular-file? link)))))
 
   (testing "does not follow links when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")]
@@ -2397,8 +2221,7 @@
 
 (deftest directory?
   (testing "returns true when path is a directory"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/some-directory")]
       (f/create-directory path)
@@ -2406,8 +2229,7 @@
       (is (true? (f/directory? path)))))
 
   (testing "returns false when path is not a directory"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/some-file")]
       (f/create-file path)
@@ -2415,8 +2237,7 @@
       (is (false? (f/directory? path)))))
 
   (testing "follows links by default"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")]
@@ -2426,8 +2247,7 @@
       (is (true? (f/directory? link)))))
 
   (testing "does not follow links when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           link (p/path test-file-system "/link")
           target (p/path test-file-system "/target")]
@@ -2438,8 +2258,7 @@
 
 (deftest symbolic-link?
   (testing "returns true when path is a symbolic link"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           target-path (p/path test-file-system "/target")
           link-path (p/path test-file-system "/link")]
@@ -2449,8 +2268,7 @@
       (is (true? (f/symbolic-link? link-path)))))
 
   (testing "returns false when path is not a symbolic link"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/not-link")]
       (f/create-file path)
@@ -2459,8 +2277,7 @@
 
 (deftest same-file?
   (testing "returns true when both paths are the same"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path-1 (p/path test-file-system "/file")
           path-2 (p/path test-file-system "/file")]
@@ -2469,8 +2286,7 @@
       (is (true? (f/same-file? path-1 path-2)))))
 
   (testing "returns true when both paths point at the same file"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path-1 (p/path test-file-system "/file")
           path-2 (p/path test-file-system "/link")]
@@ -2480,8 +2296,7 @@
       (is (true? (f/same-file? path-1 path-2)))))
 
   (testing "returns false when paths point at different files"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path-1 (p/path test-file-system "/file1")
           path-2 (p/path test-file-system "/file2")]
@@ -2492,30 +2307,26 @@
 
 (deftest hidden?
   (testing "returns true when path represents hidden file"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/.file.txt")]
       (is (true? (f/hidden? path)))))
 
   (testing "returns true when path represents hidden directory"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/.file/")]
       (is (true? (f/hidden? path)))))
 
   (testing "returns false when path represents standard file"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")]
       (is (false? (f/hidden? path))))))
 
 (deftest readable?
   (testing "returns true when path is readable"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")]
       (f/create-file path)
@@ -2523,16 +2334,14 @@
       (is (true? (f/readable? path)))))
 
   (testing "returns false when path is not readable"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")]
       (is (false? (f/readable? path))))))
 
 (deftest writable?
   (testing "returns true when path is writable"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")]
       (f/create-file path)
@@ -2540,16 +2349,14 @@
       (is (true? (f/writable? path)))))
 
   (testing "returns false when path is not writable"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")]
       (is (false? (f/writable? path))))))
 
 (deftest executable?
   (testing "returns true when path is executable"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")]
       (f/create-file path)
@@ -2557,16 +2364,14 @@
       (is (true? (f/executable? path)))))
 
   (testing "returns false when path is not executable"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")]
       (is (false? (f/executable? path))))))
 
 (deftest new-directory-stream
   (testing "returns a directory stream for the provided path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
           directory-path (p/path test-file-system "/directory-1")
@@ -2588,8 +2393,7 @@
 
   (testing (str "returns a directory stream for the provided path "
              "filtered using the supplied glob")
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
           directory-path (p/path test-file-system "/directory-1")
@@ -2613,8 +2417,7 @@
 
   (testing (str "returns a directory stream for the provided path "
              "filtered using the supplied function")
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
           directory-path (p/path test-file-system "/directory-1")
@@ -2640,8 +2443,7 @@
 
 (deftest new-input-stream
   (testing "returns an input stream for the provided path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")
           content ["Line 1" "Line 2"]]
@@ -2652,8 +2454,7 @@
 
 (deftest new-output-stream
   (testing "returns an output stream for the provided path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")
           content "Line 1\nLine 2\n"]
@@ -2663,8 +2464,7 @@
             (f/read-all-lines path)))))
 
   (testing "allows open options to be provided"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")
           original-content ["Line 1" "Line 2"]
@@ -2678,8 +2478,7 @@
 
 (deftest new-buffered-reader
   (testing "returns a new buffered reader over the path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")
           content "Line 1\nLine 2\n"]
@@ -2690,8 +2489,7 @@
         (is (= content (slurp reader))))))
 
   (testing "uses charset of UTF-8 by default"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")
           content ["\u4839" "\u3284"]]
@@ -2701,8 +2499,7 @@
         (is (= "\u4839\n\u3284\n" (slurp reader))))))
 
   (testing "uses provided charset when specified"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")
           content ["\u4839" "\u3284"]]
@@ -2713,8 +2510,7 @@
 
 (deftest new-buffered-writer
   (testing "returns a new buffered writer over the path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")
           content "Line 1\nLine 2\n"]
@@ -2726,8 +2522,7 @@
             (f/read-all-lines path)))))
 
   (testing "uses charset of UTF-8 by default"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")
           content "Line 1\nLine 2\n"]
@@ -2738,8 +2533,7 @@
             (f/read-all-lines path :utf-8)))))
 
   (testing "uses provided charset when specified"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")
           content "Line 1\nLine 2\n"]
@@ -2750,8 +2544,7 @@
             (f/read-all-lines path :utf-16be)))))
 
   (testing "supports open options"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")
           initial-content ["Line 1" "Line 2"]
@@ -2764,8 +2557,7 @@
             (f/read-all-lines path)))))
 
   (testing "supports charset and open options"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/file.txt")
           initial-content ["Line 1" "Line 2"]
@@ -2779,8 +2571,7 @@
 
 (deftest walk
   (testing "returns a seq over top level files"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -2796,8 +2587,7 @@
               paths)))))
 
   (testing "returns a seq over nested directories depth first"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -2817,8 +2607,7 @@
               paths)))))
 
   (testing "follows symlinks when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -2835,8 +2624,7 @@
               paths)))))
 
   (testing "walks only to maximum depth supplied"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -2863,8 +2651,7 @@
   ; TODO: exception cases, visit file failed
 
   (testing "walks top level files and returns accumulated result"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -2884,8 +2671,7 @@
               result)))))
 
   (testing "walks directories depth first"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -2916,8 +2702,7 @@
               result)))))
 
   (testing "honours maximum depth option when supplied"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -2947,8 +2732,7 @@
               result)))))
 
   (testing "terminates when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -2975,8 +2759,7 @@
               result)))))
 
   (testing "skips entire subtree when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -3008,8 +2791,7 @@
               result)))))
 
   (testing "skips all siblings when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -3045,8 +2827,7 @@
               result)))))
 
   (testing "assumes continue when no control returned"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/delete-me")]
       (f/create-directory root-path)
@@ -3080,8 +2861,7 @@
                            "/delete-me/directory2/file3")))))))
 
   (testing "follows symlinks when requested"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -3108,8 +2888,7 @@
               result)))))
 
   (testing "passes basic file attribute map to pre directory and file visit fns"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -3164,8 +2943,7 @@
   ; TODO: what should happen when one delete fails?
 
   (testing "recursively deletes all files/directories in a path"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/root")]
       (f/create-directory root-path)
@@ -3192,8 +2970,7 @@
   (testing (str
              "recursively copies all files/directories in a source path to a "
              "destination path")
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/root")
           source-path (p/path root-path "source")
@@ -3236,8 +3013,7 @@
   (testing (str
              "recursively moves all files/directories in a source path to "
              "a destination path")
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/root")
           source-path (p/path root-path "source")
@@ -3277,8 +3053,7 @@
   ; TODO: handle errors other than file already exists
 
   (testing "creates top level files with collection of lines as content"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
           path-1 (p/path test-file-system "/file1")
@@ -3295,8 +3070,7 @@
             (f/read-all-lines path-2)))))
 
   (testing "allows charset to be specified for collection of lines as content"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
           path-1 (p/path test-file-system "/file1")]
@@ -3308,8 +3082,7 @@
             (f/read-all-lines path-1 :utf-16be)))))
 
   (testing "allows content to be supplied as string"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
 
@@ -3322,8 +3095,7 @@
             (f/read-all-lines path-1)))))
 
   (testing "allows charset to be specified when content is string"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
           path-1 (p/path test-file-system "/file1")]
@@ -3335,8 +3107,7 @@
             (f/read-all-lines path-1 :utf-16be)))))
 
   (testing "allows content to be supplied as an input stream"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
           path-1 (p/path test-file-system "/file1")
@@ -3353,8 +3124,7 @@
             (f/read-all-lines path-1)))))
 
   (testing "allows content to be supplied as a reader"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
           path-1 (p/path test-file-system "/file1")
@@ -3373,8 +3143,7 @@
             (f/read-all-lines path-1)))))
 
   (testing "sets provided file attributes on top level files"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
 
@@ -3401,8 +3170,7 @@
       (is (= user-2 (f/read-attribute path-2 "owner:owner")))))
 
   (testing "creates top level symbolic links"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
           file-1-path (p/path test-file-system "/file1")
@@ -3421,8 +3189,7 @@
       (is (= file-2-path (f/read-symbolic-link symlink-2-path)))))
 
   (testing "throws exception when no target supplied on symlink"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (is (thrown? AssertionError
@@ -3431,8 +3198,7 @@
                [:symlink {:type :symbolic-link}]])))))
 
   (testing "sets provided file attributes on top level symbolic links"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
 
@@ -3480,8 +3246,7 @@
             (f/read-attribute symlink-2-path "owner:owner" :no-follow-links)))))
 
   (testing "creates top level links"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
           file-1-path (p/path test-file-system "/file1")
@@ -3500,8 +3265,7 @@
       (is (true? (f/same-file? link-2-path file-2-path)))))
 
   (testing "creates top level directories"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -3514,8 +3278,7 @@
                    (p/path test-file-system "/some-directory-2"))))))
 
   (testing "sets provided file attributes on top level directories"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
 
@@ -3549,8 +3312,7 @@
               directory-2-path "owner:owner" :no-follow-links)))))
 
   (testing "allows nested files for top level directories with file attributes"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
 
@@ -3609,8 +3371,7 @@
               "owner:owner" :no-follow-links)))))
 
   (testing "creates nested files"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -3628,8 +3389,7 @@
               (p/path test-file-system "/some/path/to/file-2"))))))
 
   (testing "sets provided file attributes on nested files"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
 
@@ -3659,8 +3419,7 @@
       (is (= user-2 (f/read-attribute path-2 "owner:owner")))))
 
   (testing "creates nested symbolic links"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
           file-1-path (p/path test-file-system "/some/directory/file1")
@@ -3687,8 +3446,7 @@
       (is (= file-2-path (f/read-symbolic-link symlink-2-path)))))
 
   (testing "creates nested links"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
           file-1-path (p/path test-file-system "/some/directory/file1")
@@ -3713,8 +3471,7 @@
       (is (true? (f/same-file? file-2-path link-2-path)))))
 
   (testing "creates nested directories"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")]
       (f/populate-file-tree root-path
@@ -3728,8 +3485,7 @@
                    (p/path test-file-system "/some/directory-2"))))))
 
   (testing "sets provided file attributes on nested directories"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
 
@@ -3764,8 +3520,7 @@
               directory-2-path "owner:owner" :no-follow-links)))))
 
   (testing "allows nested files under nested directories with file attributes"
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
 
@@ -3960,8 +3715,7 @@
       (testing (str "throws and aborts when entry of type " existing-type
                  " exists and definition includes type " new-type
                  " by default")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
           ((new-creators new-type) subject-path)
@@ -3977,8 +3731,7 @@
       (testing (str "throws and aborts when entry of type " existing-type
                  " exists and definition includes type " new-type
                  " when throw requested")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
           ((new-creators new-type) subject-path)
@@ -3997,8 +3750,7 @@
       (testing (str "overwrites entry and continues when entry of type "
                  existing-type " exists and definition includes type "
                  new-type "when overwrite requested")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4019,8 +3771,7 @@
       (testing (str "overwrites entry and continues when entry of type "
                  existing-type " exists and definition includes type "
                  new-type "when append requested")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4041,8 +3792,7 @@
       (testing (str "skips entry and continues when entry of type "
                  existing-type " exists and definition includes type "
                  new-type "when skip requested")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4063,8 +3813,7 @@
       (testing (str "allows on-exists handling to be overridden on an"
                  " entry by entry basis when entry of type " existing-type
                  " exists and definition includes type " new-type)
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4087,8 +3836,7 @@
                  existing-type " exists and definition includes type "
                  new-type " and on-exists has wildcard throw for "
                  "existing type")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
           ((new-creators new-type) subject-path)
@@ -4108,8 +3856,7 @@
                  existing-type " exists and definition includes type "
                  new-type " and on-exists has wildcard overwrite for "
                  "existing type")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4131,8 +3878,7 @@
                  existing-type " exists and definition includes type "
                  new-type " and on-exists has wildcard append for "
                  "existing type")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4154,8 +3900,7 @@
                  existing-type " exists and definition includes type "
                  new-type "and on-exists has wildcard skip for "
                  "existing type")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4177,8 +3922,7 @@
                  " entry by entry basis when entry of type " existing-type
                  " exists and definition includes type " new-type
                  " and on-exists has wildcard for existing type")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4201,8 +3945,7 @@
                  existing-type " exists and definition includes type "
                  new-type " and on-exists has wildcard throw for "
                  "new type")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
           ((new-creators new-type) subject-path)
@@ -4222,8 +3965,7 @@
                  existing-type " exists and definition includes type "
                  new-type " and on-exists has wildcard overwrite for "
                  "new type")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4245,8 +3987,7 @@
                  existing-type " exists and definition includes type "
                  new-type " and on-exists has wildcard append for "
                  "new type")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4268,8 +4009,7 @@
                  existing-type " exists and definition includes type "
                  new-type "and on-exists has wildcard skip for "
                  "new type")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4291,8 +4031,7 @@
                  " entry by entry basis when entry of type " existing-type
                  " exists and definition includes type " new-type
                  " and on-exists has wildcard for new type")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4315,8 +4054,7 @@
                  existing-type " exists and definition includes type "
                  new-type " and on-exists has wildcard throw for "
                  "all types")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
           ((new-creators new-type) subject-path)
@@ -4335,8 +4073,7 @@
                  existing-type " exists and definition includes type "
                  new-type " and on-exists has wildcard overwrite for "
                  "all types")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4357,8 +4094,7 @@
                  existing-type " exists and definition includes type "
                  new-type " and on-exists has wildcard append for "
                  "all types")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4379,8 +4115,7 @@
                  existing-type " exists and definition includes type "
                  new-type "and on-exists has wildcard skip for "
                  "all types")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4401,8 +4136,7 @@
                  " entry by entry basis when entry of type " existing-type
                  " exists and definition includes type " new-type
                  " and on-exists has wildcard for all types")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4423,8 +4157,7 @@
       (testing (str "throws for all types when entry of type "
                  existing-type " exists and definition includes type "
                  new-type " and on-exists is keyword throw")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
           ((new-creators new-type) subject-path)
@@ -4441,8 +4174,7 @@
       (testing (str "overwrites for all types when entry of type "
                  existing-type " exists and definition includes type "
                  new-type " and on-exists has keyword overwrite")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4461,8 +4193,7 @@
       (testing (str "overwrites for all types when entry of type "
                  existing-type " exists and definition includes type "
                  new-type " and on-exists has keyword append")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4481,8 +4212,7 @@
       (testing (str "skips for all types when entry of type "
                  existing-type " exists and definition includes type "
                  new-type "and on-exists has keyword skip")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4502,8 +4232,7 @@
                  " entry by entry basis when entry of type " existing-type
                  " exists and definition includes type " new-type
                  " and on-exists has keyword")
-        (let [test-file-system
-              (new-in-memory-file-system (random-file-system-name))
+        (let [test-file-system (t/new-unix-in-memory-file-system)
 
               subject-path (p/path test-file-system existing-path)]
           ((existing-creators existing-type) subject-path)
@@ -4522,8 +4251,7 @@
 
   (testing (str "appends entries to existing directories and continues "
              "when requested")
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
 
@@ -4551,8 +4279,7 @@
 
   (testing (str "appends contents to existing files and continues "
              "when requested")
-    (let [test-file-system
-          (new-in-memory-file-system (random-file-system-name))
+    (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
 

@@ -26,7 +26,7 @@
 
 (defn root-directories
   [^FileSystem file-system]
-  (.getRootDirectories file-system))
+  (into #{} (.getRootDirectories file-system)))
 
 (defn separator
   [^FileSystem file-system]

@@ -5,24 +5,12 @@
     [pathological.file-systems :as fs]
     [pathological.path-matchers :as pm]
     [pathological.paths :as p]
-
-    [pathological.testing
-     :refer [random-file-system-name
-             new-in-memory-file-system
-             unix-configuration
-             windows-configuration]]))
+    [pathological.testing :as t]))
 
 (deftest path-matcher
   (testing "uses the default file system when none specified"
-    (let [unix-test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration))
-
-          windows-test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration))]
+    (let [unix-test-file-system (t/new-unix-in-memory-file-system)
+          windows-test-file-system (t/new-windows-in-memory-file-system)]
       (with-bindings {#'fs/*file-system* windows-test-file-system}
         (let [path-matcher (pm/path-matcher "glob:C:\\\\*.html")
 
@@ -42,15 +30,8 @@
           (is (false? (pm/matches? path-matcher mismatching-unix-path)))))))
 
   (testing "uses the specified file system when supplied"
-    (let [unix-test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (unix-configuration))
-
-          windows-test-file-system
-          (new-in-memory-file-system
-            (random-file-system-name)
-            (windows-configuration))]
+    (let [unix-test-file-system (t/new-unix-in-memory-file-system)
+          windows-test-file-system (t/new-windows-in-memory-file-system)]
       (with-bindings {#'fs/*file-system* unix-test-file-system}
         (let [path-matcher
               (pm/path-matcher windows-test-file-system "glob:C:\\\\*.html")
