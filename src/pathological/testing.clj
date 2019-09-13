@@ -2,13 +2,15 @@
   (:refer-clojure :exclude [name])
   (:require
     [pathological.files :as f]
-    [pathological.paths :as p])
+    [pathological.paths :as p]
+    [pathological.utils :as u]
+    [pathological.attribute-specs :as as])
   (:import
     [com.google.common.jimfs Configuration
                              Feature
                              Jimfs
                              PathNormalization
-                             PathType]
+                             PathType Configuration$Builder]
     [java.util UUID]))
 
 (def ^:dynamic *features*
@@ -71,10 +73,17 @@
            roots
            working-directory
            name-canonical-normalization
+           name-display-normalization
            path-equality-uses-canonical-form?
            attribute-views
-           features]
+           default-attribute-values
+           features
+           block-size
+           max-size
+           max-cache-size]
     :or   {name-canonical-normalization       #{}
+           name-display-normalization         #{}
+           default-attribute-values           {}
            path-equality-uses-canonical-form? false}}]
   (let [path-type (->path-type path-type)
         features (->features features)
@@ -84,26 +93,42 @@
         [first-attribute-view other-attribute-views]
         (->attribute-views attribute-views)
 
-        [first-path-normalization other-path-normalizations]
+        [first-canonical-normalization other-canonical-normalizations]
         (->path-normalizations name-canonical-normalization)
 
-        builder
-        (-> (Configuration/builder path-type)
-          (.setWorkingDirectory working-directory)
-          (.setPathEqualityUsesCanonicalForm path-equality-uses-canonical-form?)
-          (.setSupportedFeatures features))
+        [first-display-normalization other-display-normalizations]
+        (->path-normalizations name-display-normalization)
 
-        builder (if first-root
-                  (.setRoots builder first-root other-roots)
-                  builder)
-        builder (if first-attribute-view
-                  (.setAttributeViews builder
-                    first-attribute-view other-attribute-views)
-                  builder)
-        builder (if first-path-normalization
-                  (.setNameCanonicalNormalization builder
-                    first-path-normalization other-path-normalizations)
-                  builder)]
+        ^Configuration$Builder
+        builder
+        (cond-> (Configuration/builder path-type)
+          features (.setSupportedFeatures features)
+          block-size (.setBlockSize block-size)
+          max-size (.setMaxSize max-size)
+          max-cache-size (.setMaxCacheSize max-cache-size)
+          working-directory (.setWorkingDirectory working-directory)
+          first-root
+          (.setRoots first-root other-roots)
+          first-attribute-view
+          (.setAttributeViews first-attribute-view other-attribute-views)
+          first-canonical-normalization
+          (.setNameCanonicalNormalization
+            first-canonical-normalization other-canonical-normalizations)
+          first-display-normalization
+          (.setNameDisplayNormalization
+            first-display-normalization other-display-normalizations)
+          path-equality-uses-canonical-form?
+          (.setPathEqualityUsesCanonicalForm
+            path-equality-uses-canonical-form?))
+
+        builder
+        (reduce
+          (fn [builder [attribute-spec value]]
+            (.setDefaultAttributeValue builder
+              (as/->attribute-spec-string attribute-spec)
+              (u/->attribute-value attribute-spec value)))
+          builder
+          default-attribute-values)]
     (.build builder)))
 
 (def unix-defaults
@@ -116,10 +141,21 @@
                         :secure-directory-stream
                         :file-channel}})
 
+(def osx-defaults
+  {:path-type                    :unix
+   :roots                        ["/"]
+   :working-directory            "/"
+   :attribute-views              #{:basic}
+   :name-display-normalization   #{:nfc}
+   :name-canonical-normalization #{:nfd :case-fold-ascii}
+   :features                     #{:links
+                                   :symbolic-links
+                                   :file-channel}})
+
 (def windows-defaults
   {:path-type                          :windows
-   :roots                              ["C:\\"]
-   :working-directory                  "C:\\"
+   :roots                              ["C:\\\\"]
+   :working-directory                  "C:\\\\"
    :name-canonical-normalization       #{:case-fold-ascii}
    :path-equality-uses-canonical-form? true
    :attribute-views                    #{:basic}
@@ -141,6 +177,9 @@
 
 (defn new-unix-in-memory-file-system [& {:as overrides}]
   (new-in-memory-file-system (merge unix-defaults overrides)))
+
+(defn new-osx-in-memory-file-system [& {:as overrides}]
+  (new-in-memory-file-system (merge osx-defaults overrides)))
 
 (defn new-windows-in-memory-file-system [& {:as overrides}]
   (new-in-memory-file-system (merge windows-defaults overrides)))
