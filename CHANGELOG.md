@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+
+## [0.1.11] — 2019-09-16
 ### Added
 - support for configurable errors in file systems created by 
   `pathological.testing`.
@@ -147,4 +149,5 @@ and this project adheres to
 [0.1.8]: https://github.com/logicblocks/pathological/compare/0.1.7...0.1.8
 [0.1.9]: https://github.com/logicblocks/pathological/compare/0.1.8...0.1.9
 [0.1.10]: https://github.com/logicblocks/pathological/compare/0.1.9...0.1.10
-[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.10...HEAD
+[0.1.11]: https://github.com/logicblocks/pathological/compare/0.1.10...0.1.11
+[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.11...HEAD
