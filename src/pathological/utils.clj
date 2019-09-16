@@ -13,25 +13,25 @@
     [java.nio ByteBuffer]
     [java.nio.charset StandardCharsets Charset]
     [java.nio.file CopyOption
-                   FileVisitOption
-                   FileVisitResult
-                   LinkOption
-                   OpenOption
-                   StandardOpenOption
-                   StandardCopyOption]
+     FileVisitOption
+     FileVisitResult
+     LinkOption
+     OpenOption
+     StandardOpenOption
+     StandardCopyOption]
     [java.nio.file.attribute AclEntry
-                             AclEntryFlag
-                             AclEntryPermission
-                             AclEntryType
-                             AclFileAttributeView
-                             BasicFileAttributeView
-                             DosFileAttributeView
-                             FileOwnerAttributeView
-                             FileTime
-                             PosixFileAttributeView
-                             PosixFilePermission
-                             PosixFilePermissions
-                             UserDefinedFileAttributeView]
+     AclEntryFlag
+     AclEntryPermission
+     AclEntryType
+     AclFileAttributeView
+     BasicFileAttributeView
+     DosFileAttributeView
+     FileOwnerAttributeView
+     FileTime
+     PosixFileAttributeView
+     PosixFilePermission
+     PosixFilePermissions
+     UserDefinedFileAttributeView]
     [java.util.stream Stream]))
 
 (defn camel->kebab [value]
@@ -247,22 +247,22 @@
 
 (defn ->bytes
   ([^String value]
-   (.getBytes value))
+    (.getBytes value))
   ([^String value charset]
-   (.getBytes value ^Charset (->charset charset))))
+    (.getBytes value ^Charset (->charset charset))))
 
 (defn ->byte-buffer
   ([value]
-   (->byte-buffer value :utf-8))
+    (->byte-buffer value :utf-8))
   ([value charset]
-   (cond
-     (instance? ByteBuffer value) value
-     (bytes? value) (ByteBuffer/wrap value)
-     :default
-     (ByteBuffer/wrap
-       (.getBytes
-         (str value)
-         ^Charset (->charset charset))))))
+    (cond
+      (instance? ByteBuffer value) value
+      (bytes? value) (ByteBuffer/wrap value)
+      :default
+      (ByteBuffer/wrap
+        (.getBytes
+          (str value)
+          ^Charset (->charset charset))))))
 
 (defn <-byte-buffer [^ByteBuffer value]
   (.array value))

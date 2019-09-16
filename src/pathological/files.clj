@@ -12,11 +12,11 @@
     [clojure.java.io :as io])
   (:import
     [java.nio.file DirectoryStream$Filter
-                   Files
-                   FileVisitor
-                   Path FileAlreadyExistsException]
+     Files
+     FileVisitor
+     Path FileAlreadyExistsException]
     [java.nio.charset Charset
-                      StandardCharsets]
+     StandardCharsets]
     [java.util.function BiPredicate]
     [java.io InputStream OutputStream]))
 
@@ -111,12 +111,12 @@
 
 (defn write-lines
   ([^Path path ^Iterable lines]
-   (write-lines path lines :utf-8))
+    (write-lines path lines :utf-8))
   ([^Path path ^Iterable lines charset & options]
-   (let [^Charset charset (u/->charset charset)
-         ^"[Ljava.nio.file.OpenOption;"
-         open-options (u/->open-options-array options)]
-     (Files/write path lines charset open-options))))
+    (let [^Charset charset (u/->charset charset)
+          ^"[Ljava.nio.file.OpenOption;"
+          open-options (u/->open-options-array options)]
+      (Files/write path lines charset open-options))))
 
 (defn read-all-bytes
   [^Path path]
@@ -124,24 +124,24 @@
 
 (defn read-all-lines
   ([^Path path]
-   (read-all-lines path StandardCharsets/UTF_8))
+    (read-all-lines path StandardCharsets/UTF_8))
   ([^Path path ^Charset charset]
-   (Files/readAllLines path (u/->charset charset))))
+    (Files/readAllLines path (u/->charset charset))))
 
 (defn lines-stream
   ([^Path path]
-   (Files/lines path))
+    (Files/lines path))
   ([^Path path charset]
-   (Files/lines path (u/->charset charset))))
+    (Files/lines path (u/->charset charset))))
 
 (defn lines
   ([^Path path]
-   (u/stream-seq (lines-stream path)))
+    (u/stream-seq (lines-stream path)))
   ([^Path path charset]
-   (u/stream-seq (lines-stream path charset))))
+    (u/stream-seq (lines-stream path charset))))
 
 (deftype FnBackedBiPredicate
-  [predicate-fn]
+         [predicate-fn]
 
   BiPredicate
   (test [_ path basic-file-attributes]
@@ -337,7 +337,7 @@
   (Files/isExecutable path))
 
 (deftype FnBackedDirectoryStreamFilter
-  [filter-fn]
+         [filter-fn]
 
   DirectoryStream$Filter
   (accept [_ path]
@@ -345,13 +345,13 @@
 
 (defn new-directory-stream
   ([^Path path]
-   (Files/newDirectoryStream path))
+    (Files/newDirectoryStream path))
   ([^Path path glob-or-filter]
-   (if (instance? String glob-or-filter)
-     (Files/newDirectoryStream path ^String glob-or-filter)
-     (Files/newDirectoryStream path
-       ^DirectoryStream$Filter
-       (->FnBackedDirectoryStreamFilter glob-or-filter)))))
+    (if (instance? String glob-or-filter)
+      (Files/newDirectoryStream path ^String glob-or-filter)
+      (Files/newDirectoryStream path
+        ^DirectoryStream$Filter
+        (->FnBackedDirectoryStreamFilter glob-or-filter)))))
 
 (defn new-input-stream
   [^Path path & options]
@@ -368,16 +368,16 @@
 (defn new-buffered-reader
   ([^Path path] (new-buffered-reader path :utf-8))
   ([^Path path charset]
-   (Files/newBufferedReader path (u/->charset charset))))
+    (Files/newBufferedReader path (u/->charset charset))))
 
 (defn new-buffered-writer
   ([^Path path & args]
-   (let [[first & rest] args
-         charset (u/->charset (if (u/charset? first) first :utf-8))
-         ^"[Ljava.nio.file.OpenOption;"
-         open-options (u/->open-options-array
-                        (if (u/charset? first) rest args))]
-     (Files/newBufferedWriter path charset open-options))))
+    (let [[first & rest] args
+          charset (u/->charset (if (u/charset? first) first :utf-8))
+          ^"[Ljava.nio.file.OpenOption;"
+          open-options (u/->open-options-array
+                         (if (u/charset? first) rest args))]
+      (Files/newBufferedWriter path charset open-options))))
 
 (defn walk-stream
   [^Path path
@@ -403,11 +403,11 @@
     (u/->file-visit-result control)))
 
 (deftype FnBackedFileVisitor
-  [pre-visit-directory-fn
-   post-visit-directory-fn
-   visit-file-fn
-   visit-file-failed-fn
-   accumulator-atom]
+         [pre-visit-directory-fn
+          post-visit-directory-fn
+          visit-file-fn
+          visit-file-failed-fn
+          accumulator-atom]
 
   FileVisitor
   (preVisitDirectory [_ directory basic-file-attributes]
@@ -552,7 +552,7 @@
               (fn [path rest]
                 (when (seq rest)
                   (apply populate-file-tree path rest
-                    (flatten (into [] options)))))
+                    (flatten (vec options)))))
 
               file-attributes (get attributes :file-attributes [])
               resolution-strategies (get attributes :on-exists on-exists)]
@@ -587,7 +587,8 @@
                   (apply create-file path file-attributes)))
               write-fn
               (fn [path content & options]
-                (with-open [output-stream
+                (with-open [^OutputStream
+                            output-stream
                             (apply new-output-stream path options)]
                   (io/copy content output-stream)))
 

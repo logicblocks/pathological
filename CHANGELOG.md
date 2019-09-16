@@ -8,6 +8,14 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Added
+- support for configurable errors in file systems created by 
+  `pathological.testing`.
+
+### Changed
+- `pathological.testing` dependencies (`com.google.jimfs/jimfs` and 
+  `org.mockito/mockito-core`) are now in provided scope. They are only
+  required if the `pathological.testing` namespace is used.
 
 ## [0.1.10] — 2019-09-02
 ### Added

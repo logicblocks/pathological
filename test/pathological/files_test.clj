@@ -20,20 +20,20 @@
 
     [java.nio.charset StandardCharsets Charset]
     [java.nio.file FileAlreadyExistsException
-                   Files
-                   LinkOption
-                   NoSuchFileException
-                   Path]
+     Files
+     LinkOption
+     NoSuchFileException
+     Path]
     [java.nio.file.attribute AclFileAttributeView
-                             BasicFileAttributes
-                             BasicFileAttributeView
-                             DosFileAttributeView
-                             DosFileAttributes
-                             FileOwnerAttributeView
-                             PosixFileAttributes
-                             PosixFileAttributeView
-                             PosixFilePermissions
-                             UserDefinedFileAttributeView]))
+     BasicFileAttributes
+     BasicFileAttributeView
+     DosFileAttributeView
+     DosFileAttributes
+     FileOwnerAttributeView
+     PosixFileAttributes
+     PosixFileAttributeView
+     PosixFilePermissions
+     UserDefinedFileAttributeView]))
 
 (declare thrown?)
 
@@ -265,7 +265,7 @@
             (f/read-posix-file-permissions temp-path)))))
 
   (testing
-    "creates a temporary file in the default file system default location"
+   "creates a temporary file in the default file system default location"
     (let [prefix "pre-"
           suffix "-post"
 
@@ -327,7 +327,7 @@
             (f/read-posix-file-permissions temp-path)))))
 
   (testing
-    "creates a temporary directory in the default file system default location"
+   "creates a temporary directory in the default file system default location"
     (let [prefix "pre-"
 
           temp-path-1 (f/create-temp-directory prefix)
@@ -3215,13 +3215,13 @@
          [:symlink-1 {:type   :symbolic-link
                       :target "/file-1"
                       :file-attributes
-                              {"posix:permissions" "rwxrw-rw-"
-                               "owner:owner"       user-1}}]
+                      {"posix:permissions" "rwxrw-rw-"
+                       "owner:owner"       user-1}}]
          [:symlink-2 {:type   :symbolic-link
                       :target "/file-2"
                       :file-attributes
-                              {"posix:permissions" "r--r--r--"
-                               "owner:owner"       user-2}}]])
+                      {"posix:permissions" "r--r--r--"
+                       "owner:owner"       user-2}}]])
 
       (is (not= #{:owner-read :owner-write :owner-execute
                   :group-read :group-write
@@ -3290,12 +3290,12 @@
       (f/populate-file-tree root-path
         [[:directory-1 {:type :directory
                         :file-attributes
-                              {"posix:permissions" "rwxr-xr-x"
-                               "owner:owner"       user-1}}]
+                        {"posix:permissions" "rwxr-xr-x"
+                         "owner:owner"       user-1}}]
          [:directory-2 {:type :directory
                         :file-attributes
-                              {"posix:permissions" "r-xr-xr-x"
-                               "owner:owner"       user-2}}]])
+                        {"posix:permissions" "r-xr-xr-x"
+                         "owner:owner"       user-2}}]])
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-execute
@@ -3498,12 +3498,12 @@
         [[:some
           [:directory-1 {:type :directory
                          :file-attributes
-                               {"posix:permissions" "rwxr-xr-x"
-                                "owner:owner"       user-1}}]
+                         {"posix:permissions" "rwxr-xr-x"
+                          "owner:owner"       user-1}}]
           [:directory-2 {:type :directory
                          :file-attributes
-                               {"posix:permissions" "r-xr-xr-x"
-                                "owner:owner"       user-2}}]]])
+                         {"posix:permissions" "r-xr-xr-x"
+                          "owner:owner"       user-2}}]]])
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-execute

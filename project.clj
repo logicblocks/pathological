@@ -5,8 +5,6 @@
   :license {:name "The MIT License"
             :url  "https://opensource.org/licenses/MIT"}
 
-  :dependencies [[com.google.jimfs/jimfs "1.1"]]
-
   :plugins [[lein-cloverage "1.1.1"]
             [lein-shell "0.5.0"]
             [lein-ancient "0.6.15"]
@@ -18,16 +16,21 @@
             [lein-bikeshed "0.5.1"]]
 
   :profiles
-  {:shared {:dependencies
-            [[org.clojure/clojure "1.10.1"]
-             [org.apache.tika/tika-core "1.22"]
-             [org.apache.tika/tika-parsers "1.22"
-              :exclusions [com.google.guava/guava]]
-             [ch.qos.logback/logback-classic "1.2.3"]
-             [eftest "0.5.8"]]}
-   :dev    [:shared {:source-paths ["dev"]
-                     :eftest {:multithread? false}}]
-   :test   [:shared {:eftest {:multithread? false}}]}
+  {:provided {:dependencies
+              [[com.google.jimfs/jimfs "1.1"]
+               [org.mockito/mockito-core "3.0.0"]]}
+   :shared   [:provided
+                {:dependencies
+               [[org.clojure/clojure "1.10.1"]
+                [nrepl "0.6.0"]
+                [org.apache.tika/tika-core "1.22"]
+                [org.apache.tika/tika-parsers "1.22"
+                 :exclusions [com.google.guava/guava]]
+                [ch.qos.logback/logback-classic "1.2.3"]
+                [eftest "0.5.8"]]}]
+   :dev      [:shared {:source-paths ["dev"]
+                       :eftest       {:multithread? false}}]
+   :test     [:shared {:eftest {:multithread? false}}]}
 
   :cloverage
   {:ns-exclude-regex [#"^user"]}
@@ -60,7 +63,7 @@
   :aliases {"test"      ["with-profile" "test" "eftest" ":all"]
             "precommit" ["do"
                          ["check"]
-                         ["kibit" "--replace"]
+                         ["kibit"]
                          ["cljfmt" "fix"]
                          ["bikeshed"
                           "--name-collisions" "false"

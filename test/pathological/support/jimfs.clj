@@ -67,4 +67,3 @@
 
 (defn working-directory [^JimfsFileSystem file-system]
   (reflect/get-field (default-file-view file-system) :working-directory-path))
-

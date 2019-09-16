@@ -38,7 +38,7 @@
   ^Field (first fields))
 
 (defn array-of-objects [args]
-  ^"[Ljava.lang.Object;" (into-array Object (rest args)))
+  ^"[Ljava.lang.Object;" (into-array Object args))
 
 (defn invoke [object method-name & args]
   (let [klass (class object)

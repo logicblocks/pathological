@@ -14,7 +14,11 @@
     [pathological.files :as f])
   (:import
     [com.google.common.jimfs Feature
-                             PathType PathNormalization]))
+     PathNormalization
+     PathType]
+    [java.io IOException]))
+
+(declare thrown?)
 
 (deftest builds-default-unix-filesystem-with-random-name
   (let [file-system (t/new-unix-in-memory-file-system)]
@@ -118,7 +122,7 @@
 (deftest builds-unix-filesystem-with-default-attribute-values
   (let [file-system (t/new-unix-in-memory-file-system
                       :default-attribute-values
-                      {"owner:owner" "some-user"
+                      {"owner:owner"       "some-user"
                        "posix:permissions" "rwxr-xr-x"})]
     (is (= (PathType/unix) (jimfs/path-type file-system)))
     (is (= [(u/->file-attribute "owner:owner"
@@ -141,6 +145,39 @@
     (is (= ["Line 2"]
           (f/read-all-lines
             (p/path file-system "/work/directory-1/file-2"))))))
+
+(deftest builds-unix-filesystem-throwing-error-on-specified-files-ns-calls
+  (let [file-system (t/new-unix-in-memory-file-system
+                      :error-on #{#'pathological.files/create-directory
+                                  #'pathological.files/create-file})]
+    (is (thrown? IOException
+          (f/create-directory (p/path file-system "/test"))))
+    (is (thrown? IOException
+          (f/create-file (p/path file-system "/test"))))
+
+    (f/create-symbolic-link
+      (p/path file-system "/test")
+      (p/path file-system "/other"))
+
+    (is (true? (f/exists? (p/path file-system "/test")
+                 :no-follow-links)))))
+
+(deftest builds-unix-filesystem-throwing-error-on-specified-provider-calls
+  (let [file-system
+        (t/new-unix-in-memory-file-system
+          :error-on #{'java.nio.file.spi.FileSystemProvider#createDirectory
+                      'java.nio.file.spi.FileSystemProvider#newByteChannel})]
+    (is (thrown? IOException
+          (f/create-directory (p/path file-system "/test"))))
+    (is (thrown? IOException
+          (f/create-file (p/path file-system "/test"))))
+
+    (f/create-symbolic-link
+      (p/path file-system "/test")
+      (p/path file-system "/other"))
+
+    (is (true? (f/exists? (p/path file-system "/test")
+                 :no-follow-links)))))
 
 (deftest builds-default-osx-filesystem-with-random-name
   (let [file-system (t/new-osx-in-memory-file-system)]
@@ -241,7 +278,7 @@
   (let [file-system (t/new-osx-in-memory-file-system
                       :attribute-views #{:basic :posix :owner}
                       :default-attribute-values
-                      {"owner:owner" "some-user"
+                      {"owner:owner"       "some-user"
                        "posix:permissions" "rwxr-xr-x"})]
     (is (= (PathType/unix) (jimfs/path-type file-system)))
     (is (= [(u/->file-attribute "owner:owner"
@@ -264,6 +301,39 @@
     (is (= ["Line 2"]
           (f/read-all-lines
             (p/path file-system "/work/directory-1/file-2"))))))
+
+(deftest builds-osx-filesystem-throwing-error-on-specified-files-ns-calls
+  (let [file-system (t/new-osx-in-memory-file-system
+                      :error-on #{#'pathological.files/create-directory
+                                  #'pathological.files/create-file})]
+    (is (thrown? IOException
+          (f/create-directory (p/path file-system "/test"))))
+    (is (thrown? IOException
+          (f/create-file (p/path file-system "/test"))))
+
+    (f/create-symbolic-link
+      (p/path file-system "/test")
+      (p/path file-system "/other"))
+
+    (is (true? (f/exists? (p/path file-system "/test")
+                 :no-follow-links)))))
+
+(deftest builds-osx-filesystem-throwing-error-on-specified-provider-calls
+  (let [file-system
+        (t/new-osx-in-memory-file-system
+          :error-on #{'java.nio.file.spi.FileSystemProvider#createDirectory
+                      'java.nio.file.spi.FileSystemProvider#newByteChannel})]
+    (is (thrown? IOException
+          (f/create-directory (p/path file-system "/test"))))
+    (is (thrown? IOException
+          (f/create-file (p/path file-system "/test"))))
+
+    (f/create-symbolic-link
+      (p/path file-system "/test")
+      (p/path file-system "/other"))
+
+    (is (true? (f/exists? (p/path file-system "/test")
+                 :no-follow-links)))))
 
 (deftest builds-default-windows-filesystem-with-random-name
   (let [file-system (t/new-windows-in-memory-file-system)]
@@ -371,7 +441,7 @@
   (let [file-system (t/new-windows-in-memory-file-system
                       :attribute-views #{:basic :posix :owner}
                       :default-attribute-values
-                      {"owner:owner" "some-user"
+                      {"owner:owner"       "some-user"
                        "posix:permissions" "rwxr-xr-x"})]
     (is (= (PathType/windows) (jimfs/path-type file-system)))
     (is (= [(u/->file-attribute "owner:owner"
@@ -394,3 +464,36 @@
     (is (= ["Line 2"]
           (f/read-all-lines
             (p/path file-system "C:\\work\\directory-1\\file-2"))))))
+
+(deftest builds-windows-filesystem-throwing-error-on-specified-files-ns-calls
+  (let [file-system (t/new-windows-in-memory-file-system
+                      :error-on #{#'pathological.files/create-directory
+                                  #'pathological.files/create-file})]
+    (is (thrown? IOException
+          (f/create-directory (p/path file-system "C:\\test"))))
+    (is (thrown? IOException
+          (f/create-file (p/path file-system "C:\\test"))))
+
+    (f/create-symbolic-link
+      (p/path file-system "C:\\test")
+      (p/path file-system "C:\\other"))
+
+    (is (true? (f/exists? (p/path file-system "C:\\test")
+                 :no-follow-links)))))
+
+(deftest builds-windows-filesystem-throwing-error-on-specified-provider-calls
+  (let [file-system
+        (t/new-windows-in-memory-file-system
+          :error-on #{'java.nio.file.spi.FileSystemProvider#createDirectory
+                      'java.nio.file.spi.FileSystemProvider#newByteChannel})]
+    (is (thrown? IOException
+          (f/create-directory (p/path file-system "C:\\test"))))
+    (is (thrown? IOException
+          (f/create-file (p/path file-system "C:\\test"))))
+
+    (f/create-symbolic-link
+      (p/path file-system "C:\\test")
+      (p/path file-system "C:\\other"))
+
+    (is (true? (f/exists? (p/path file-system "C:\\test")
+                 :no-follow-links)))))

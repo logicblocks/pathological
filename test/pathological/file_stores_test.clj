@@ -8,7 +8,7 @@
     [pathological.paths :as p]
     [pathological.testing :as t])
   (:import [java.nio.file.attribute AclFileAttributeView
-                                    BasicFileAttributeView]))
+            BasicFileAttributeView]))
 
 (deftest supports-file-attribute-view
   (testing "for keyword"
