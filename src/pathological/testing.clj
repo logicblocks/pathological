@@ -1,9 +1,10 @@
 (ns pathological.testing
-  (:refer-clojure :exclude [name class])
+  (:refer-clojure :exclude [name])
   (:require
     [pathological.files :as f]
     [pathological.paths :as p]
     [pathological.utils :as u]
+    [pathological.file-systems :as fs]
     [pathological.attribute-specs :as as])
   (:import
     [java.util UUID]
@@ -11,17 +12,25 @@
     [java.net URI]
     [java.lang.reflect Method]
     [com.google.common.jimfs Configuration
-     Configuration$Builder
-     Feature
-     Jimfs
-     JimfsFileSystem
-     JimfsFileSystemProvider
-     JimfsFileSystems
-     PathNormalization
-     PathType]
-    [org.mockito Mockito Matchers]
+                             Configuration$Builder
+                             Feature
+                             Jimfs
+                             JimfsFileSystems
+                             PathNormalization
+                             PathType]
+    [org.mockito Mockito]
     [org.mockito.stubbing Answer Stubber]
-    [org.mockito.invocation InvocationOnMock]))
+    [org.mockito.invocation InvocationOnMock]
+    [java.nio.file AccessMode
+                   CopyOption
+                   DirectoryStream$Filter
+                   LinkOption
+                   OpenOption
+                   Path]
+    [java.nio.file.attribute FileAttribute]
+    [java.util.concurrent ExecutorService]
+    [clojure.lang Reflector]
+    [java.nio.file.spi FileSystemProvider]))
 
 (def ^:dynamic *features*
   {:links                   Feature/LINKS
@@ -156,201 +165,283 @@
           default-attribute-values)]
     (.build builder)))
 
-(defn- provider [^JimfsFileSystem file-system]
-  ^JimfsFileSystemProvider (.provider file-system))
+(def ^:private provider-methods
+  {'java.nio.file.spi.FileSystemProvider#newInputStream
+   {:method-name          'newInputStream
+    :arguments-signatures [[Path [OpenOption]]]
+    :matching-calls       #{#'pathological.files/new-input-stream
+                            #'pathological.files/new-buffered-reader
+                            #'pathological.files/read-all-lines
+                            #'pathological.files/lines-stream
+                            #'pathological.files/lines
+                            #'pathological.files/copy}}
 
-(defn- throw-if-requested [definitions names]
+   'java.nio.file.spi.FileSystemProvider#newOutputStream
+   {:method-name          'newOutputStream
+    :arguments-signatures [[Path [OpenOption]]]
+    :matching-calls       #{#'pathological.files/new-output-stream
+                            #'pathological.files/new-buffered-writer
+                            #'pathological.files/write-lines
+                            #'pathological.files/copy}}
+
+   'java.nio.file.spi.FileSystemProvider#newFileChannel
+   {:method-name          'newFileChannel
+    :arguments-signatures [[Path #{OpenOption} [FileAttribute]]]
+    :matching-calls       #{#'pathological.files/lines-stream
+                            #'pathological.files/lines}}
+
+   'java.nio.file.spi.FileSystemProvider#newAsynchronousFileChannel
+   {:method-name          'newAsynchronousFileChannel
+    :arguments-signatures [[Path #{OpenOption} ExecutorService [FileAttribute]]]
+    :matching-calls       #{}}
+
+   'java.nio.file.spi.FileSystemProvider#newByteChannel
+   {:method-name          'newByteChannel
+    :arguments-signatures [[Path #{OpenOption} [FileAttribute]]]
+    :matching-calls       #{#'pathological.files/create-file
+                            #'pathological.files/create-temp-file
+                            #'pathological.files/read-all-bytes}}
+
+   'java.nio.file.spi.FileSystemProvider#newDirectoryStream
+   {:method-name          'newDirectoryStream
+    :arguments-signatures [[Path DirectoryStream$Filter]]
+    :matching-calls       #{#'pathological.files/find-stream
+                            #'pathological.files/find
+                            #'pathological.files/walk-stream
+                            #'pathological.files/walk
+                            #'pathological.files/walk-file-tree
+                            #'pathological.files/list-stream
+                            #'pathological.files/list
+                            #'pathological.files/new-directory-stream}}
+
+   'java.nio.file.spi.FileSystemProvider#createDirectory
+   {:method-name          'createDirectory
+    :arguments-signatures [[Path [FileAttribute]]]
+    :matching-calls       #{#'pathological.files/create-directory
+                            #'pathological.files/create-directories
+                            #'pathological.files/create-temp-directory}}
+
+   'java.nio.file.spi.FileSystemProvider#createSymbolicLink
+   {:method-name          'createSymbolicLink
+    :arguments-signatures [[Path Path [FileAttribute]]]
+    :matching-calls       #{#'pathological.files/create-symbolic-link}}
+
+   'java.nio.file.spi.FileSystemProvider#createLink
+   {:method-name          'createLink
+    :arguments-signatures [[Path Path]]
+    :matching-calls       #{#'pathological.files/create-link}}
+
+   'java.nio.file.spi.FileSystemProvider#delete
+   {:method-name          'delete
+    :arguments-signatures [[Path]]
+    :matching-calls       #{#'pathological.files/delete
+                            #'pathological.files/delete-recursively}}
+
+   'java.nio.file.spi.FileSystemProvider#deleteIfExists
+   {:method-name          'deleteIfExists
+    :arguments-signatures [[Path]]
+    :matching-calls       #{#'pathological.files/delete-if-exists}}
+
+   'java.nio.file.spi.FileSystemProvider#readSymbolicLink
+   {:method-name          'readSymbolicLink
+    :arguments-signatures [[Path]]
+    :matching-calls       #{#'pathological.files/read-symbolic-link}}
+
+   'java.nio.file.spi.FileSystemProvider#copy
+   {:method-name          'copy
+    :arguments-signatures [[Path Path [CopyOption]]]
+    :matching-calls       #{#'pathological.files/copy
+                            #'pathological.files/copy-recursively}}
+
+   'java.nio.file.spi.FileSystemProvider#move
+   {:method-name          'move
+    :arguments-signatures [[Path Path [CopyOption]]]
+    :matching-calls       #{#'pathological.files/move
+                            #'pathological.files/move-recursively}}
+
+   'java.nio.file.spi.FileSystemProvider#isSameFile
+   {:method-name          'isSameFile
+    :arguments-signatures [[Path Path]]
+    :matching-calls       #{#'pathological.files/same-file?}}
+
+   'java.nio.file.spi.FileSystemProvider#isHidden
+   {:method-name          'isHidden
+    :arguments-signatures [[Path]]
+    :matching-calls       #{#'pathological.files/hidden?}}
+
+   'java.nio.file.spi.FileSystemProvider#checkAccess
+   {:method-name          'checkAccess
+    :arguments-signatures [[Path [AccessMode]]]
+    :matching-calls       #{#'pathological.files/exists?
+                            #'pathological.files/not-exists?
+                            #'pathological.files/readable?
+                            #'pathological.files/writable?
+                            #'pathological.files/executable?}}
+
+   'java.nio.file.spi.FileSystemProvider#getFileAttributeView
+   {:method-name          'getFileAttributeView
+    :arguments-signatures [[Path Class [LinkOption]]]
+    :matching-calls       #{#'pathological.files/set-posix-file-permissions
+                            #'pathological.files/read-file-attribute-view}}
+
+   'java.nio.file.spi.FileSystemProvider#readAttributes
+   {:method-name          'readAttributes
+    :arguments-signatures [[Path Class [LinkOption]]
+                           [Path String [LinkOption]]]
+    :matching-calls       #{#'pathological.files/find-stream
+                            #'pathological.files/find
+                            #'pathological.files/walk-stream
+                            #'pathological.files/walk
+                            #'pathological.files/walk-file-tree
+                            #'pathological.files/size
+                            #'pathological.files/read-posix-file-permissions
+                            #'pathological.files/read-owner
+                            #'pathological.files/set-owner
+                            #'pathological.files/read-last-modified-time
+                            #'pathological.files/set-last-modified-time
+                            #'pathological.files/read-attribute
+                            #'pathological.files/read-attributes
+                            #'pathological.files/regular-file?
+                            #'pathological.files/directory?
+                            #'pathological.files/symbolic-link?}}
+
+   'java.nio.file.spi.FileSystemProvider#setAttributes
+   {:method-name          'setAttributes
+    :arguments-signatures [[Path String Object [LinkOption]]]
+    :matching-calls       #{#'pathological.files/set-attribute}}})
+
+(defn- <-argument [value type]
+  (condp = type
+    Path (str value)
+    #{OpenOption} (u/<-open-options-array value)
+    [OpenOption] (u/<-open-options-array value)
+    [CopyOption] (u/<-copy-options-array value)
+    [LinkOption] (u/<-link-options-array value)
+    [AccessMode] (u/<-access-modes-array value)
+    [FileAttribute] (u/<-file-attributes-array value)
+    value))
+
+(defn- <-arguments-array [values types]
+  (let [values
+        (if (vector? (last types))
+          (concat (take (dec (count types)) values)
+            [(drop (dec (count types)) values)])
+          values)]
+    (mapv <-argument values types)))
+
+(defn- same-arguments [erroring-arguments invocation-arguments]
+  (= (take (count erroring-arguments) invocation-arguments)
+    erroring-arguments))
+
+(defn- matches-erroring-argument-specs?
+  [erroring-argument-specs invocation-arguments]
+  (some
+    (fn [erroring-arguments]
+      (same-arguments erroring-arguments invocation-arguments))
+    erroring-argument-specs))
+
+(defn- should-error? [erroring-argument-specs invocation-arguments]
+  (or (empty? erroring-argument-specs)
+    (matches-erroring-argument-specs?
+      erroring-argument-specs
+      invocation-arguments)))
+
+(defn- throw-on-match [erroring-argument-specs argument-types]
   ^Stubber
   (Mockito/doAnswer
     (reify Answer
       (answer [_ ^InvocationOnMock invocation]
-        (let [method (.getMethod invocation)]
-          (if (some #(contains? definitions %) names)
+        (let [method (.getMethod invocation)
+              method-name (.getName method)
+              invocation-arguments (.getArguments invocation)
+              invocation-arguments
+              (when (seq erroring-argument-specs)
+                (<-arguments-array invocation-arguments argument-types))]
+          (if (should-error? erroring-argument-specs invocation-arguments)
             (throw (IOException.
-                     (str "Errored executing: '" (.getName method)
-                       "' as requested.")))
+                     (str "Errored executing: '" method-name
+                       "' with arguments: " invocation-arguments
+                       " as requested.")))
             (.callRealMethod invocation)))))))
 
-(defn- spy-for [thing]
-  (Mockito/spy thing))
+(defn- matchers-for [argument-types]
+  (map
+    #(if (coll? %)
+       (Mockito/any)
+       (Mockito/any %))
+    argument-types))
 
-(defn- on-call [^JimfsFileSystemProvider spy call]
-  (let [arg-count (count (second call))
-        arg-matchers (repeat arg-count '(Matchers/any))
-        what-to-do ^Stubber (nth call 2)]
-    `(.
-       ^JimfsFileSystemProvider
-       (.when
-         ^Stubber ~what-to-do
-         ^JimfsFileSystemProvider ~spy)
-       ~(first call)
-       ~@arg-matchers)))
+(defn- on-call
+  [errorable-file-system-provider method argument-types what-to-do]
+  (Reflector/invokeInstanceMethod
+    (.when ^Stubber what-to-do errorable-file-system-provider)
+    (clojure.core/name method)
+    (into-array Object (matchers-for argument-types))))
 
-(defmacro ^:private configure-on [spy & calls]
-  `(do
-     ~@(map #(on-call spy %) calls)
-     ~spy))
+(defn- lookup-provider-methods-for [method]
+  (if (contains? provider-methods method)
+    [(get provider-methods method)]
+    (filter
+      (fn [{:keys [matching-calls]}]
+        (contains? matching-calls method))
+      (vals provider-methods))))
+
+(defn- configure-error-on
+  [errorable-file-system-provider [method argument-specs]]
+  (let [provider-methods-for-method (lookup-provider-methods-for method)]
+    (doseq
+      [{:keys [method-name arguments-signatures]} provider-methods-for-method
+       argument-signature arguments-signatures]
+      (on-call errorable-file-system-provider method-name argument-signature
+        (throw-on-match argument-specs argument-signature)))))
+
+(defn- new-errorable-file-system-provider [file-system]
+  ^FileSystemProvider (Mockito/spy (fs/provider file-system)))
+
+(defn- consolidate-error-definitions [error-definitions]
+  (letfn [(aggregate-argument-specs [error-definition]
+            (remove nil? (mapv second error-definition)))]
+    (->> error-definitions
+      (group-by first)
+      (reduce-kv
+        (fn [acc method error-definitions]
+          (assoc acc
+            method (aggregate-argument-specs error-definitions)))
+        {}))))
+
+(defn- configure-errors-on [file-system error-definitions]
+  (let [error-definitions (consolidate-error-definitions error-definitions)]
+    (run! #(configure-error-on (fs/provider file-system) %)
+      error-definitions)
+    file-system))
 
 (defn- new-jimfs-file-system [provider uri configuration]
   (let [method
-        (first (filter #(= (.getName ^Method %) "newFileSystem")
-                 (.getDeclaredMethods JimfsFileSystems)))]
+        (first
+          (filter
+            #(= (.getName ^Method %)
+               (clojure.core/name 'newFileSystem))
+            (.getDeclaredMethods JimfsFileSystems)))]
     (.setAccessible ^Method method true)
     (.invoke ^Method method nil
       (into-array Object [provider uri configuration]))))
 
-(defn- new-erroring-jimfs-file-system-provider
-  [jimfs-file-system-provider definitions]
-  (let [spy (spy-for jimfs-file-system-provider)]
-    (configure-on spy
-      (newInputStream [path args]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#newInputStream
-            #'pathological.files/new-input-stream
-            #'pathological.files/new-buffered-reader
-            #'pathological.files/read-all-lines
-            #'pathological.files/lines-stream
-            #'pathological.files/lines
-            #'pathological.files/copy}))
+(defn new-in-memory-file-system [options]
+  (let [{:keys [name working-directory contents error-on]
+         :or   {name     (random-file-system-name)
+                contents []
+                error-on #{}}} options
 
-      (newOutputStream [path args]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#newOutputStream
-            #'pathological.files/new-output-stream
-            #'pathological.files/new-buffered-writer
-            #'pathological.files/write-lines
-            #'pathological.files/copy}))
-
-      (newFileChannel [path options args]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#newFileChannel
-            #'pathological.files/lines-stream
-            #'pathological.files/lines}))
-
-      (newAsynchronousFileChannel [path options executor args]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#newAsynchronousFileChannel}))
-
-      (newByteChannel [path options args]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#newByteChannel
-            #'pathological.files/create-file
-            #'pathological.files/create-temp-file
-            #'pathological.files/read-all-bytes}))
-
-      (newDirectoryStream [dir filter]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#newDirectoryStream
-            #'pathological.files/find-stream
-            #'pathological.files/find
-            #'pathological.files/walk-stream
-            #'pathological.files/walk
-            #'pathological.files/walk-file-tree
-            #'pathological.files/list-stream
-            #'pathological.files/list
-            #'pathological.files/new-directory-stream}))
-
-      (createDirectory [dir args]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#createDirectory
-            #'pathological.files/create-directory
-            #'pathological.files/create-directories
-            #'pathological.files/create-temp-directory}))
-
-      (createSymbolicLink [link target args]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#createSymbolicLink
-            #'pathological.files/create-symbolic-link}))
-
-      (createLink [link existing]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#createLink
-            #'pathological.files/create-link}))
-
-      (delete [path]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#delete
-            #'pathological.files/delete
-            #'pathological.files/delete-recursively}))
-
-      (deleteIfExists [path]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#deleteIfExists
-            #'pathological.files/delete-if-exists}))
-
-      (readSymbolicLink [path]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#readSymbolicLink
-            #'pathological.files/read-symbolic-link}))
-
-      (copy [source target args]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#copy
-            #'pathological.files/copy
-            #'pathological.files/copy-recursively}))
-
-      (move [source target args]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#move
-            #'pathological.files/move
-            #'pathological.files/move-recursively}))
-
-      (isSameFile [first second]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#isSameFile
-            #'pathological.files/same-file?}))
-
-      (isHidden [path]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#isHidden
-            #'pathological.files/hidden?}))
-
-      (checkAccess [path args]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#checkAccess
-            #'pathological.files/exists?
-            #'pathological.files/not-exists?
-            #'pathological.files/readable?
-            #'pathological.files/writable?
-            #'pathological.files/executable?}))
-
-      (getFileAttributeView [path type args]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#getFileAttributeView
-            #'pathological.files/set-posix-file-permissions
-            #'pathological.files/read-file-attribute-view}))
-
-      (readAttributes [path type-or-attributes args]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#readAttributes
-            #'pathological.files/find-stream
-            #'pathological.files/find
-            #'pathological.files/walk-stream
-            #'pathological.files/walk
-            #'pathological.files/walk-file-tree
-            #'pathological.files/size
-            #'pathological.files/read-posix-file-permissions
-            #'pathological.files/read-owner
-            #'pathological.files/set-owner
-            #'pathological.files/read-last-modified-time
-            #'pathological.files/set-last-modified-time
-            #'pathological.files/read-attribute
-            #'pathological.files/read-attributes
-            #'pathological.files/regular-file?
-            #'pathological.files/directory?
-            #'pathological.files/symbolic-link?}))
-
-      (setAttribute [path attribute value args]
-        (throw-if-requested definitions
-          #{'java.nio.file.spi.FileSystemProvider#readAttributes
-            #'pathological.files/set-attribute})))))
-
-(defn- new-erroring-jimfs-file-system
-  [file-system name configuration definitions]
-  (let [uri (URI. "jimfs" name nil nil)
-        provider (new-erroring-jimfs-file-system-provider
-                   (provider file-system) definitions)]
-    (new-jimfs-file-system provider uri configuration)))
+        configuration (configuration options)
+        file-system (Jimfs/newFileSystem name configuration)
+        file-system (if (seq error-on)
+                      (new-jimfs-file-system
+                        (new-errorable-file-system-provider file-system)
+                        (URI. Jimfs/URI_SCHEME name nil nil)
+                        configuration)
+                      file-system)]
+    (f/populate-file-tree (p/path file-system working-directory) contents)
+    (configure-errors-on file-system error-on)))
 
 (def unix-defaults
   {:path-type         :unix
@@ -383,21 +474,6 @@
    :features                           #{:links
                                          :symbolic-links
                                          :file-channel}})
-
-(defn new-in-memory-file-system
-  [options]
-  (let [{:keys [name working-directory contents error-on]
-         :or   {name     (random-file-system-name)
-                contents []
-                error-on #{}}} options
-
-        configuration (configuration options)
-        file-system (Jimfs/newFileSystem name configuration)
-        working-path (p/path file-system working-directory)]
-    (f/populate-file-tree working-path contents)
-    (if (seq error-on)
-      (new-erroring-jimfs-file-system file-system name configuration error-on)
-      file-system)))
 
 (defn new-unix-in-memory-file-system [& {:as overrides}]
   (new-in-memory-file-system (merge unix-defaults overrides)))

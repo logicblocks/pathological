@@ -19,6 +19,10 @@
   [^FileSystem file-system]
   (.close file-system))
 
+(defn provider
+  [^FileSystem file-system]
+  (.provider file-system))
+
 (defn file-stores
   [^FileSystem file-system]
   (map (requiring-resolve 'pathological.file-stores/->file-store)

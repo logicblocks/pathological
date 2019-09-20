@@ -18,7 +18,7 @@
     [java.nio.charset Charset
      StandardCharsets]
     [java.util.function BiPredicate]
-    [java.io InputStream OutputStream]))
+    [java.io InputStream OutputStream IOException]))
 
 (defn create-directories
   [^Path path & options]
@@ -456,36 +456,61 @@
     @accumulator-atom))
 
 (defn delete-recursively
-  [^Path path]
-  (letfn [(delete-fn [_ path _] (delete path))]
+  [^Path path & {:as options}]
+  (letfn [(delete-fn [_ path _]
+            (try
+              (delete path)
+              (catch IOException e
+                (when-not (= :skip (:on-error options))
+                  (throw e)))))]
     (if (exists? path)
       (walk-file-tree path
         :visit-file-fn delete-fn
         :post-visit-directory-fn delete-fn))))
 
 (defn copy-recursively
-  [^Path source ^Path destination]
+  [^Path source ^Path destination & {:as options}]
   (letfn [(rebase [path]
             (p/resolve destination (p/relativize source path)))
           (create-directory-fn [_ directory _]
-            (create-directories (rebase directory)))
+            (try
+              (create-directories (rebase directory))
+              (catch IOException e
+                (when-not (= :skip (:on-error options))
+                  (throw e)))))
           (copy-fn [_ file _]
-            (copy file (rebase file)))]
+            (try
+              (copy file (rebase file))
+              (catch IOException e
+                (when-not (= :skip (:on-error options))
+                  (throw e)))))]
     (if (exists? source)
       (walk-file-tree source
         :pre-visit-directory-fn create-directory-fn
         :visit-file-fn copy-fn))))
 
 (defn move-recursively
-  [^Path source ^Path destination]
+  [^Path source ^Path destination & {:as options}]
   (letfn [(rebase [path]
             (p/resolve destination (p/relativize source path)))
           (create-directory-fn [_ directory _]
-            (create-directories (rebase directory)))
+            (try
+              (create-directories (rebase directory))
+              (catch IOException e
+                (when-not (= :skip (:on-error options))
+                  (throw e)))))
           (delete-directory-fn [_ directory _]
-            (delete directory))
+            (try
+              (delete directory)
+              (catch IOException e
+                (when-not (= :skip (:on-error options))
+                  (throw e)))))
           (move-fn [_ file _]
-            (move file (rebase file)))]
+            (try
+              (move file (rebase file))
+              (catch IOException e
+                (when-not (= :skip (:on-error options))
+                  (throw e)))))]
     (if (exists? source)
       (walk-file-tree source
         :pre-visit-directory-fn create-directory-fn

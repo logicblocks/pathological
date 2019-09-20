@@ -8,6 +8,12 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Added
+- argument matching for errors in file systems created by
+  `pathological.testing`.
+- error handling on `delete-recursively`, `copy-recursively` and 
+  `move-recursively` in `pathological.files` via an `:on-error` option
+  taking `:skip` or `:throw` values.
 
 ## [0.1.11] — 2019-09-16
 ### Added

@@ -14,8 +14,8 @@
     [pathological.files :as f])
   (:import
     [com.google.common.jimfs Feature
-     PathNormalization
-     PathType]
+                             PathNormalization
+                             PathType]
     [java.io IOException]))
 
 (declare thrown?)
@@ -146,27 +146,10 @@
           (f/read-all-lines
             (p/path file-system "/work/directory-1/file-2"))))))
 
-(deftest builds-unix-filesystem-throwing-error-on-specified-files-ns-calls
+(deftest builds-unix-filesystem-throwing-errors-as-specified
   (let [file-system (t/new-unix-in-memory-file-system
-                      :error-on #{#'pathological.files/create-directory
-                                  #'pathological.files/create-file})]
-    (is (thrown? IOException
-          (f/create-directory (p/path file-system "/test"))))
-    (is (thrown? IOException
-          (f/create-file (p/path file-system "/test"))))
-
-    (f/create-symbolic-link
-      (p/path file-system "/test")
-      (p/path file-system "/other"))
-
-    (is (true? (f/exists? (p/path file-system "/test")
-                 :no-follow-links)))))
-
-(deftest builds-unix-filesystem-throwing-error-on-specified-provider-calls
-  (let [file-system
-        (t/new-unix-in-memory-file-system
-          :error-on #{'java.nio.file.spi.FileSystemProvider#createDirectory
-                      'java.nio.file.spi.FileSystemProvider#newByteChannel})]
+                      :error-on [[#'pathological.files/create-directory]
+                                 [#'pathological.files/create-file]])]
     (is (thrown? IOException
           (f/create-directory (p/path file-system "/test"))))
     (is (thrown? IOException
@@ -302,27 +285,10 @@
           (f/read-all-lines
             (p/path file-system "/work/directory-1/file-2"))))))
 
-(deftest builds-osx-filesystem-throwing-error-on-specified-files-ns-calls
+(deftest builds-osx-filesystem-throwing-errors-as-specified
   (let [file-system (t/new-osx-in-memory-file-system
-                      :error-on #{#'pathological.files/create-directory
-                                  #'pathological.files/create-file})]
-    (is (thrown? IOException
-          (f/create-directory (p/path file-system "/test"))))
-    (is (thrown? IOException
-          (f/create-file (p/path file-system "/test"))))
-
-    (f/create-symbolic-link
-      (p/path file-system "/test")
-      (p/path file-system "/other"))
-
-    (is (true? (f/exists? (p/path file-system "/test")
-                 :no-follow-links)))))
-
-(deftest builds-osx-filesystem-throwing-error-on-specified-provider-calls
-  (let [file-system
-        (t/new-osx-in-memory-file-system
-          :error-on #{'java.nio.file.spi.FileSystemProvider#createDirectory
-                      'java.nio.file.spi.FileSystemProvider#newByteChannel})]
+                      :error-on [[#'pathological.files/create-directory]
+                                 [#'pathological.files/create-file]])]
     (is (thrown? IOException
           (f/create-directory (p/path file-system "/test"))))
     (is (thrown? IOException
@@ -465,10 +431,10 @@
           (f/read-all-lines
             (p/path file-system "C:\\work\\directory-1\\file-2"))))))
 
-(deftest builds-windows-filesystem-throwing-error-on-specified-files-ns-calls
+(deftest builds-windows-filesystem-throwing-errors-as-specified
   (let [file-system (t/new-windows-in-memory-file-system
-                      :error-on #{#'pathological.files/create-directory
-                                  #'pathological.files/create-file})]
+                      :error-on [[#'pathological.files/create-directory]
+                                 [#'pathological.files/create-file]])]
     (is (thrown? IOException
           (f/create-directory (p/path file-system "C:\\test"))))
     (is (thrown? IOException
@@ -481,19 +447,89 @@
     (is (true? (f/exists? (p/path file-system "C:\\test")
                  :no-follow-links)))))
 
-(deftest builds-windows-filesystem-throwing-error-on-specified-provider-calls
+(deftest builds-erroring-filesystem-on-specified-files-ns-calls
   (let [file-system
-        (t/new-windows-in-memory-file-system
-          :error-on #{'java.nio.file.spi.FileSystemProvider#createDirectory
-                      'java.nio.file.spi.FileSystemProvider#newByteChannel})]
+        (t/new-in-memory-file-system
+          (merge t/unix-defaults
+            {:error-on [[#'pathological.files/create-directory]
+                        [#'pathological.files/create-file]]}))]
     (is (thrown? IOException
-          (f/create-directory (p/path file-system "C:\\test"))))
+          (f/create-directory (p/path file-system "/test"))))
     (is (thrown? IOException
-          (f/create-file (p/path file-system "C:\\test"))))
+          (f/create-file (p/path file-system "/test"))))
 
     (f/create-symbolic-link
-      (p/path file-system "C:\\test")
-      (p/path file-system "C:\\other"))
+      (p/path file-system "/test")
+      (p/path file-system "/other"))
 
-    (is (true? (f/exists? (p/path file-system "C:\\test")
+    (is (true? (f/exists? (p/path file-system "/test")
                  :no-follow-links)))))
+
+(deftest builds-erroring-filesystem-on-specified-provider-calls
+  (let [file-system
+        (t/new-in-memory-file-system
+          (merge t/unix-defaults
+            {:error-on
+             [['java.nio.file.spi.FileSystemProvider#createDirectory]
+              ['java.nio.file.spi.FileSystemProvider#newByteChannel]]}))]
+    (is (thrown? IOException
+          (f/create-directory (p/path file-system "/test"))))
+    (is (thrown? IOException
+          (f/create-file (p/path file-system "/test"))))
+
+    (f/create-symbolic-link
+      (p/path file-system "/test")
+      (p/path file-system "/other"))
+
+    (is (true? (f/exists? (p/path file-system "/test")
+                 :no-follow-links)))))
+
+(deftest builds-erroring-filesystem-by-matching-arguments-on-files-ns
+  (let [file-system
+        (t/new-in-memory-file-system
+          (merge t/unix-defaults
+            {:error-on
+             [[#'pathological.files/create-directory ["/directory-1"]]
+              [#'pathological.files/create-directory ["/directory-2"]]]}))]
+    (is (thrown? IOException
+          (f/create-directory (p/path file-system "/directory-1"))))
+    (is (thrown? IOException
+          (f/create-directory (p/path file-system "/directory-2"))))
+
+    (f/create-directory (p/path file-system "/directory-3"))
+
+    (is (true? (f/exists? (p/path file-system "/directory-3"))))))
+
+(deftest builds-erroring-filesystem-by-matching-arguments-on-provider-calls
+  (let [file-system
+        (t/new-in-memory-file-system
+          (merge t/unix-defaults
+            {:error-on
+             [['java.nio.file.spi.FileSystemProvider#createDirectory
+               ["/directory-1"]]
+              ['java.nio.file.spi.FileSystemProvider#createDirectory
+               ["/directory-2"]]]}))]
+    (is (thrown? IOException
+          (f/create-directory (p/path file-system "/directory-1"))))
+    (is (thrown? IOException
+          (f/create-directory (p/path file-system "/directory-2"))))
+
+    (f/create-directory (p/path file-system "/directory-3"))
+
+    (is (true? (f/exists? (p/path file-system "/directory-3"))))))
+
+#_(deftest builds-erroring-filesystem-matching-file-attributes
+  (let [file-system
+        (t/new-in-memory-file-system
+          (merge t/unix-defaults
+            {:error-on
+             [[#'pathological.files/create-directory
+               ["/directory-1" {"posix:permissions" "rwxr-xr-x"}]]]}))]
+    (is (thrown? IOException
+          (f/create-directory (p/path file-system "/directory-1")
+            {"posix:permissions" "rwxr-xr-x"})))
+
+    (f/create-directory (p/path file-system "/directory-1")
+      {"posix:permissions" "r--r--r--"})
+
+    (is (true? (f/exists? (p/path file-system "/directory-1"))))))

@@ -8,8 +8,8 @@
     [pathological.testing :as t])
   (:import
     [java.nio.file FileSystem
-     FileStore
-     FileSystems]))
+                   FileStore
+                   FileSystems]))
 
 (deftest default-file-system
   (testing "returns default file system"
@@ -20,6 +20,12 @@
   (testing "uses default file system by default"
     (is (= (FileSystems/getDefault)
           fs/*file-system*))))
+
+(deftest provider
+  (testing "returns the provider for the file system"
+    (let [test-file-system (t/new-unix-in-memory-file-system)]
+      (is (= (.provider test-file-system)
+            (fs/provider test-file-system))))))
 
 (deftest close
   (testing "closes the file system"

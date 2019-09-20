@@ -13,12 +13,12 @@
     [java.nio ByteBuffer]
     [java.nio.charset StandardCharsets Charset]
     [java.nio.file CopyOption
-     FileVisitOption
-     FileVisitResult
-     LinkOption
-     OpenOption
-     StandardOpenOption
-     StandardCopyOption]
+                   FileVisitOption
+                   FileVisitResult
+                   LinkOption
+                   OpenOption
+                   StandardOpenOption
+                   StandardCopyOption AccessMode]
     [java.nio.file.attribute AclEntry
      AclEntryFlag
      AclEntryPermission
@@ -77,6 +77,11 @@
 
 (def ^:dynamic *link-options*
   {:no-follow-links LinkOption/NOFOLLOW_LINKS})
+
+(def ^:dynamic *access-modes*
+  {:read AccessMode/READ
+   :write AccessMode/WRITE
+   :execute AccessMode/EXECUTE})
 
 (def ^:dynamic *file-visit-options*
   {:follow-links FileVisitOption/FOLLOW_LINKS})
@@ -139,6 +144,51 @@
    :others-read    PosixFilePermission/OTHERS_READ
    :others-write   PosixFilePermission/OTHERS_WRITE
    :others-execute PosixFilePermission/OTHERS_EXECUTE})
+
+(defn ->file-time [value]
+  (when value
+    (if-not (instance? FileTime value)
+      (FileTime/from (Instant/parse value))
+      value)))
+
+(defn <-file-time [value]
+  (str value))
+
+(defn ->charset [value]
+  (get *charsets* value value))
+
+(defn charset? [value]
+  (and value
+    (or (instance? Charset value)
+      (contains? *charsets* value))))
+
+(defn ->bytes
+  ([^String value]
+   (.getBytes value))
+  ([^String value charset]
+   (.getBytes value ^Charset (->charset charset))))
+
+(defn ->byte-buffer
+  ([value]
+   (->byte-buffer value :utf-8))
+  ([value charset]
+   (cond
+     (instance? ByteBuffer value) value
+     (bytes? value) (ByteBuffer/wrap value)
+     :default
+     (ByteBuffer/wrap
+       (.getBytes
+         (str value)
+         ^Charset (->charset charset))))))
+
+(defn <-byte-buffer [^ByteBuffer value]
+  (.array value))
+
+(defn ->lookup-fn [var]
+  (fn [value] (get var value value)))
+
+(defn <-lookup-fn [var]
+  (fn [value] (get (map-invert var) value value)))
 
 (defn ->file-attribute-view-class [type]
   (if (instance? Named type)
@@ -225,78 +275,6 @@
   (PosixFilePermissions/asFileAttribute
     (->posix-file-permissions string-or-set)))
 
-(defn ->file-time [value]
-  (when value
-    (if-not (instance? FileTime value)
-      (FileTime/from (Instant/parse value))
-      value)))
-
-(defn <-file-time [value]
-  (str value))
-
-(defn ->lookup-fn [var]
-  (fn [value] (get var value value)))
-
-(defn ->charset [value]
-  (get *charsets* value value))
-
-(defn charset? [value]
-  (and value
-    (or (instance? Charset value)
-      (contains? *charsets* value))))
-
-(defn ->bytes
-  ([^String value]
-    (.getBytes value))
-  ([^String value charset]
-    (.getBytes value ^Charset (->charset charset))))
-
-(defn ->byte-buffer
-  ([value]
-    (->byte-buffer value :utf-8))
-  ([value charset]
-    (cond
-      (instance? ByteBuffer value) value
-      (bytes? value) (ByteBuffer/wrap value)
-      :default
-      (ByteBuffer/wrap
-        (.getBytes
-          (str value)
-          ^Charset (->charset charset))))))
-
-(defn <-byte-buffer [^ByteBuffer value]
-  (.array value))
-
-(def ->open-option (->lookup-fn *open-options*))
-(def ->copy-option (->lookup-fn *copy-options*))
-(def ->link-option (->lookup-fn *link-options*))
-(def ->file-visit-option (->lookup-fn *file-visit-options*))
-
-(defmacro ->varargs-array [type args]
-  `(into-array ~type (or ~args [])))
-
-(defmacro ->file-attributes-array [args]
-  `(->varargs-array java.nio.file.attribute.FileAttribute ~args))
-
-(defmacro ->open-options-array [args]
-  `(->varargs-array OpenOption (map ->open-option ~args)))
-
-(defmacro ->copy-options-array [args]
-  `(->varargs-array CopyOption (map ->copy-option ~args)))
-
-(defmacro ->link-options-array [args]
-  `(->varargs-array LinkOption (map ->link-option ~args)))
-
-(defmacro ->file-visit-options-array [args]
-  `(->varargs-array FileVisitOption (map ->file-visit-option ~args)))
-
-(defn ->file-visit-options-set [options]
-  (set (map ->file-visit-option options)))
-
-(defn ->file-visit-result [control]
-  (or (get *file-visit-results* control)
-    (throw (AssertionError. (str "Invalid control: " control)))))
-
 (def ->attribute-value-conversion-defaults
   {:posix {:permissions ->posix-file-permissions}
    :user  {:* ->byte-buffer}
@@ -339,6 +317,7 @@
         (lookup-conversion *<-attribute-value-conversions* attribute-spec)]
     (attribute-conversion value)))
 
+
 (defrecord FileAttribute [name value]
   java.nio.file.attribute.FileAttribute
   (name [_] name)
@@ -348,6 +327,64 @@
   (map->FileAttribute
     {:name  (as/->attribute-spec-string attribute-spec)
      :value (->attribute-value attribute-spec value)}))
+
+(defn <-file-attribute [^FileAttribute attribute]
+  (let [attribute-spec
+        (as/->attribute-spec (.name attribute))]
+    {attribute-spec (<-attribute-value attribute-spec (.value attribute))}))
+
+(def ->open-option (->lookup-fn *open-options*))
+(def <-open-option (<-lookup-fn *open-options*))
+(def ->copy-option (->lookup-fn *copy-options*))
+(def <-copy-option (<-lookup-fn *copy-options*))
+(def ->link-option (->lookup-fn *link-options*))
+(def <-link-option (<-lookup-fn *link-options*))
+(def ->access-mode (->lookup-fn *access-modes*))
+(def <-access-mode (<-lookup-fn *access-modes*))
+(def ->file-visit-option (->lookup-fn *file-visit-options*))
+
+(defmacro ->varargs-array [type args]
+  `(into-array ~type (or ~args [])))
+
+(defmacro ->file-attributes-array [args]
+  `(->varargs-array java.nio.file.attribute.FileAttribute ~args))
+
+(defn <-file-attributes-array [value]
+  (merge (map <-file-attribute value)))
+
+(defmacro ->open-options-array [args]
+  `(->varargs-array OpenOption (map ->open-option ~args)))
+
+(defn <-open-options-array [value]
+  (map <-open-option value))
+
+(defmacro ->copy-options-array [args]
+  `(->varargs-array CopyOption (map ->copy-option ~args)))
+
+(defn <-copy-options-array [value]
+  (map <-copy-option value))
+
+(defmacro ->link-options-array [args]
+  `(->varargs-array LinkOption (map ->link-option ~args)))
+
+(defn <-link-options-array [value]
+  (map <-link-option value))
+
+(defn ->access-modes-array [args]
+  `(->varargs-array AccessMode (map ->access-mode ~args)))
+
+(defn <-access-modes-array [value]
+  (map <-access-mode value))
+
+(defmacro ->file-visit-options-array [args]
+  `(->varargs-array FileVisitOption (map ->file-visit-option ~args)))
+
+(defn ->file-visit-options-set [options]
+  (set (map ->file-visit-option options)))
+
+(defn ->file-visit-result [control]
+  (or (get *file-visit-results* control)
+    (throw (AssertionError. (str "Invalid control: " control)))))
 
 (defn stream-seq [^Stream stream]
   (iterator-seq (.iterator stream)))

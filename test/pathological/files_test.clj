@@ -16,24 +16,24 @@
     [java.util Arrays]
     [java.time Instant]
     [java.time.temporal ChronoUnit]
-    [java.io ByteArrayOutputStream BufferedReader BufferedWriter]
+    [java.io ByteArrayOutputStream BufferedReader BufferedWriter IOException]
 
     [java.nio.charset StandardCharsets Charset]
     [java.nio.file FileAlreadyExistsException
-     Files
-     LinkOption
-     NoSuchFileException
-     Path]
+                   Files
+                   LinkOption
+                   NoSuchFileException
+                   Path]
     [java.nio.file.attribute AclFileAttributeView
-     BasicFileAttributes
-     BasicFileAttributeView
-     DosFileAttributeView
-     DosFileAttributes
-     FileOwnerAttributeView
-     PosixFileAttributes
-     PosixFileAttributeView
-     PosixFilePermissions
-     UserDefinedFileAttributeView]))
+                             BasicFileAttributes
+                             BasicFileAttributeView
+                             DosFileAttributeView
+                             DosFileAttributes
+                             FileOwnerAttributeView
+                             PosixFileAttributes
+                             PosixFileAttributeView
+                             PosixFilePermissions
+                             UserDefinedFileAttributeView]))
 
 (declare thrown?)
 
@@ -265,7 +265,7 @@
             (f/read-posix-file-permissions temp-path)))))
 
   (testing
-   "creates a temporary file in the default file system default location"
+    "creates a temporary file in the default file system default location"
     (let [prefix "pre-"
           suffix "-post"
 
@@ -327,7 +327,7 @@
             (f/read-posix-file-permissions temp-path)))))
 
   (testing
-   "creates a temporary directory in the default file system default location"
+    "creates a temporary directory in the default file system default location"
     (let [prefix "pre-"
 
           temp-path-1 (f/create-temp-directory prefix)
@@ -2940,31 +2940,95 @@
               result))))))
 
 (deftest delete-recursively
-  ; TODO: what should happen when one delete fails?
-
   (testing "recursively deletes all files/directories in a path"
     (let [test-file-system (t/new-unix-in-memory-file-system)
 
-          root-path (p/path test-file-system "/root")]
-      (f/create-directory root-path)
-      (f/populate-file-tree root-path
-        [[:directory1
-          [:file1 {:content ["Item 1"]}]
-          [:file2 {:content ["Item 2"]}]]
-         [:directory2
-          [:file3 {:content ["Item 3"]}]]])
+          work-path (p/path test-file-system "/work")]
+      (f/create-directory work-path)
+      (f/populate-file-tree work-path
+        [[:directory-1
+          [:file-1 {:content ["Item 1"]}]
+          [:file-2 {:content ["Item 2"]}]]
+         [:directory-2
+          [:file-3 {:content ["Item 3"]}]]])
 
-      (f/delete-recursively root-path)
+      (f/delete-recursively work-path)
 
-      (is (false? (f/exists? root-path)))
-      (is (false? (f/exists? (p/path root-path "/directory1"))))
-      (is (false? (f/exists? (p/path root-path "/directory1/file1"))))
-      (is (false? (f/exists? (p/path root-path "/directory1/file2"))))
-      (is (false? (f/exists? (p/path root-path "/directory2"))))
-      (is (false? (f/exists? (p/path root-path "/directory2/file3")))))))
+      (is (false? (f/exists? work-path)))
+      (is (false? (f/exists? (p/path work-path "/directory-1"))))
+      (is (false? (f/exists? (p/path work-path "/directory-1/file-1"))))
+      (is (false? (f/exists? (p/path work-path "/directory-1/file-2"))))
+      (is (false? (f/exists? (p/path work-path "/directory-2"))))
+      (is (false? (f/exists? (p/path work-path "/directory-2/file-3"))))))
+
+  (testing "throws when one delete fails by default"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :contents [[:work
+                        [:directory-1
+                         [:file-1 {:content ["Item 1"]}]
+                         [:file-2 {:content ["Item 2"]}]]
+                        [:directory-2
+                         [:file-3 {:content ["Item 3"]}]]]]
+            :error-on [[#'pathological.files/delete
+                        ["/work/directory-1/file-2"]]])
+
+          work-path (p/path test-file-system "/work")]
+      (is (thrown? IOException
+            (f/delete-recursively work-path)))
+
+      (is (true? (f/exists? (p/path work-path "/directory-1"))))
+      (is (false? (f/exists? (p/path work-path "/directory-1/file-1"))))
+      (is (true? (f/exists? (p/path work-path "/directory-1/file-2"))))
+      (is (true? (f/exists? (p/path work-path "/directory-2"))))
+      (is (true? (f/exists? (p/path work-path "/directory-2/file-3"))))))
+
+  (testing "throws when one delete fails when requested"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :contents [[:work
+                        [:directory-1
+                         [:file-1 {:content ["Item 1"]}]
+                         [:file-2 {:content ["Item 2"]}]]
+                        [:directory-2
+                         [:file-3 {:content ["Item 3"]}]]]]
+            :error-on [[#'pathological.files/delete
+                        ["/work/directory-1/file-2"]]])
+
+          work-path (p/path test-file-system "/work")]
+      (is (thrown? IOException
+            (f/delete-recursively work-path
+              :on-error :throw)))
+
+      (is (true? (f/exists? (p/path work-path "/directory-1"))))
+      (is (false? (f/exists? (p/path work-path "/directory-1/file-1"))))
+      (is (true? (f/exists? (p/path work-path "/directory-1/file-2"))))
+      (is (true? (f/exists? (p/path work-path "/directory-2"))))
+      (is (true? (f/exists? (p/path work-path "/directory-2/file-3"))))))
+
+  (testing "skips and continues when one delete fails when requested"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :contents [[:work
+                        [:directory-1
+                         [:file-1 {:content ["Item 1"]}]
+                         [:file-2 {:content ["Item 2"]}]]
+                        [:directory-2
+                         [:file-3 {:content ["Item 3"]}]]]]
+            :error-on [[#'pathological.files/delete
+                        ["/work/directory-1/file-2"]]])
+
+          work-path (p/path test-file-system "/work")]
+      (f/delete-recursively work-path
+        :on-error :skip)
+
+      (is (true? (f/exists? (p/path work-path "/directory-1"))))
+      (is (false? (f/exists? (p/path work-path "/directory-1/file-1"))))
+      (is (true? (f/exists? (p/path work-path "/directory-1/file-2"))))
+      (is (false? (f/exists? (p/path work-path "/directory-2"))))
+      (is (false? (f/exists? (p/path work-path "/directory-2/file-3")))))))
 
 (deftest copy-recursively
-  ; TODO: what should happen when one copy fails?
   ; TODO: test copy options
 
   (testing (str
@@ -3004,50 +3068,268 @@
       (is (= ["Item 2"]
             (f/read-all-lines (p/path target-path "/directory1/file2"))))
       (is (= ["Item 3"]
-            (f/read-all-lines (p/path target-path "/directory2/file3")))))))
+            (f/read-all-lines (p/path target-path "/directory2/file3"))))))
+
+  (testing "throws when one copy fails by default"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :contents [[:root
+                        [:source
+                         [:directory-1
+                          [:file-1 {:content ["Item 1"]}]
+                          [:file-2 {:content ["Item 2"]}]]
+                         [:directory-2
+                          [:file-3 {:content ["Item 3"]}]]]]]
+            :error-on [[#'pathological.files/copy
+                        ["/root/source/directory-1/file-2"
+                         "/root/target/directory-1/file-2"]]])
+
+          root-path (p/path test-file-system "/root")
+          source-path (p/path root-path "source")
+          target-path (p/path root-path "target")]
+      (is (thrown? IOException
+            (f/copy-recursively source-path target-path)))
+
+      (is (true? (f/exists? source-path)))
+      (is (true? (f/exists? (p/path source-path "/directory-1"))))
+      (is (true? (f/exists? (p/path source-path "/directory-1/file-1"))))
+      (is (true? (f/exists? (p/path source-path "/directory-1/file-2"))))
+      (is (true? (f/exists? (p/path source-path "/directory-2"))))
+      (is (true? (f/exists? (p/path source-path "/directory-2/file-3"))))
+
+      (is (true? (f/exists? target-path)))
+      (is (true? (f/exists? (p/path target-path "/directory-1"))))
+      (is (true? (f/exists? (p/path target-path "/directory-1/file-1"))))
+      (is (false? (f/exists? (p/path target-path "/directory-1/file-2"))))
+      (is (false? (f/exists? (p/path target-path "/directory-2"))))
+      (is (false? (f/exists? (p/path target-path "/directory-2/file-3"))))
+      (is (= ["Item 1"]
+            (f/read-all-lines (p/path target-path "/directory-1/file-1"))))))
+
+  (testing "throws when one copy fails when requested"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :contents [[:root
+                        [:source
+                         [:directory-1
+                          [:file-1 {:content ["Item 1"]}]
+                          [:file-2 {:content ["Item 2"]}]]
+                         [:directory-2
+                          [:file-3 {:content ["Item 3"]}]]]]]
+            :error-on [[#'pathological.files/copy
+                        ["/root/source/directory-1/file-2"
+                         "/root/target/directory-1/file-2"]]])
+
+          root-path (p/path test-file-system "/root")
+          source-path (p/path root-path "source")
+          target-path (p/path root-path "target")]
+      (is (thrown? IOException
+            (f/copy-recursively source-path target-path
+              :on-error :throw)))
+
+      (is (true? (f/exists? source-path)))
+      (is (true? (f/exists? (p/path source-path "/directory-1"))))
+      (is (true? (f/exists? (p/path source-path "/directory-1/file-1"))))
+      (is (true? (f/exists? (p/path source-path "/directory-1/file-2"))))
+      (is (true? (f/exists? (p/path source-path "/directory-2"))))
+      (is (true? (f/exists? (p/path source-path "/directory-2/file-3"))))
+
+      (is (true? (f/exists? target-path)))
+      (is (true? (f/exists? (p/path target-path "/directory-1"))))
+      (is (true? (f/exists? (p/path target-path "/directory-1/file-1"))))
+      (is (false? (f/exists? (p/path target-path "/directory-1/file-2"))))
+      (is (false? (f/exists? (p/path target-path "/directory-2"))))
+      (is (false? (f/exists? (p/path target-path "/directory-2/file-3"))))
+      (is (= ["Item 1"]
+            (f/read-all-lines (p/path target-path "/directory-1/file-1"))))))
+
+  (testing "skips and continues when one copy fails when requested"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :contents [[:root
+                        [:source
+                         [:directory-1
+                          [:file-1 {:content ["Item 1"]}]
+                          [:file-2 {:content ["Item 2"]}]]
+                         [:directory-2
+                          [:file-3 {:content ["Item 3"]}]]]]]
+            :error-on [[#'pathological.files/copy
+                        ["/root/source/directory-1/file-2"
+                         "/root/target/directory-1/file-2"]]])
+
+          root-path (p/path test-file-system "/root")
+          source-path (p/path root-path "source")
+          target-path (p/path root-path "target")]
+      (f/copy-recursively source-path target-path
+        :on-error :skip)
+
+      (is (true? (f/exists? source-path)))
+      (is (true? (f/exists? (p/path source-path "/directory-1"))))
+      (is (true? (f/exists? (p/path source-path "/directory-1/file-1"))))
+      (is (true? (f/exists? (p/path source-path "/directory-1/file-2"))))
+      (is (true? (f/exists? (p/path source-path "/directory-2"))))
+      (is (true? (f/exists? (p/path source-path "/directory-2/file-3"))))
+
+      (is (true? (f/exists? target-path)))
+      (is (true? (f/exists? (p/path target-path "/directory-1"))))
+      (is (true? (f/exists? (p/path target-path "/directory-1/file-1"))))
+      (is (false? (f/exists? (p/path target-path "/directory-1/file-2"))))
+      (is (true? (f/exists? (p/path target-path "/directory-2"))))
+      (is (true? (f/exists? (p/path target-path "/directory-2/file-3"))))
+      (is (= ["Item 1"]
+            (f/read-all-lines (p/path target-path "/directory-1/file-1")))))))
 
 (deftest move-recursively
-  ; TODO: what should happen when one move fails?
   ; TODO: test copy options
 
   (testing (str
              "recursively moves all files/directories in a source path to "
              "a destination path")
-    (let [test-file-system (t/new-unix-in-memory-file-system)
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :contents [[:root
+                       [:source
+                        [:directory-1
+                         [:file-1 {:content ["Item 1"]}]
+                         [:file-2 {:content ["Item 2"]}]]
+                        [:directory-2
+                         [:file-3 {:content ["Item 3"]}]]]]])
 
           root-path (p/path test-file-system "/root")
           source-path (p/path root-path "source")
           target-path (p/path root-path "target")]
-      (f/create-directory root-path)
-      (f/populate-file-tree root-path
-        [[:source
-          [:directory1
-           [:file1 {:content ["Item 1"]}]
-           [:file2 {:content ["Item 2"]}]]
-          [:directory2
-           [:file3 {:content ["Item 3"]}]]]])
-
       (f/move-recursively source-path target-path)
 
       (is (false? (f/exists? source-path)))
-      (is (false? (f/exists? (p/path source-path "/directory1"))))
-      (is (false? (f/exists? (p/path source-path "/directory1/file1"))))
-      (is (false? (f/exists? (p/path source-path "/directory1/file2"))))
-      (is (false? (f/exists? (p/path source-path "/directory2"))))
-      (is (false? (f/exists? (p/path source-path "/directory2/file3"))))
+      (is (false? (f/exists? (p/path source-path "/directory-1"))))
+      (is (false? (f/exists? (p/path source-path "/directory-1/file-1"))))
+      (is (false? (f/exists? (p/path source-path "/directory-1/file-2"))))
+      (is (false? (f/exists? (p/path source-path "/directory-2"))))
+      (is (false? (f/exists? (p/path source-path "/directory-2/file-3"))))
 
       (is (true? (f/exists? target-path)))
-      (is (true? (f/exists? (p/path target-path "/directory1"))))
-      (is (true? (f/exists? (p/path target-path "/directory1/file1"))))
-      (is (true? (f/exists? (p/path target-path "/directory1/file2"))))
-      (is (true? (f/exists? (p/path target-path "/directory2"))))
-      (is (true? (f/exists? (p/path target-path "/directory2/file3"))))
+      (is (true? (f/exists? (p/path target-path "/directory-1"))))
+      (is (true? (f/exists? (p/path target-path "/directory-1/file-1"))))
+      (is (true? (f/exists? (p/path target-path "/directory-1/file-2"))))
+      (is (true? (f/exists? (p/path target-path "/directory-2"))))
+      (is (true? (f/exists? (p/path target-path "/directory-2/file-3"))))
       (is (= ["Item 1"]
-            (f/read-all-lines (p/path target-path "/directory1/file1"))))
+            (f/read-all-lines (p/path target-path "/directory-1/file-1"))))
       (is (= ["Item 2"]
-            (f/read-all-lines (p/path target-path "/directory1/file2"))))
+            (f/read-all-lines (p/path target-path "/directory-1/file-2"))))
       (is (= ["Item 3"]
-            (f/read-all-lines (p/path target-path "/directory2/file3")))))))
+            (f/read-all-lines (p/path target-path "/directory-2/file-3"))))))
+
+  (testing "throws when one move fails by default"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :contents [[:root
+                        [:source
+                         [:directory-1
+                          [:file-1 {:content ["Item 1"]}]
+                          [:file-2 {:content ["Item 2"]}]]
+                         [:directory-2
+                          [:file-3 {:content ["Item 3"]}]]]]]
+            :error-on [[#'pathological.files/move
+                        ["/root/source/directory-1/file-2"
+                         "/root/target/directory-1/file-2"]]])
+
+          root-path (p/path test-file-system "/root")
+          source-path (p/path root-path "source")
+          target-path (p/path root-path "target")]
+      (is (thrown? IOException
+            (f/move-recursively source-path target-path)))
+
+      (is (true? (f/exists? source-path)))
+      (is (true? (f/exists? (p/path source-path "/directory-1"))))
+      (is (false? (f/exists? (p/path source-path "/directory-1/file-1"))))
+      (is (true? (f/exists? (p/path source-path "/directory-1/file-2"))))
+      (is (true? (f/exists? (p/path source-path "/directory-2"))))
+      (is (true? (f/exists? (p/path source-path "/directory-2/file-3"))))
+
+      (is (true? (f/exists? target-path)))
+      (is (true? (f/exists? (p/path target-path "/directory-1"))))
+      (is (true? (f/exists? (p/path target-path "/directory-1/file-1"))))
+      (is (false? (f/exists? (p/path target-path "/directory-1/file-2"))))
+      (is (false? (f/exists? (p/path target-path "/directory-2"))))
+      (is (false? (f/exists? (p/path target-path "/directory-2/file-3"))))
+      (is (= ["Item 1"]
+            (f/read-all-lines (p/path target-path "/directory-1/file-1"))))))
+
+  (testing "throws when one move fails when requested"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :contents [[:root
+                        [:source
+                         [:directory-1
+                          [:file-1 {:content ["Item 1"]}]
+                          [:file-2 {:content ["Item 2"]}]]
+                         [:directory-2
+                          [:file-3 {:content ["Item 3"]}]]]]]
+            :error-on [[#'pathological.files/move
+                        ["/root/source/directory-1/file-2"
+                         "/root/target/directory-1/file-2"]]])
+
+          root-path (p/path test-file-system "/root")
+          source-path (p/path root-path "source")
+          target-path (p/path root-path "target")]
+      (is (thrown? IOException
+            (f/move-recursively source-path target-path
+              :on-error :throw)))
+
+      (is (true? (f/exists? source-path)))
+      (is (true? (f/exists? (p/path source-path "/directory-1"))))
+      (is (false? (f/exists? (p/path source-path "/directory-1/file-1"))))
+      (is (true? (f/exists? (p/path source-path "/directory-1/file-2"))))
+      (is (true? (f/exists? (p/path source-path "/directory-2"))))
+      (is (true? (f/exists? (p/path source-path "/directory-2/file-3"))))
+
+      (is (true? (f/exists? target-path)))
+      (is (true? (f/exists? (p/path target-path "/directory-1"))))
+      (is (true? (f/exists? (p/path target-path "/directory-1/file-1"))))
+      (is (false? (f/exists? (p/path target-path "/directory-1/file-2"))))
+      (is (false? (f/exists? (p/path target-path "/directory-2"))))
+      (is (false? (f/exists? (p/path target-path "/directory-2/file-3"))))
+      (is (= ["Item 1"]
+            (f/read-all-lines (p/path target-path "/directory-1/file-1"))))))
+
+  (testing "skips and continues when one move fails when requested"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :contents [[:root
+                        [:source
+                         [:directory-1
+                          [:file-1 {:content ["Item 1"]}]
+                          [:file-2 {:content ["Item 2"]}]]
+                         [:directory-2
+                          [:file-3 {:content ["Item 3"]}]]]]]
+            :error-on [[#'pathological.files/move
+                        ["/root/source/directory-1/file-2"
+                         "/root/target/directory-1/file-2"]]])
+
+          root-path (p/path test-file-system "/root")
+          source-path (p/path root-path "source")
+          target-path (p/path root-path "target")]
+      (f/move-recursively source-path target-path
+        :on-error :skip)
+
+      (is (true? (f/exists? source-path)))
+      (is (true? (f/exists? (p/path source-path "/directory-1"))))
+      (is (false? (f/exists? (p/path source-path "/directory-1/file-1"))))
+      (is (true? (f/exists? (p/path source-path "/directory-1/file-2"))))
+      (is (false? (f/exists? (p/path source-path "/directory-2"))))
+      (is (false? (f/exists? (p/path source-path "/directory-2/file-3"))))
+
+      (is (true? (f/exists? target-path)))
+      (is (true? (f/exists? (p/path target-path "/directory-1"))))
+      (is (true? (f/exists? (p/path target-path "/directory-1/file-1"))))
+      (is (false? (f/exists? (p/path target-path "/directory-1/file-2"))))
+      (is (true? (f/exists? (p/path target-path "/directory-2"))))
+      (is (true? (f/exists? (p/path target-path "/directory-2/file-3"))))
+      (is (= ["Item 1"]
+            (f/read-all-lines (p/path target-path "/directory-1/file-1"))))
+      (is (= ["Item 3"]
+            (f/read-all-lines (p/path target-path "/directory-2/file-3")))))))
 
 (deftest populate-file-tree
   ; TODO: handle errors other than file already exists
@@ -3215,13 +3497,13 @@
          [:symlink-1 {:type   :symbolic-link
                       :target "/file-1"
                       :file-attributes
-                      {"posix:permissions" "rwxrw-rw-"
-                       "owner:owner"       user-1}}]
+                              {"posix:permissions" "rwxrw-rw-"
+                               "owner:owner"       user-1}}]
          [:symlink-2 {:type   :symbolic-link
                       :target "/file-2"
                       :file-attributes
-                      {"posix:permissions" "r--r--r--"
-                       "owner:owner"       user-2}}]])
+                              {"posix:permissions" "r--r--r--"
+                               "owner:owner"       user-2}}]])
 
       (is (not= #{:owner-read :owner-write :owner-execute
                   :group-read :group-write
@@ -3290,12 +3572,12 @@
       (f/populate-file-tree root-path
         [[:directory-1 {:type :directory
                         :file-attributes
-                        {"posix:permissions" "rwxr-xr-x"
-                         "owner:owner"       user-1}}]
+                              {"posix:permissions" "rwxr-xr-x"
+                               "owner:owner"       user-1}}]
          [:directory-2 {:type :directory
                         :file-attributes
-                        {"posix:permissions" "r-xr-xr-x"
-                         "owner:owner"       user-2}}]])
+                              {"posix:permissions" "r-xr-xr-x"
+                               "owner:owner"       user-2}}]])
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-execute
@@ -3498,12 +3780,12 @@
         [[:some
           [:directory-1 {:type :directory
                          :file-attributes
-                         {"posix:permissions" "rwxr-xr-x"
-                          "owner:owner"       user-1}}]
+                               {"posix:permissions" "rwxr-xr-x"
+                                "owner:owner"       user-1}}]
           [:directory-2 {:type :directory
                          :file-attributes
-                         {"posix:permissions" "r-xr-xr-x"
-                          "owner:owner"       user-2}}]]])
+                               {"posix:permissions" "r-xr-xr-x"
+                                "owner:owner"       user-2}}]]])
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-execute
