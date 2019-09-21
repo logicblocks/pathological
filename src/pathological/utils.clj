@@ -13,12 +13,12 @@
     [java.nio ByteBuffer]
     [java.nio.charset StandardCharsets Charset]
     [java.nio.file CopyOption
-                   FileVisitOption
-                   FileVisitResult
-                   LinkOption
-                   OpenOption
-                   StandardOpenOption
-                   StandardCopyOption AccessMode]
+     FileVisitOption
+     FileVisitResult
+     LinkOption
+     OpenOption
+     StandardOpenOption
+     StandardCopyOption AccessMode]
     [java.nio.file.attribute AclEntry
      AclEntryFlag
      AclEntryPermission
@@ -164,22 +164,22 @@
 
 (defn ->bytes
   ([^String value]
-   (.getBytes value))
+    (.getBytes value))
   ([^String value charset]
-   (.getBytes value ^Charset (->charset charset))))
+    (.getBytes value ^Charset (->charset charset))))
 
 (defn ->byte-buffer
   ([value]
-   (->byte-buffer value :utf-8))
+    (->byte-buffer value :utf-8))
   ([value charset]
-   (cond
-     (instance? ByteBuffer value) value
-     (bytes? value) (ByteBuffer/wrap value)
-     :default
-     (ByteBuffer/wrap
-       (.getBytes
-         (str value)
-         ^Charset (->charset charset))))))
+    (cond
+      (instance? ByteBuffer value) value
+      (bytes? value) (ByteBuffer/wrap value)
+      :default
+      (ByteBuffer/wrap
+        (.getBytes
+          (str value)
+          ^Charset (->charset charset))))))
 
 (defn <-byte-buffer [^ByteBuffer value]
   (.array value))
@@ -316,7 +316,6 @@
   (let [attribute-conversion
         (lookup-conversion *<-attribute-value-conversions* attribute-spec)]
     (attribute-conversion value)))
-
 
 (defrecord FileAttribute [name value]
   java.nio.file.attribute.FileAttribute

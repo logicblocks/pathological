@@ -14,8 +14,8 @@
     [pathological.files :as f])
   (:import
     [com.google.common.jimfs Feature
-                             PathNormalization
-                             PathType]
+     PathNormalization
+     PathType]
     [java.io IOException]))
 
 (declare thrown?)
@@ -519,17 +519,17 @@
     (is (true? (f/exists? (p/path file-system "/directory-3"))))))
 
 #_(deftest builds-erroring-filesystem-matching-file-attributes
-  (let [file-system
-        (t/new-in-memory-file-system
-          (merge t/unix-defaults
-            {:error-on
-             [[#'pathological.files/create-directory
-               ["/directory-1" {"posix:permissions" "rwxr-xr-x"}]]]}))]
-    (is (thrown? IOException
-          (f/create-directory (p/path file-system "/directory-1")
-            {"posix:permissions" "rwxr-xr-x"})))
+    (let [file-system
+          (t/new-in-memory-file-system
+            (merge t/unix-defaults
+              {:error-on
+               [[#'pathological.files/create-directory
+                 ["/directory-1" {"posix:permissions" "rwxr-xr-x"}]]]}))]
+      (is (thrown? IOException
+            (f/create-directory (p/path file-system "/directory-1")
+              {"posix:permissions" "rwxr-xr-x"})))
 
-    (f/create-directory (p/path file-system "/directory-1")
-      {"posix:permissions" "r--r--r--"})
+      (f/create-directory (p/path file-system "/directory-1")
+        {"posix:permissions" "r--r--r--"})
 
-    (is (true? (f/exists? (p/path file-system "/directory-1"))))))
+      (is (true? (f/exists? (p/path file-system "/directory-1"))))))

@@ -549,6 +549,11 @@
         :overwrite)
       resolution-strategy)))
 
+(defn- determine-error-strategy [new-type strategies]
+  (if (keyword? strategies)
+    strategies
+    (get strategies new-type)))
+
 (defn type [^Path path & options]
   (cond
     (apply directory? path options) :directory
@@ -558,10 +563,11 @@
 
 (defn populate-file-tree
   [^Path path definition & {:as options}]
-  (let [on-exists (:on-exists options)
+  (let [on-exists (get options :on-exists)
         on-exists (if-not (keyword? on-exists)
                     (merge {[:* :*] :throw} on-exists)
-                    on-exists)]
+                    on-exists)
+        on-error (get options :on-error :throw)]
     (doseq [[name & rest] definition
             :let [[attributes rest] (parse-definition rest)
                   path (p/path path (clojure.core/name name))
@@ -580,7 +586,8 @@
                     (flatten (vec options)))))
 
               file-attributes (get attributes :file-attributes [])
-              resolution-strategies (get attributes :on-exists on-exists)]
+              resolution-strategies (get attributes :on-exists on-exists)
+              error-strategy (determine-error-strategy :directory on-error)]
           (try
             (create-fn path file-attributes)
             (create-entries-fn path rest)
@@ -602,7 +609,10 @@
                   (= :skip resolution-strategy)
                   nil
 
-                  :else (throw exception))))))
+                  :else (throw exception))))
+            (catch IOException exception
+              (when (not= error-strategy :skip)
+                (throw exception)))))
 
         :file
         (let [create-fn
@@ -632,7 +642,8 @@
 
                         :else content)
               file-attributes (get attributes :file-attributes [])
-              resolution-strategies (get attributes :on-exists on-exists)]
+              resolution-strategies (get attributes :on-exists on-exists)
+              error-strategy (determine-error-strategy :file on-error)]
           (try
             (create-fn path file-attributes)
             (write-fn path content)
@@ -654,7 +665,10 @@
                     (create-fn path file-attributes)
                     (write-fn path content))
 
-                  :else (throw exception))))))
+                  :else (throw exception))))
+            (catch IOException exception
+              (when (not= error-strategy :skip)
+                (throw exception)))))
 
         :symbolic-link
         (let [create-fn
@@ -665,7 +679,8 @@
                     (apply create-symbolic-link path target file-attributes))))
               target (:target attributes)
               file-attributes (get attributes :file-attributes [])
-              resolution-strategies (get attributes :on-exists on-exists)]
+              resolution-strategies (get attributes :on-exists on-exists)
+              error-strategy (determine-error-strategy :symbolic-link on-error)]
           (assert target (str "Attribute :target missing for path: " path))
           (try
             (create-fn path target file-attributes)
@@ -683,7 +698,10 @@
                     (delete path)
                     (create-fn path target file-attributes))
 
-                  :else (throw exception))))))
+                  :else (throw exception))))
+            (catch IOException exception
+              (when (not= error-strategy :skip)
+                (throw exception)))))
 
         :link
         (let [target (:target attributes)
@@ -691,7 +709,8 @@
               (fn [path target]
                 (create-link path
                   (p/path (p/file-system path) target)))
-              resolution-strategies (get attributes :on-exists on-exists)]
+              resolution-strategies (get attributes :on-exists on-exists)
+              error-strategy (determine-error-strategy :link on-error)]
           (assert target (str "Attribute :target missing for path: " path))
           (try
             (create-fn path target)
@@ -709,4 +728,7 @@
                     (delete path)
                     (create-fn path target))
 
-                  :else (throw exception))))))))))
+                  :else (throw exception))))
+            (catch IOException exception
+              (when (not= error-strategy :skip)
+                (throw exception)))))))))

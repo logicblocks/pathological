@@ -20,20 +20,20 @@
 
     [java.nio.charset StandardCharsets Charset]
     [java.nio.file FileAlreadyExistsException
-                   Files
-                   LinkOption
-                   NoSuchFileException
-                   Path]
+     Files
+     LinkOption
+     NoSuchFileException
+     Path]
     [java.nio.file.attribute AclFileAttributeView
-                             BasicFileAttributes
-                             BasicFileAttributeView
-                             DosFileAttributeView
-                             DosFileAttributes
-                             FileOwnerAttributeView
-                             PosixFileAttributes
-                             PosixFileAttributeView
-                             PosixFilePermissions
-                             UserDefinedFileAttributeView]))
+     BasicFileAttributes
+     BasicFileAttributeView
+     DosFileAttributeView
+     DosFileAttributes
+     FileOwnerAttributeView
+     PosixFileAttributes
+     PosixFileAttributeView
+     PosixFilePermissions
+     UserDefinedFileAttributeView]))
 
 (declare thrown?)
 
@@ -265,7 +265,7 @@
             (f/read-posix-file-permissions temp-path)))))
 
   (testing
-    "creates a temporary file in the default file system default location"
+   "creates a temporary file in the default file system default location"
     (let [prefix "pre-"
           suffix "-post"
 
@@ -327,7 +327,7 @@
             (f/read-posix-file-permissions temp-path)))))
 
   (testing
-    "creates a temporary directory in the default file system default location"
+   "creates a temporary directory in the default file system default location"
     (let [prefix "pre-"
 
           temp-path-1 (f/create-temp-directory prefix)
@@ -3188,12 +3188,12 @@
     (let [test-file-system
           (t/new-unix-in-memory-file-system
             :contents [[:root
-                       [:source
-                        [:directory-1
-                         [:file-1 {:content ["Item 1"]}]
-                         [:file-2 {:content ["Item 2"]}]]
-                        [:directory-2
-                         [:file-3 {:content ["Item 3"]}]]]]])
+                        [:source
+                         [:directory-1
+                          [:file-1 {:content ["Item 1"]}]
+                          [:file-2 {:content ["Item 2"]}]]
+                         [:directory-2
+                          [:file-3 {:content ["Item 3"]}]]]]])
 
           root-path (p/path test-file-system "/root")
           source-path (p/path root-path "source")
@@ -3332,8 +3332,6 @@
             (f/read-all-lines (p/path target-path "/directory-2/file-3")))))))
 
 (deftest populate-file-tree
-  ; TODO: handle errors other than file already exists
-
   (testing "creates top level files with collection of lines as content"
     (let [test-file-system (t/new-unix-in-memory-file-system)
 
@@ -3497,13 +3495,13 @@
          [:symlink-1 {:type   :symbolic-link
                       :target "/file-1"
                       :file-attributes
-                              {"posix:permissions" "rwxrw-rw-"
-                               "owner:owner"       user-1}}]
+                      {"posix:permissions" "rwxrw-rw-"
+                       "owner:owner"       user-1}}]
          [:symlink-2 {:type   :symbolic-link
                       :target "/file-2"
                       :file-attributes
-                              {"posix:permissions" "r--r--r--"
-                               "owner:owner"       user-2}}]])
+                      {"posix:permissions" "r--r--r--"
+                       "owner:owner"       user-2}}]])
 
       (is (not= #{:owner-read :owner-write :owner-execute
                   :group-read :group-write
@@ -3572,12 +3570,12 @@
       (f/populate-file-tree root-path
         [[:directory-1 {:type :directory
                         :file-attributes
-                              {"posix:permissions" "rwxr-xr-x"
-                               "owner:owner"       user-1}}]
+                        {"posix:permissions" "rwxr-xr-x"
+                         "owner:owner"       user-1}}]
          [:directory-2 {:type :directory
                         :file-attributes
-                              {"posix:permissions" "r-xr-xr-x"
-                               "owner:owner"       user-2}}]])
+                        {"posix:permissions" "r-xr-xr-x"
+                         "owner:owner"       user-2}}]])
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-execute
@@ -3780,12 +3778,12 @@
         [[:some
           [:directory-1 {:type :directory
                          :file-attributes
-                               {"posix:permissions" "rwxr-xr-x"
-                                "owner:owner"       user-1}}]
+                         {"posix:permissions" "rwxr-xr-x"
+                          "owner:owner"       user-1}}]
           [:directory-2 {:type :directory
                          :file-attributes
-                               {"posix:permissions" "r-xr-xr-x"
-                                "owner:owner"       user-2}}]]])
+                         {"posix:permissions" "r-xr-xr-x"
+                          "owner:owner"       user-2}}]]])
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-execute
@@ -4581,4 +4579,308 @@
               "Line 3" "Line 4"]
             (f/read-all-lines path-1)))
       (is (= ["Line 5" "Line 6"]
-            (f/read-all-lines path-2))))))
+            (f/read-all-lines path-2)))))
+
+  (testing "throws on error creating file by default"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :error-on [[#'pathological.files/create-file
+                        ["/file-2"]]])
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/file-1")
+          path-2 (p/path test-file-system "/file-2")
+          path-3 (p/path test-file-system "/file-3")]
+      (is (thrown? IOException
+            (f/populate-file-tree root-path
+              [[:file-1 {:content ["Line 1" "Line 2"]}]
+               [:file-2 {:content ["Line 3" "Line 4"]}]
+               [:file-3 {:content ["Line 5" "Line 6"]}]])))
+
+      (is (true? (f/exists? path-1)))
+      (is (false? (f/exists? path-2)))
+      (is (false? (f/exists? path-3)))))
+
+  (testing "throws on error creating file when requested"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :error-on [[#'pathological.files/create-file
+                        ["/file-2"]]])
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/file-1")
+          path-2 (p/path test-file-system "/file-2")
+          path-3 (p/path test-file-system "/file-3")]
+      (is (thrown? IOException
+            (f/populate-file-tree root-path
+              [[:file-1 {:content ["Line 1" "Line 2"]}]
+               [:file-2 {:content ["Line 3" "Line 4"]}]
+               [:file-3 {:content ["Line 5" "Line 6"]}]]
+              :on-error {:file :throw})))
+
+      (is (true? (f/exists? path-1)))
+      (is (false? (f/exists? path-2)))
+      (is (false? (f/exists? path-3)))))
+
+  (testing "skips and continues on error creating file when requested"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :error-on [[#'pathological.files/create-file
+                        ["/file-2"]]])
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/file-1")
+          path-2 (p/path test-file-system "/file-2")
+          path-3 (p/path test-file-system "/file-3")]
+      (f/populate-file-tree root-path
+        [[:file-1 {:content ["Line 1" "Line 2"]}]
+         [:file-2 {:content ["Line 3" "Line 4"]}]
+         [:file-3 {:content ["Line 5" "Line 6"]}]]
+        :on-error {:file :skip})
+
+      (is (true? (f/exists? path-1)))
+      (is (false? (f/exists? path-2)))
+      (is (true? (f/exists? path-3)))))
+
+  (testing "throws on error creating directory by default"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :error-on [[#'pathological.files/create-directory
+                        ["/directory-2"]]])
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/directory-1")
+          path-2 (p/path test-file-system "/directory-2")
+          path-3 (p/path test-file-system "/directory-3")]
+      (is (thrown? IOException
+            (f/populate-file-tree root-path
+              [[:directory-1 {:type :directory}]
+               [:directory-2 {:type :directory}]
+               [:directory-3 {:type :directory}]])))
+
+      (is (true? (f/exists? path-1)))
+      (is (false? (f/exists? path-2)))
+      (is (false? (f/exists? path-3)))))
+
+  (testing "throws on error creating directory when requested"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :error-on [[#'pathological.files/create-directory
+                        ["/directory-2"]]])
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/directory-1")
+          path-2 (p/path test-file-system "/directory-2")
+          path-3 (p/path test-file-system "/directory-3")]
+      (is (thrown? IOException
+            (f/populate-file-tree root-path
+              [[:directory-1 {:type :directory}]
+               [:directory-2 {:type :directory}]
+               [:directory-3 {:type :directory}]]
+              :on-error {:directory :throw})))
+
+      (is (true? (f/exists? path-1)))
+      (is (false? (f/exists? path-2)))
+      (is (false? (f/exists? path-3)))))
+
+  (testing "skips and continues on error creating directory when requested"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :error-on [[#'pathological.files/create-directory
+                        ["/directory-2"]]])
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/directory-1")
+          path-2 (p/path test-file-system "/directory-2")
+          path-3 (p/path test-file-system "/directory-3")]
+      (f/populate-file-tree root-path
+        [[:directory-1 {:type :directory}]
+         [:directory-2 {:type :directory}]
+         [:directory-3 {:type :directory}]]
+        :on-error {:directory :skip})
+
+      (is (true? (f/exists? path-1)))
+      (is (false? (f/exists? path-2)))
+      (is (true? (f/exists? path-3)))))
+
+  (testing "throws on error creating symbolic link by default"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :error-on [[#'pathological.files/create-symbolic-link
+                        ["/file-2" "/file-1"]]])
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/file-1")
+          path-2 (p/path test-file-system "/file-2")
+          path-3 (p/path test-file-system "/file-3")]
+      (is (thrown? IOException
+            (f/populate-file-tree root-path
+              [[:file-1 {:content ["Line 1" "Line 2"]}]
+               [:file-2 {:type :symbolic-link :target "/file-1"}]
+               [:file-3 {:content ["Line 3" "Line 4"]}]])))
+
+      (is (true? (f/exists? path-1)))
+      (is (false? (f/exists? path-2)))
+      (is (false? (f/exists? path-3)))))
+
+  (testing "throws on error creating symbolic link when requested"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :error-on [[#'pathological.files/create-symbolic-link
+                        ["/file-2" "/file-1"]]])
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/file-1")
+          path-2 (p/path test-file-system "/file-2")
+          path-3 (p/path test-file-system "/file-3")]
+      (is (thrown? IOException
+            (f/populate-file-tree root-path
+              [[:file-1 {:content ["Line 1" "Line 2"]}]
+               [:file-2 {:type :symbolic-link :target "/file-1"}]
+               [:file-3 {:content ["Line 3" "Line 4"]}]]
+              :on-error {:symbolic-link :throw})))
+
+      (is (true? (f/exists? path-1)))
+      (is (false? (f/exists? path-2)))
+      (is (false? (f/exists? path-3)))))
+
+  (testing "skips and continues on error creating symbolic link when requested"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :error-on [[#'pathological.files/create-symbolic-link
+                        ["/file-2" "/file-1"]]])
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/file-1")
+          path-2 (p/path test-file-system "/file-2")
+          path-3 (p/path test-file-system "/file-3")]
+      (f/populate-file-tree root-path
+        [[:file-1 {:content ["Line 1" "Line 2"]}]
+         [:file-2 {:type :symbolic-link :target "/file-1"}]
+         [:file-3 {:content ["Line 3" "Line 4"]}]]
+        :on-error {:symbolic-link :skip})
+
+      (is (true? (f/exists? path-1)))
+      (is (false? (f/exists? path-2)))
+      (is (true? (f/exists? path-3)))))
+
+  (testing "throws on error creating link by default"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :error-on [[#'pathological.files/create-link
+                        ["/file-2" "/file-1"]]])
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/file-1")
+          path-2 (p/path test-file-system "/file-2")
+          path-3 (p/path test-file-system "/file-3")]
+      (is (thrown? IOException
+            (f/populate-file-tree root-path
+              [[:file-1 {:content ["Line 1" "Line 2"]}]
+               [:file-2 {:type :link :target "/file-1"}]
+               [:file-3 {:content ["Line 3" "Line 4"]}]])))
+
+      (is (true? (f/exists? path-1)))
+      (is (false? (f/exists? path-2)))
+      (is (false? (f/exists? path-3)))))
+
+  (testing "throws on error creating link when requested"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :error-on [[#'pathological.files/create-link
+                        ["/file-2" "/file-1"]]])
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/file-1")
+          path-2 (p/path test-file-system "/file-2")
+          path-3 (p/path test-file-system "/file-3")]
+      (is (thrown? IOException
+            (f/populate-file-tree root-path
+              [[:file-1 {:content ["Line 1" "Line 2"]}]
+               [:file-2 {:type :link :target "/file-1"}]
+               [:file-3 {:content ["Line 3" "Line 4"]}]]
+              :on-error {:link :throw})))
+
+      (is (true? (f/exists? path-1)))
+      (is (false? (f/exists? path-2)))
+      (is (false? (f/exists? path-3)))))
+
+  (testing "skips and continues on error creating link when requested"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :error-on [[#'pathological.files/create-link
+                        ["/file-2" "/file-1"]]])
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/file-1")
+          path-2 (p/path test-file-system "/file-2")
+          path-3 (p/path test-file-system "/file-3")]
+      (f/populate-file-tree root-path
+        [[:file-1 {:content ["Line 1" "Line 2"]}]
+         [:file-2 {:type :link :target "/file-1"}]
+         [:file-3 {:content ["Line 3" "Line 4"]}]]
+        :on-error {:link :skip})
+
+      (is (true? (f/exists? path-1)))
+      (is (false? (f/exists? path-2)))
+      (is (true? (f/exists? path-3)))))
+
+  (testing "throws on any error when specified"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :error-on [[#'pathological.files/create-link
+                        ["/file-2" "/file-1"]]])
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/file-1")
+          path-2 (p/path test-file-system "/file-2")
+          path-3 (p/path test-file-system "/file-3")]
+      (is (thrown? IOException
+            (f/populate-file-tree root-path
+              [[:file-1 {:content ["Line 1" "Line 2"]}]
+               [:file-2 {:type :link :target "/file-1"}]
+               [:file-3 {:content ["Line 3" "Line 4"]}]]
+              :on-error :throw)))
+
+      (is (true? (f/exists? path-1)))
+      (is (false? (f/exists? path-2)))
+      (is (false? (f/exists? path-3)))))
+
+  (testing "skips and continues on any error when specified"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :error-on [[#'pathological.files/create-link
+                        ["/file-2" "/file-1"]]
+                       [#'pathological.files/create-directory
+                        ["/file-3"]]])
+
+          root-path (p/path test-file-system "/")
+
+          path-1 (p/path test-file-system "/file-1")
+          path-2 (p/path test-file-system "/file-2")
+          path-3 (p/path test-file-system "/file-3")
+          path-4 (p/path test-file-system "/file-4")]
+      (f/populate-file-tree root-path
+        [[:file-1 {:content ["Line 1" "Line 2"]}]
+         [:file-2 {:type :link :target "/file-1"}]
+         [:file-3 {:type :directory}]
+         [:file-4 {:content ["Line 3" "Line 4"]}]]
+        :on-error :skip)
+
+      (is (true? (f/exists? path-1)))
+      (is (false? (f/exists? path-2)))
+      (is (false? (f/exists? path-3)))
+      (is (true? (f/exists? path-4))))))

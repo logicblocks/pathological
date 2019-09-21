@@ -12,21 +12,21 @@
     [java.net URI]
     [java.lang.reflect Method]
     [com.google.common.jimfs Configuration
-                             Configuration$Builder
-                             Feature
-                             Jimfs
-                             JimfsFileSystems
-                             PathNormalization
-                             PathType]
+     Configuration$Builder
+     Feature
+     Jimfs
+     JimfsFileSystems
+     PathNormalization
+     PathType]
     [org.mockito Mockito]
     [org.mockito.stubbing Answer Stubber]
     [org.mockito.invocation InvocationOnMock]
     [java.nio.file AccessMode
-                   CopyOption
-                   DirectoryStream$Filter
-                   LinkOption
-                   OpenOption
-                   Path]
+     CopyOption
+     DirectoryStream$Filter
+     LinkOption
+     OpenOption
+     Path]
     [java.nio.file.attribute FileAttribute]
     [java.util.concurrent ExecutorService]
     [clojure.lang Reflector]
@@ -390,8 +390,8 @@
   [errorable-file-system-provider [method argument-specs]]
   (let [provider-methods-for-method (lookup-provider-methods-for method)]
     (doseq
-      [{:keys [method-name arguments-signatures]} provider-methods-for-method
-       argument-signature arguments-signatures]
+     [{:keys [method-name arguments-signatures]} provider-methods-for-method
+      argument-signature arguments-signatures]
       (on-call errorable-file-system-provider method-name argument-signature
         (throw-on-match argument-specs argument-signature)))))
 
