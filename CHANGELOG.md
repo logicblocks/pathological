@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+
+## [0.1.12] — 2019-09-22
 ### Added
 - argument matching for errors in file systems created by
   `pathological.testing`.
@@ -156,4 +158,5 @@ and this project adheres to
 [0.1.9]: https://github.com/logicblocks/pathological/compare/0.1.8...0.1.9
 [0.1.10]: https://github.com/logicblocks/pathological/compare/0.1.9...0.1.10
 [0.1.11]: https://github.com/logicblocks/pathological/compare/0.1.10...0.1.11
-[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.11...HEAD
+[0.1.12]: https://github.com/logicblocks/pathological/compare/0.1.11...0.1.12
+[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.12...HEAD
