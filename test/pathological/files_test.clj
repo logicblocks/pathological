@@ -3077,8 +3077,6 @@
       (is (false? (f/exists? (p/path work-path "/directory-2/file-3")))))))
 
 (deftest copy-recursively
-  ; TODO: test copy options
-
   (testing (str
              "recursively copies all files/directories in a source path to a "
              "destination path")
@@ -3225,11 +3223,55 @@
       (is (true? (f/exists? (p/path target-path "/directory-2"))))
       (is (true? (f/exists? (p/path target-path "/directory-2/file-3"))))
       (is (= ["Item 1"]
-            (f/read-all-lines (p/path target-path "/directory-1/file-1")))))))
+            (f/read-all-lines (p/path target-path "/directory-1/file-1"))))))
+
+  (testing "uses provided copy options when supplied"
+    (let [test-file-system (t/new-unix-in-memory-file-system)
+
+          root-path (p/path test-file-system "/root")
+          source-path (p/path root-path "source")
+          target-path (p/path root-path "target")]
+      (f/create-directory root-path)
+      (f/populate-file-tree root-path
+        [[:source
+          [:directory1
+           [:file1 {:content ["Item 1"]}]
+           [:file2 {:content ["Item 2"]}]]
+          [:directory2
+           [:file3 {:file-attributes {"posix:permissions" "r--r--r--"}
+                    :content         ["Item 3"]}]]]
+         [:target
+          [:directory2
+           [:file3 {:content ["Item 0"]}]]]])
+
+      (f/copy-recursively source-path target-path
+        :options #{:replace-existing :copy-attributes})
+
+      (is (true? (f/exists? source-path)))
+      (is (true? (f/exists? (p/path source-path "/directory1"))))
+      (is (true? (f/exists? (p/path source-path "/directory1/file1"))))
+      (is (true? (f/exists? (p/path source-path "/directory1/file2"))))
+      (is (true? (f/exists? (p/path source-path "/directory2"))))
+      (is (true? (f/exists? (p/path source-path "/directory2/file3"))))
+
+      (is (true? (f/exists? target-path)))
+      (is (true? (f/exists? (p/path target-path "/directory1"))))
+      (is (true? (f/exists? (p/path target-path "/directory1/file1"))))
+      (is (true? (f/exists? (p/path target-path "/directory1/file2"))))
+      (is (true? (f/exists? (p/path target-path "/directory2"))))
+      (is (true? (f/exists? (p/path target-path "/directory2/file3"))))
+      (is (= ["Item 1"]
+            (f/read-all-lines (p/path target-path "/directory1/file1"))))
+      (is (= ["Item 2"]
+            (f/read-all-lines (p/path target-path "/directory1/file2"))))
+      (is (= ["Item 3"]
+            (f/read-all-lines (p/path target-path "/directory2/file3"))))
+      (is (= "r--r--r--"
+            (u/->posix-file-permissions-string
+              (f/read-posix-file-permissions
+                (p/path target-path "/directory2/file3"))))))))
 
 (deftest move-recursively
-  ; TODO: test copy options
-
   (testing (str
              "recursively moves all files/directories in a source path to "
              "a destination path")
@@ -3377,7 +3419,53 @@
       (is (= ["Item 1"]
             (f/read-all-lines (p/path target-path "/directory-1/file-1"))))
       (is (= ["Item 3"]
-            (f/read-all-lines (p/path target-path "/directory-2/file-3")))))))
+            (f/read-all-lines (p/path target-path "/directory-2/file-3"))))))
+
+  (testing "uses provided copy options when supplied"
+    (let [test-file-system (t/new-unix-in-memory-file-system)
+
+          root-path (p/path test-file-system "/root")
+          source-path (p/path root-path "source")
+          target-path (p/path root-path "target")]
+      (f/create-directory root-path)
+      (f/populate-file-tree root-path
+        [[:source
+          [:directory1
+           [:file1 {:content ["Item 1"]}]
+           [:file2 {:content ["Item 2"]}]]
+          [:directory2
+           [:file3 {:file-attributes {"posix:permissions" "r--r--r--"}
+                    :content         ["Item 3"]}]]]
+         [:target
+          [:directory2
+           [:file3 {:content ["Item 0"]}]]]])
+
+      (f/move-recursively source-path target-path
+        :options #{:replace-existing :copy-attributes})
+
+      (is (false? (f/exists? source-path)))
+      (is (false? (f/exists? (p/path source-path "/directory1"))))
+      (is (false? (f/exists? (p/path source-path "/directory1/file1"))))
+      (is (false? (f/exists? (p/path source-path "/directory1/file2"))))
+      (is (false? (f/exists? (p/path source-path "/directory2"))))
+      (is (false? (f/exists? (p/path source-path "/directory2/file3"))))
+
+      (is (true? (f/exists? target-path)))
+      (is (true? (f/exists? (p/path target-path "/directory1"))))
+      (is (true? (f/exists? (p/path target-path "/directory1/file1"))))
+      (is (true? (f/exists? (p/path target-path "/directory1/file2"))))
+      (is (true? (f/exists? (p/path target-path "/directory2"))))
+      (is (true? (f/exists? (p/path target-path "/directory2/file3"))))
+      (is (= ["Item 1"]
+            (f/read-all-lines (p/path target-path "/directory1/file1"))))
+      (is (= ["Item 2"]
+            (f/read-all-lines (p/path target-path "/directory1/file2"))))
+      (is (= ["Item 3"]
+            (f/read-all-lines (p/path target-path "/directory2/file3"))))
+      (is (= "r--r--r--"
+            (u/->posix-file-permissions-string
+              (f/read-posix-file-permissions
+                (p/path target-path "/directory2/file3"))))))))
 
 (deftest populate-file-tree
   (testing "creates top level files with collection of lines as content"

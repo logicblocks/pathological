@@ -480,7 +480,7 @@
                   (throw e)))))
           (copy-fn [_ file _]
             (try
-              (copy file (rebase file))
+              (apply copy file (rebase file) (get options :options []))
               (catch IOException e
                 (when-not (= :skip (:on-error options))
                   (throw e)))))]
@@ -507,7 +507,7 @@
                   (throw e)))))
           (move-fn [_ file _]
             (try
-              (move file (rebase file))
+              (apply move file (rebase file) (get options :options []))
               (catch IOException e
                 (when-not (= :skip (:on-error options))
                   (throw e)))))]

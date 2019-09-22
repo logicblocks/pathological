@@ -9,3 +9,4 @@ TODO
 * Add `new-byte-channel` and associated machinery
 * Use `<-attribute-value` in attribute view conversion
 * Implement `clojure.java.io/do-copy` for `Path`
+* Allow entry specific overrides for error handling in `populate-file-tree`

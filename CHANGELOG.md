@@ -8,6 +8,10 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Added
+- support for copy options to `copy-recursively` and `move-recursively`
+  in `pathological.files`.
+  
 ### Fixed
 - bug in `walk-file-tree` in `pathological.files` where `:visit-file-failed-fn`
   was not being called.
