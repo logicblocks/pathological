@@ -426,7 +426,7 @@
 
   (visitFileFailed [_ file exception]
     (invoke-visitor-and-accumulate
-      visit-file-fn accumulator-atom file exception)))
+      visit-file-failed-fn accumulator-atom file exception)))
 
 (defn walk-file-tree
   [^Path path

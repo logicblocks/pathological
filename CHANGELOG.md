@@ -8,6 +8,9 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Fixed
+- bug in `walk-file-tree` in `pathological.files` where `:visit-file-failed-fn`
+  was not being called.
 
 ## [0.1.12] — 2019-09-22
 ### Added

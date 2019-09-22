@@ -20,20 +20,20 @@
 
     [java.nio.charset StandardCharsets Charset]
     [java.nio.file FileAlreadyExistsException
-     Files
-     LinkOption
-     NoSuchFileException
-     Path]
+                   Files
+                   LinkOption
+                   NoSuchFileException
+                   Path]
     [java.nio.file.attribute AclFileAttributeView
-     BasicFileAttributes
-     BasicFileAttributeView
-     DosFileAttributeView
-     DosFileAttributes
-     FileOwnerAttributeView
-     PosixFileAttributes
-     PosixFileAttributeView
-     PosixFilePermissions
-     UserDefinedFileAttributeView]))
+                             BasicFileAttributes
+                             BasicFileAttributeView
+                             DosFileAttributeView
+                             DosFileAttributes
+                             FileOwnerAttributeView
+                             PosixFileAttributes
+                             PosixFileAttributeView
+                             PosixFilePermissions
+                             UserDefinedFileAttributeView]))
 
 (declare thrown?)
 
@@ -265,7 +265,7 @@
             (f/read-posix-file-permissions temp-path)))))
 
   (testing
-   "creates a temporary file in the default file system default location"
+    "creates a temporary file in the default file system default location"
     (let [prefix "pre-"
           suffix "-post"
 
@@ -327,7 +327,7 @@
             (f/read-posix-file-permissions temp-path)))))
 
   (testing
-   "creates a temporary directory in the default file system default location"
+    "creates a temporary directory in the default file system default location"
     (let [prefix "pre-"
 
           temp-path-1 (f/create-temp-directory prefix)
@@ -2648,8 +2648,6 @@
               paths))))))
 
 (deftest walk-file-tree
-  ; TODO: exception cases, visit file failed
-
   (testing "walks top level files and returns accumulated result"
     (let [test-file-system (t/new-unix-in-memory-file-system)
 
@@ -2937,6 +2935,56 @@
                  (attributes-for "/directory2")]
                 [:file "/directory2/file2"
                  (attributes-for "/directory2/file2")]]
+              result)))))
+
+  (testing "throws on file visit failure by default"
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :max-cache-size 0
+            :contents
+            [[:file-1 {:content ["Item 1"]}]
+             [:file-2 {:content ["Item 2"]}]
+             [:file-3 {:content ["Item 3"]}]]
+            :error-on
+            [['java.nio.file.spi.FileSystemProvider#readAttributes
+              ["/file-2"]]])
+
+          root-path (p/path test-file-system "/")]
+      (is (thrown? IOException
+            (f/walk-file-tree root-path
+              :visit-file-fn
+              (fn [accumulator path _]
+                {:control :continue
+                 :result  (assoc accumulator
+                            (str path) (f/read-all-lines path))}))))))
+
+  (testing (str "calls visit file failed function on file visit failure "
+             "when specified")
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :max-cache-size 0
+            :contents
+            [[:file-1 {:content ["Item 1"]}]
+             [:file-2 {:content ["Item 2"]}]
+             [:file-3 {:content ["Item 3"]}]]
+            :error-on
+            [['java.nio.file.spi.FileSystemProvider#readAttributes
+              ["/file-2"]]])
+
+          root-path (p/path test-file-system "/")]
+      (let [result (f/walk-file-tree root-path
+                     :visit-file-fn
+                     (fn [accumulator path _]
+                       {:control :continue
+                        :result  (assoc accumulator
+                                   (str path) (f/read-all-lines path))})
+                     :visit-file-failed-fn
+                     (fn [accumulator path _]
+                       {:control :continue
+                        :result  (assoc accumulator (str path) :failed)}))]
+        (is (= {"/file-1" ["Item 1"]
+                "/file-2" :failed
+                "/file-3" ["Item 3"]}
               result))))))
 
 (deftest delete-recursively
@@ -3495,13 +3543,13 @@
          [:symlink-1 {:type   :symbolic-link
                       :target "/file-1"
                       :file-attributes
-                      {"posix:permissions" "rwxrw-rw-"
-                       "owner:owner"       user-1}}]
+                              {"posix:permissions" "rwxrw-rw-"
+                               "owner:owner"       user-1}}]
          [:symlink-2 {:type   :symbolic-link
                       :target "/file-2"
                       :file-attributes
-                      {"posix:permissions" "r--r--r--"
-                       "owner:owner"       user-2}}]])
+                              {"posix:permissions" "r--r--r--"
+                               "owner:owner"       user-2}}]])
 
       (is (not= #{:owner-read :owner-write :owner-execute
                   :group-read :group-write
@@ -3570,12 +3618,12 @@
       (f/populate-file-tree root-path
         [[:directory-1 {:type :directory
                         :file-attributes
-                        {"posix:permissions" "rwxr-xr-x"
-                         "owner:owner"       user-1}}]
+                              {"posix:permissions" "rwxr-xr-x"
+                               "owner:owner"       user-1}}]
          [:directory-2 {:type :directory
                         :file-attributes
-                        {"posix:permissions" "r-xr-xr-x"
-                         "owner:owner"       user-2}}]])
+                              {"posix:permissions" "r-xr-xr-x"
+                               "owner:owner"       user-2}}]])
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-execute
@@ -3778,12 +3826,12 @@
         [[:some
           [:directory-1 {:type :directory
                          :file-attributes
-                         {"posix:permissions" "rwxr-xr-x"
-                          "owner:owner"       user-1}}]
+                               {"posix:permissions" "rwxr-xr-x"
+                                "owner:owner"       user-1}}]
           [:directory-2 {:type :directory
                          :file-attributes
-                         {"posix:permissions" "r-xr-xr-x"
-                          "owner:owner"       user-2}}]]])
+                               {"posix:permissions" "r-xr-xr-x"
+                                "owner:owner"       user-2}}]]])
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-execute

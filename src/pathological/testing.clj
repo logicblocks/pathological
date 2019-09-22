@@ -414,9 +414,7 @@
 
 (defn- matchers-for [argument-types]
   (map
-    #(if (coll? %)
-       (Mockito/any)
-       (Mockito/any %))
+    (fn [_] (Mockito/any))
     argument-types))
 
 (defn- on-call
