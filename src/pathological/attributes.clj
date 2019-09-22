@@ -2,8 +2,7 @@
   (:refer-clojure :exclude [name])
   (:require
     [pathological.principals :as pr]
-    [pathological.utils :as u]
-    [pathological.attribute-specs :as as])
+    [pathological.utils :as u])
   (:import
     [java.nio.file Path]
     [java.nio ByteBuffer]

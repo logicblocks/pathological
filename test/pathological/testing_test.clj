@@ -518,18 +518,93 @@
 
     (is (true? (f/exists? (p/path file-system "/directory-3"))))))
 
-#_(deftest builds-erroring-filesystem-matching-file-attributes
-    (let [file-system
-          (t/new-in-memory-file-system
-            (merge t/unix-defaults
-              {:error-on
-               [[#'pathological.files/create-directory
-                 ["/directory-1" {"posix:permissions" "rwxr-xr-x"}]]]}))]
-      (is (thrown? IOException
-            (f/create-directory (p/path file-system "/directory-1")
-              {"posix:permissions" "rwxr-xr-x"})))
+(deftest builds-erroring-filesystem-matching-file-attributes
+  (let [file-system
+        (t/new-in-memory-file-system
+          (merge t/unix-defaults
+            {:error-on
+             [[#'pathological.files/create-directory
+               ["/directory-1"
+                {"posix:permissions" "rwxr-xr-x"
+                 "owner:owner"       (fn [file-system]
+                                       (pr/->user-principal
+                                         file-system "some-user"))}]]]}))]
+    (is (thrown? IOException
+          (f/create-directory (p/path file-system "/directory-1")
+            {"posix:permissions" "rwxr-xr-x"
+             "owner:owner"       (pr/->user-principal "some-user")})))
 
-      (f/create-directory (p/path file-system "/directory-1")
-        {"posix:permissions" "r--r--r--"})
+    (f/create-directory (p/path file-system "/directory-1")
+      {"posix:permissions" "r--r--r--"})
 
-      (is (true? (f/exists? (p/path file-system "/directory-1"))))))
+    (is (true? (f/exists? (p/path file-system "/directory-1"))))))
+
+(deftest builds-erroring-filesystem-matching-copy-option
+  (let [file-system
+        (t/new-in-memory-file-system
+          (merge t/unix-defaults
+            {:contents
+             [[:file-1 {:contents ["Line 1" "Line 2"]}]]
+             :error-on
+             [[#'pathological.files/copy
+               ["/file-1" "/file-2" :replace-existing :atomic-move]]]}))]
+    (is (thrown? IOException
+          (f/copy (p/path file-system "/file-1") (p/path file-system "/file-2")
+            :replace-existing :atomic-move)))
+
+    (f/copy (p/path file-system "/file-1") (p/path file-system "/file-2")
+      :replace-existing)
+
+    (is (true? (f/exists? (p/path file-system "/file-2"))))))
+
+(deftest builds-erroring-filesystem-matching-open-option
+  (let [file-system
+        (t/new-in-memory-file-system
+          (merge t/unix-defaults
+            {:error-on
+             [[#'pathological.files/new-output-stream
+               ["/file-1" :write :truncate-existing]]]}))]
+    (is (thrown? IOException
+          (f/new-output-stream
+            (p/path file-system "/file-1")
+            :write :truncate-existing)))
+
+    (f/create-file (p/path file-system "/file-1"))
+    (spit (f/new-output-stream
+            (p/path file-system "/file-1")
+            :write :append)
+      "Hello")
+
+    (is (true? (f/exists? (p/path file-system "/file-1"))))))
+
+(deftest builds-erroring-filesystem-matching-class-and-link-options
+  (let [file-system
+        (t/new-in-memory-file-system
+          (merge t/unix-defaults
+            {:contents
+             [[:file-1 {:content ["Line 1" "Line 2"]}]]
+             :error-on
+             [[#'pathological.files/read-file-attribute-view
+               ["/file-1" :basic :no-follow-links]]]}))]
+    (is (thrown? IOException
+          (f/read-file-attribute-view
+            (p/path file-system "/file-1")
+            :basic :no-follow-links)))
+
+    (is (some? (f/read-file-attribute-view
+                 (p/path file-system "/file-1")
+                 :basic)))))
+
+(deftest builds-erroring-filesystem-matching-access-mode
+  (let [file-system
+        (t/new-in-memory-file-system
+          (merge t/unix-defaults
+            {:contents
+             [[:file-1 {:content ["Line 1" "Line 2"]}]]
+             :error-on
+             [['java.nio.file.spi.FileSystemProvider#checkAccess
+               ["/file-1" :read]]]}))]
+    ; would be true if checkAccess didn't fail
+    (is (false? (f/readable? (p/path file-system "/file-1"))))
+
+    (is (true? (f/writable? (p/path file-system "/file-1"))))))

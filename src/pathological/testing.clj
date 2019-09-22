@@ -310,9 +310,44 @@
     :arguments-signatures [[Path String Object [LinkOption]]]
     :matching-calls       #{#'pathological.files/set-attribute}}})
 
-(defn- <-argument [value type]
+(defn- normalise-file-attribute-value [attribute-spec value]
+  (u/<-attribute-value attribute-spec
+    (u/->attribute-value attribute-spec value)))
+
+(defn- normalise-file-attributes-map [file-system initial-map]
+  (reduce-kv
+    (fn [normalised-map key value]
+      (let [attribute-spec (as/->attribute-spec key)
+            value (if (fn? value) (value file-system) value)]
+        (assoc normalised-map
+          attribute-spec
+          (normalise-file-attribute-value attribute-spec value))))
+    {}
+    initial-map))
+
+(defn- normalise-erroring-argument [file-system value type]
   (condp = type
     Path (str value)
+    [FileAttribute] (normalise-file-attributes-map file-system value)
+    value))
+
+(defn- normalise-erroring-argument-seq [file-system values types]
+  (let [values
+        (if (vector? (last types))
+          (let [non-varargs-count (dec (count types))
+                non-varargs (take non-varargs-count values)
+                varargs (drop non-varargs-count values)]
+            (cond
+              (empty? varargs) non-varargs
+              (map? (first varargs)) (concat non-varargs varargs)
+              :else (concat non-varargs [varargs])))
+          values)]
+    (mapv (partial normalise-erroring-argument file-system) values types)))
+
+(defn- normalise-invocation-argument [value type]
+  (condp = type
+    Path (str value)
+    Class (u/<-file-attribute-view-class value)
     #{OpenOption} (u/<-open-options-array value)
     [OpenOption] (u/<-open-options-array value)
     [CopyOption] (u/<-copy-options-array value)
@@ -321,13 +356,19 @@
     [FileAttribute] (u/<-file-attributes-array value)
     value))
 
-(defn- <-arguments-array [values types]
+(defn- normalise-invocation-argument-array [values types]
   (let [values
         (if (vector? (last types))
-          (concat (take (dec (count types)) values)
-            [(drop (dec (count types)) values)])
-          values)]
-    (mapv <-argument values types)))
+          (let [non-varargs-count (dec (count types))
+                non-varargs (take non-varargs-count values)
+                varargs (drop non-varargs-count values)]
+            (concat non-varargs [varargs]))
+          values)
+        normalised (mapv normalise-invocation-argument values types)
+        normalised (if (and (seq normalised) (map? (first (last normalised))))
+                     (concat (butlast normalised) [(first (last normalised))])
+                     normalised)]
+    normalised))
 
 (defn- same-arguments [erroring-arguments invocation-arguments]
   (= (take (count erroring-arguments) invocation-arguments)
@@ -346,7 +387,7 @@
       erroring-argument-specs
       invocation-arguments)))
 
-(defn- throw-on-match [erroring-argument-specs argument-types]
+(defn- throw-on-match [file-system erroring-argument-specs argument-types]
   ^Stubber
   (Mockito/doAnswer
     (reify Answer
@@ -356,7 +397,14 @@
               invocation-arguments (.getArguments invocation)
               invocation-arguments
               (when (seq erroring-argument-specs)
-                (<-arguments-array invocation-arguments argument-types))]
+                (normalise-invocation-argument-array
+                  invocation-arguments argument-types))
+              erroring-argument-specs
+              (when (seq erroring-argument-specs)
+                (mapv
+                  #(normalise-erroring-argument-seq
+                     file-system % argument-types)
+                  erroring-argument-specs))]
           (if (should-error? erroring-argument-specs invocation-arguments)
             (throw (IOException.
                      (str "Errored executing: '" method-name
@@ -372,9 +420,9 @@
     argument-types))
 
 (defn- on-call
-  [errorable-file-system-provider method argument-types what-to-do]
+  [file-system-provider method argument-types what-to-do]
   (Reflector/invokeInstanceMethod
-    (.when ^Stubber what-to-do errorable-file-system-provider)
+    (.when ^Stubber what-to-do file-system-provider)
     (clojure.core/name method)
     (into-array Object (matchers-for argument-types))))
 
@@ -387,13 +435,13 @@
       (vals provider-methods))))
 
 (defn- configure-error-on
-  [errorable-file-system-provider [method argument-specs]]
+  [file-system [method argument-specs]]
   (let [provider-methods-for-method (lookup-provider-methods-for method)]
     (doseq
      [{:keys [method-name arguments-signatures]} provider-methods-for-method
       argument-signature arguments-signatures]
-      (on-call errorable-file-system-provider method-name argument-signature
-        (throw-on-match argument-specs argument-signature)))))
+      (on-call (fs/provider file-system) method-name argument-signature
+        (throw-on-match file-system argument-specs argument-signature)))))
 
 (defn- new-errorable-file-system-provider [file-system]
   ^FileSystemProvider (Mockito/spy (fs/provider file-system)))
@@ -411,7 +459,7 @@
 
 (defn- configure-errors-on [file-system error-definitions]
   (let [error-definitions (consolidate-error-definitions error-definitions)]
-    (run! #(configure-error-on (fs/provider file-system) %)
+    (run! #(configure-error-on file-system %)
       error-definitions)
     file-system))
 

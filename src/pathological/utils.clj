@@ -79,8 +79,8 @@
   {:no-follow-links LinkOption/NOFOLLOW_LINKS})
 
 (def ^:dynamic *access-modes*
-  {:read AccessMode/READ
-   :write AccessMode/WRITE
+  {:read    AccessMode/READ
+   :write   AccessMode/WRITE
    :execute AccessMode/EXECUTE})
 
 (def ^:dynamic *file-visit-options*
@@ -145,6 +145,9 @@
    :others-write   PosixFilePermission/OTHERS_WRITE
    :others-execute PosixFilePermission/OTHERS_EXECUTE})
 
+(defmacro ->varargs-array [type args]
+  `(into-array ~type (or ~args [])))
+
 (defn ->file-time [value]
   (when value
     (if-not (instance? FileTime value)
@@ -195,10 +198,16 @@
     (get *file-attribute-view-classes* (keyword (name type)) type)
     type))
 
+(defn <-file-attribute-view-class [type]
+  (get (map-invert *file-attribute-view-classes*) type type))
+
 (defn ->file-store-attribute-view-class [type]
   (if (instance? Named type)
     (get *file-store-attribute-view-classes* (keyword (name type)) type)
     type))
+
+(defn <-file-store-attribute-view-class [type]
+  (get (map-invert *file-store-attribute-view-classes*) type type))
 
 (defn ->acl-entry-type [value]
   (get acl-entry-types value value))
@@ -297,7 +306,7 @@
 (def ^:dynamic *<-attribute-value-conversions*
   <-attribute-value-conversion-defaults)
 
-(defn- lookup-conversion [all-conversions attribute-spec]
+(defn- lookup-attribute-conversion [all-conversions attribute-spec]
   (let [view (as/view attribute-spec)
         name (as/name attribute-spec)]
     (or
@@ -309,12 +318,14 @@
 
 (defn ->attribute-value [attribute-spec value]
   (let [attribute-conversion
-        (lookup-conversion *->attribute-value-conversions* attribute-spec)]
+        (lookup-attribute-conversion
+          *->attribute-value-conversions* attribute-spec)]
     (attribute-conversion value)))
 
 (defn <-attribute-value [attribute-spec value]
   (let [attribute-conversion
-        (lookup-conversion *<-attribute-value-conversions* attribute-spec)]
+        (lookup-attribute-conversion
+          *<-attribute-value-conversions* attribute-spec)]
     (attribute-conversion value)))
 
 (defrecord FileAttribute [name value]
@@ -332,6 +343,12 @@
         (as/->attribute-spec (.name attribute))]
     {attribute-spec (<-attribute-value attribute-spec (.value attribute))}))
 
+(defmacro ->file-attributes-array [args]
+  `(->varargs-array java.nio.file.attribute.FileAttribute ~args))
+
+(defn <-file-attributes-array [value]
+  (merge (map <-file-attribute value)))
+
 (def ->open-option (->lookup-fn *open-options*))
 (def <-open-option (<-lookup-fn *open-options*))
 (def ->copy-option (->lookup-fn *copy-options*))
@@ -341,15 +358,6 @@
 (def ->access-mode (->lookup-fn *access-modes*))
 (def <-access-mode (<-lookup-fn *access-modes*))
 (def ->file-visit-option (->lookup-fn *file-visit-options*))
-
-(defmacro ->varargs-array [type args]
-  `(into-array ~type (or ~args [])))
-
-(defmacro ->file-attributes-array [args]
-  `(->varargs-array java.nio.file.attribute.FileAttribute ~args))
-
-(defn <-file-attributes-array [value]
-  (merge (map <-file-attribute value)))
 
 (defmacro ->open-options-array [args]
   `(->varargs-array OpenOption (map ->open-option ~args)))
