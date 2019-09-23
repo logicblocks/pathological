@@ -413,8 +413,10 @@
             (.callRealMethod invocation)))))))
 
 (defn- matchers-for [argument-types]
-  (map
-    (fn [_] (Mockito/any))
+  (mapv
+    #(if (coll? %)
+       (Mockito/any)
+       (Mockito/any %))
     argument-types))
 
 (defn- on-call
