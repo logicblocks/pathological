@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+
+## [0.1.13] — 2019-09-23
 ### Added
 - support for copy options to `copy-recursively` and `move-recursively`
   in `pathological.files`.
@@ -166,4 +168,5 @@ and this project adheres to
 [0.1.10]: https://github.com/logicblocks/pathological/compare/0.1.9...0.1.10
 [0.1.11]: https://github.com/logicblocks/pathological/compare/0.1.10...0.1.11
 [0.1.12]: https://github.com/logicblocks/pathological/compare/0.1.11...0.1.12
-[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.12...HEAD
+[0.1.13]: https://github.com/logicblocks/pathological/compare/0.1.12...0.1.13
+[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.13...HEAD
