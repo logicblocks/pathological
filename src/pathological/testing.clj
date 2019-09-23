@@ -339,7 +339,7 @@
                 varargs (drop non-varargs-count values)]
             (cond
               (empty? varargs) non-varargs
-              (map? (first varargs)) (concat non-varargs varargs)
+              (coll? (first varargs)) (concat non-varargs varargs)
               :else (concat non-varargs [varargs])))
           values)]
     (mapv (partial normalise-erroring-argument file-system) values types)))

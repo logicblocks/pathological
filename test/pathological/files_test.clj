@@ -727,9 +727,11 @@
       (is (false? (f/exists? source-path)))))
 
   (testing "uses an atomic move when requested"
-    ; TODO: work out how to test this.
-
-    (let [test-file-system (t/new-unix-in-memory-file-system)
+    (let [test-file-system
+          (t/new-unix-in-memory-file-system
+            :error-on
+            [['java.nio.file.spi.FileSystemProvider#move
+              ["/source" "/target" []]]])
 
           content ["Line 1" "Line 2"]
           source-path (p/path test-file-system "/source")
