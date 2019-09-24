@@ -20,7 +20,7 @@
               [[com.google.jimfs/jimfs "1.1"]
                [org.mockito/mockito-core "3.0.0"]]}
    :shared   [:provided
-                {:dependencies
+              {:dependencies
                [[org.clojure/clojure "1.10.1"]
                 [nrepl "0.6.0"]
                 [org.apache.tika/tika-core "1.22"]
@@ -37,7 +37,9 @@
 
   :codox
   {:namespaces  [#"^pathological\."]
+   :metadata    {:doc/format :markdown}
    :output-path "docs"
+   :doc-paths   ["docs"]
    :source-uri  "https://github.com/logicblocks/pathological/blob/{version}/{filepath}#L{line}"}
 
   :cljfmt {:indents ^:replace {#".*" [[:inner 0]]}}

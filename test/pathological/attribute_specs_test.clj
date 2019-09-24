@@ -123,10 +123,10 @@
 (deftest names
   (testing "returns the names from an attribute spec map"
     (is (= #{:creation-time :last-access-time}
-          (as/names {:view :basic
+          (as/names {:view  :basic
                      :names #{:creation-time :last-access-time}})))
     (is (= #{:creation-time :last-access-time}
-          (as/names {:view :*
+          (as/names {:view  :*
                      :names #{:creation-time :last-access-time}}))))
 
   (testing "returns the names from a kebab case attribute spec string"
@@ -149,3 +149,189 @@
     (is (nil? (as/names {:view :user :name :custom-attribute-1})))
     (is (nil? (as/names "user:customAttribute1")))
     (is (nil? (as/names "user:custom-attribute-1")))))
+
+(deftest view?
+  (testing "returns true if the attribute spec has the provided view"
+    (is (some? (as/view?
+                 {:view :custom-view :name :attribute-a}
+                 :custom-view)))
+    (is (some? (as/view?
+                 {:view :custom-view :names #{:attribute-a :attribute-b}}
+                 :custom-view)))
+    (is (some? (as/view?
+                 {:view :custom-view :names :*}
+                 :custom-view)))
+    (is (some? (as/view? "custom-view:attribute-a" :custom-view)))
+    (is (some? (as/view? "custom-view:attribute-a,attribute-b" :custom-view)))
+    (is (some? (as/view? "custom-view:*" :custom-view)))
+    (is (some? (as/view? "customView:attributeA" :custom-view)))
+    (is (some? (as/view? "customView:attributeA,attributeB" :custom-view)))
+    (is (some? (as/view? "customView:*" :custom-view))))
+
+  (testing "returns false if the attribute spec does not have the provided view"
+    (is (nil? (as/view?
+                {:view :other-view :name :attribute-a}
+                :custom-view)))
+    (is (nil? (as/view?
+                {:view :other-view :names #{:attribute-a :attribute-b}}
+                :custom-view)))
+    (is (nil? (as/view?
+                {:view :other-view :names :*}
+                :custom-view)))
+    (is (nil? (as/view? "other-view:attribute-a" :custom-view)))
+    (is (nil? (as/view? "other-view:attribute-a,attribute-b" :custom-view)))
+    (is (nil? (as/view? "other-view:*" :custom-view)))
+    (is (nil? (as/view? "otherView:attributeA" :custom-view)))
+    (is (nil? (as/view? "otherView:attributeA,attributeB" :custom-view)))
+    (is (nil? (as/view? "otherView:*" :custom-view))))
+
+  (testing "returns true if the attribute spec has any of the provided views"
+    (is (some? (as/view?
+                 {:view :custom-view :name :attribute-a}
+                 #{:other-view :custom-view})))
+    (is (some? (as/view?
+                 {:view :custom-view :names #{:attribute-a :attribute-b}}
+                 #{:other-view :custom-view})))
+    (is (some? (as/view?
+                 {:view :custom-view :names :*}
+                 #{:other-view :custom-view})))
+    (is (some? (as/view?
+                 "custom-view:attribute-a"
+                 #{:other-view :custom-view})))
+    (is (some? (as/view?
+                 "custom-view:attribute-a,attribute-b"
+                 #{:other-view :custom-view})))
+    (is (some? (as/view?
+                 "custom-view:*"
+                 #{:other-view :custom-view})))
+    (is (some? (as/view?
+                 "customView:attributeA"
+                 #{:other-view :custom-view})))
+    (is (some? (as/view?
+                 "customView:attributeA,attributeB"
+                 #{:other-view :custom-view})))
+    (is (some? (as/view?
+                 "customView:*"
+                 #{:other-view :custom-view}))))
+
+  (testing "returns false if the attribute spec has none of the provided views"
+    (is (nil? (as/view?
+                {:view :custom-view :name :attribute-a}
+                #{:other-view :other-other-view})))
+    (is (nil? (as/view?
+                {:view :custom-view :names #{:attribute-a :attribute-b}}
+                #{:other-view :other-other-view})))
+    (is (nil? (as/view?
+                {:view :custom-view :names :*}
+                #{:other-view :other-other-view})))
+    (is (nil? (as/view?
+                "custom-view:attribute-a"
+                #{:other-view :other-other-view})))
+    (is (nil? (as/view?
+                "custom-view:attribute-a,attribute-b"
+                #{:other-view :other-other-view})))
+    (is (nil? (as/view?
+                "custom-view:*"
+                #{:other-view :other-other-view})))
+    (is (nil? (as/view?
+                "customView:attributeA"
+                #{:other-view :other-other-view})))
+    (is (nil? (as/view?
+                "customView:attributeA,attributeB"
+                #{:other-view :other-other-view})))
+    (is (nil? (as/view?
+                "customView:*"
+                #{:other-view :other-other-view})))))
+
+(deftest name?
+  (testing (str "returns true if the attribute spec is for a single attribute "
+             "and has the provided name")
+    (is (some? (as/name? {:view :custom-view :name :attribute-a} :attribute-a)))
+    (is (some? (as/name? {:view :* :name :attribute-a} :attribute-a)))
+    (is (some? (as/name? "*:attribute-a" :attribute-a)))
+    (is (some? (as/name? "*:attributeA" :attribute-a)))
+    (is (some? (as/name? "custom-view:attribute-a" :attribute-a)))
+    (is (some? (as/name? "customView:attributeA" :attribute-a))))
+
+  (testing (str "returns false if the attribute spec is for a single attribute "
+             "and does not have the provided name")
+    (is (nil? (as/name? {:view :custom-view :name :attribute-b} :attribute-a)))
+    (is (nil? (as/name? {:view :* :name :attribute-b} :attribute-a)))
+    (is (nil? (as/name? "*:attribute-b" :attribute-a)))
+    (is (nil? (as/name? "*:attributeB" :attribute-a)))
+    (is (nil? (as/name? "other-view:attribute-b" :attribute-a)))
+    (is (nil? (as/name? "otherView:attributeB" :attribute-a))))
+
+  (testing "returns false if the attribute spec is for multiple attributes"
+    (is (nil? (as/name?
+                {:view :custom-view :names #{:attribute-a :attribute-b}}
+                :attribute-a)))
+    (is (nil? (as/name?
+                {:view :* :names #{:attribute-a :attribute-b}}
+                :attribute-a)))
+    (is (nil? (as/name? "*:attribute-a,attribute-b" :attribute-a)))
+    (is (nil? (as/name? "*:attributeA,attributeB" :attribute-a)))
+    (is (nil? (as/name? "other-view:attribute-a,attribute-b" :attribute-a)))
+    (is (nil? (as/name? "otherView:attributeA,attributeB" :attribute-a))))
+
+  (testing (str "returns true if the attribute spec is for a single attribute "
+             "and has any of the provided names")
+    (is (some? (as/name?
+                 {:view :custom-view :name :attribute-a}
+                 #{:attribute-a :attribute-b})))
+    (is (some? (as/name?
+                 {:view :* :name :attribute-a}
+                 #{:attribute-a :attribute-b})))
+    (is (some? (as/name?
+                 "*:attribute-a"
+                 #{:attribute-a :attribute-b})))
+    (is (some? (as/name?
+                 "*:attributeA"
+                 #{:attribute-a :attribute-b})))
+    (is (some? (as/name?
+                 "custom-view:attribute-a"
+                 #{:attribute-a :attribute-b})))
+    (is (some? (as/name?
+                 "customView:attributeA"
+                 #{:attribute-a :attribute-b}))))
+
+  (testing (str "returns false if the attribute spec is for a single attribute "
+             "and has any of the provided names")
+    (is (nil? (as/name?
+                {:view :custom-view :name :attribute-c}
+                #{:attribute-a :attribute-b})))
+    (is (nil? (as/name?
+                {:view :* :name :attribute-c}
+                #{:attribute-a :attribute-b})))
+    (is (nil? (as/name?
+                "*:attribute-c"
+                #{:attribute-a :attribute-b})))
+    (is (nil? (as/name?
+                "*:attributeC"
+                #{:attribute-a :attribute-b})))
+    (is (nil? (as/name?
+                "custom-view:attribute-c"
+                #{:attribute-a :attribute-b})))
+    (is (nil? (as/name?
+                "customView:attributeC"
+                #{:attribute-a :attribute-b}))))
+
+  (testing "returns false if the attribute spec is for multiple attributes"
+    (is (nil? (as/name?
+                {:view :custom-view :names #{:attribute-a :attribute-b}}
+                #{:attribute-a :attribute-b})))
+    (is (nil? (as/name?
+                {:view :* :names #{:attribute-a :attribute-b}}
+                #{:attribute-a :attribute-b})))
+    (is (nil? (as/name?
+                "*:attribute-a,attribute-b"
+                #{:attribute-a :attribute-b})))
+    (is (nil? (as/name?
+                "*:attributeA,attributeB"
+                #{:attribute-a :attribute-b})))
+    (is (nil? (as/name?
+                "custom-view:attribute-a,attribute-b"
+                #{:attribute-a :attribute-b})))
+    (is (nil? (as/name?
+                "customView:attributeA,attributeB"
+                #{:attribute-a :attribute-b})))))
