@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Added
+- documentation for `pathological.attributes`.
 
 ## [0.1.14] — 2019-09-24
 ### Added
