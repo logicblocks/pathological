@@ -19,10 +19,8 @@
       - a [Class](https://docs.oracle.com/javase/7/docs/api/java/lang/Class.html)
         instance corresponding to a class implementing
         [FileAttributeView](https://docs.oracle.com/javase/7/docs/api/java/nio/file/attribute/FileAttributeView.html),
-      - a string representing the view name of the file attribute view, defined
-        by the underlying file system implementation.
-      - a keyword identifying the file attribute view, supported by
-        [[pathological.attributes/*file-attribute-view-factories*]]."))
+      - a string or keyword representing the view name of the file attribute
+        view, defined by the underlying file system implementation."))
 
 (defprotocol FileStoreAttributeViewSupport
   "A protocol allowing the file store attribute view support of a file store
@@ -42,10 +40,8 @@
       - a [Class](https://docs.oracle.com/javase/7/docs/api/java/lang/Class.html)
         instance corresponding to a class implementing
         [FileStoreAttributeView](https://docs.oracle.com/javase/7/docs/api/java/nio/file/attribute/FileStoreAttributeView.html),
-      - a string representing the view name of the file store attribute view,
-        defined by the underlying file system implementation.
-      - a keyword identifying the file store attribute view, supported by
-        [[*file-store-attribute-view-factories*]].")
+      - a string or keyword representing the view name of the file store
+        attribute view, defined by the underlying file system implementation.")
   (read-attribute [file-store attribute-spec]
     "Reads the attribute defined by the given attribute spec from the file
     store.

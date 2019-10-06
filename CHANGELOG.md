@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Added
+- documentation for `pathological.file-systems`.
 
 ## [0.1.16] — 2019-10-06
 ### Added
