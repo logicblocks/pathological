@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+
+## [0.1.18] — 2019-10-06
 ### Added
 - documentation for `pathological.path-matchers`.
 
@@ -191,4 +193,5 @@ and this project adheres to
 [0.1.15]: https://github.com/logicblocks/pathological/compare/0.1.14...0.1.15
 [0.1.16]: https://github.com/logicblocks/pathological/compare/0.1.15...0.1.16
 [0.1.17]: https://github.com/logicblocks/pathological/compare/0.1.16...0.1.17
-[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.17...HEAD
+[0.1.18]: https://github.com/logicblocks/pathological/compare/0.1.17...0.1.18
+[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.18...HEAD
