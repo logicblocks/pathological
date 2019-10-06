@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+
+## [0.1.15] — 2019-10-06
 ### Added
 - documentation for `pathological.attributes`.
 
@@ -176,4 +178,5 @@ and this project adheres to
 [0.1.12]: https://github.com/logicblocks/pathological/compare/0.1.11...0.1.12
 [0.1.13]: https://github.com/logicblocks/pathological/compare/0.1.12...0.1.13
 [0.1.14]: https://github.com/logicblocks/pathological/compare/0.1.13...0.1.14
-[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.14...HEAD
+[0.1.15]: https://github.com/logicblocks/pathological/compare/0.1.14...0.1.15
+[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.15...HEAD

@@ -12,7 +12,7 @@ greater.
 Add the following to your `project.clj` file:
 
 ```clj
-[io.logicblocks/pathological "0.1.14"]
+[io.logicblocks/pathological "0.1.15"]
 ```
 
 ## Documentation
