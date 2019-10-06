@@ -11,8 +11,9 @@
   (FileSystems/getDefault))
 
 (def ^{:dynamic true :tag FileSystem} *file-system*
-  "The file system to use in various calls where no file system is provided,
-  e.g., [[pathological.paths/path]],
+  "The file system to use in various calls where an explicit file system is
+  optional, e.g., [[pathological.paths/path]],
+  [[pathological.path-matchers/path-matcher]],
   [[pathological.principals/->user-principal]] and
   [[pathological.principals/->group-principal]]
 

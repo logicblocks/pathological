@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Added
+- documentation for `pathological.path-matchers`.
 
 ## [0.1.17] — 2019-10-06
 ### Added
