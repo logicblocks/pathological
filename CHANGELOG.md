@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+
+## [0.1.17] — 2019-10-06
 ### Added
 - documentation for `pathological.file-systems`.
 
@@ -186,4 +188,5 @@ and this project adheres to
 [0.1.14]: https://github.com/logicblocks/pathological/compare/0.1.13...0.1.14
 [0.1.15]: https://github.com/logicblocks/pathological/compare/0.1.14...0.1.15
 [0.1.16]: https://github.com/logicblocks/pathological/compare/0.1.15...0.1.16
-[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.16...HEAD
+[0.1.17]: https://github.com/logicblocks/pathological/compare/0.1.16...0.1.17
+[Unreleased]: https://github.com/logicblocks/pathological/compare/0.1.17...HEAD
