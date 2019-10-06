@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Added
+- documentation for `pathological.file-stores`.
 
 ## [0.1.15] — 2019-10-06
 ### Added

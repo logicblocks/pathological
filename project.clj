@@ -69,5 +69,6 @@
                          ["cljfmt" "fix"]
                          ["bikeshed"
                           "--name-collisions" "false"
+                          "--long-lines" "false"
                           "--verbose" "true"]
                          ["test"]]})
