@@ -8,6 +8,8 @@ and this project adheres to
 
 
 ## [Unreleased]
+### Added
+- partial documentation for `pathological.paths`.
 
 ## [0.1.18] — 2019-10-06
 ### Added
