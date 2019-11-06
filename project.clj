@@ -1,4 +1,4 @@
-(defproject io.logicblocks/pathological "0.1.19"
+(defproject io.logicblocks/pathological "0.1.20-SNAPSHOT"
   :description "A thin but complete wrapper of Java NIO2 for Clojure."
   :url "https://github.com/logicblocks/pathological"
 
