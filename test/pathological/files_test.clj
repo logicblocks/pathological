@@ -2110,8 +2110,6 @@
               (as/->attribute-spec-string attribute-spec)
               (u/->link-options-array [])))))))
 
-; Not currently implemented on OS X
-; https://bugs.openjdk.java.net/browse/JDK-7133484
 (deftest probe-content-type
   (testing "returns the content type of the path"
     (let [test-file-system (t/new-unix-in-memory-file-system)
