@@ -1,9 +1,9 @@
 (ns pathological.support.reflect
   (:refer-clojure :exclude [class])
   (:require
-    [pathological.utils :as u])
+   [pathological.utils :as u])
   (:import
-    [java.lang.reflect Method Field]))
+   [java.lang.reflect Method Field]))
 
 (defn class [object]
   ^Class

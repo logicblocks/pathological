@@ -1,11 +1,11 @@
 (ns pathological.utils-test
   (:require
-    [clojure.test :refer :all]
+   [clojure.test :refer :all]
 
-    [pathological.utils :as u]
-    [pathological.attributes :as a]
-    [pathological.principals :as pr]
-    [pathological.testing :as t])
+   [pathological.utils :as u]
+   [pathological.attributes :as a]
+   [pathological.principals :as pr]
+   [pathological.testing :as t])
   (:import [java.nio.file.attribute PosixFilePermission
             PosixFilePermissions]))
 

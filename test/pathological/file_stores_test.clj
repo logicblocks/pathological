@@ -1,12 +1,12 @@
 (ns pathological.file-stores-test
   (:require
-    [clojure.test :refer :all]
+   [clojure.test :refer :all]
 
-    [pathological.file-stores :as fst]
-    [pathological.file-systems :as fs]
-    [pathological.files :as f]
-    [pathological.paths :as p]
-    [pathological.testing :as t])
+   [pathological.file-stores :as fst]
+   [pathological.file-systems :as fs]
+   [pathological.files :as f]
+   [pathological.paths :as p]
+   [pathological.testing :as t])
   (:import [java.nio.file.attribute AclFileAttributeView
             BasicFileAttributeView]))
 

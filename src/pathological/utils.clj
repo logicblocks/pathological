@@ -1,38 +1,38 @@
 (ns pathological.utils
   (:refer-clojure :exclude [type])
   (:require
-    [clojure.string :as string]
-    [clojure.set :refer [map-invert]]
+   [clojure.string :as string]
+   [clojure.set :refer [map-invert]]
 
-    [pathological.principals :as pr]
-    [pathological.attribute-specs :as as])
+   [pathological.principals :as pr]
+   [pathological.attribute-specs :as as])
   (:import
-    [clojure.lang Named]
-    [java.util Set]
-    [java.time Instant]
-    [java.nio ByteBuffer]
-    [java.nio.charset StandardCharsets Charset]
-    [java.nio.file CopyOption
-     FileVisitOption
-     FileVisitResult
-     LinkOption
-     OpenOption
-     StandardOpenOption
-     StandardCopyOption AccessMode]
-    [java.nio.file.attribute AclEntry
-     AclEntryFlag
-     AclEntryPermission
-     AclEntryType
-     AclFileAttributeView
-     BasicFileAttributeView
-     DosFileAttributeView
-     FileOwnerAttributeView
-     FileTime
-     PosixFileAttributeView
-     PosixFilePermission
-     PosixFilePermissions
-     UserDefinedFileAttributeView]
-    [java.util.stream Stream]))
+   [clojure.lang Named]
+   [java.util Set]
+   [java.time Instant]
+   [java.nio ByteBuffer]
+   [java.nio.charset StandardCharsets Charset]
+   [java.nio.file CopyOption
+    FileVisitOption
+    FileVisitResult
+    LinkOption
+    OpenOption
+    StandardOpenOption
+    StandardCopyOption AccessMode]
+   [java.nio.file.attribute AclEntry
+    AclEntryFlag
+    AclEntryPermission
+    AclEntryType
+    AclFileAttributeView
+    BasicFileAttributeView
+    DosFileAttributeView
+    FileOwnerAttributeView
+    FileTime
+    PosixFileAttributeView
+    PosixFilePermission
+    PosixFilePermissions
+    UserDefinedFileAttributeView]
+   [java.util.stream Stream]))
 
 (defn camel->kebab [value]
   (string/lower-case
@@ -167,22 +167,22 @@
 
 (defn ->bytes
   ([^String value]
-    (.getBytes value))
+   (.getBytes value))
   ([^String value charset]
-    (.getBytes value ^Charset (->charset charset))))
+   (.getBytes value ^Charset (->charset charset))))
 
 (defn ->byte-buffer
   ([value]
-    (->byte-buffer value :utf-8))
+   (->byte-buffer value :utf-8))
   ([value charset]
-    (cond
-      (instance? ByteBuffer value) value
-      (bytes? value) (ByteBuffer/wrap value)
-      :default
-      (ByteBuffer/wrap
-        (.getBytes
-          (str value)
-          ^Charset (->charset charset))))))
+   (cond
+     (instance? ByteBuffer value) value
+     (bytes? value) (ByteBuffer/wrap value)
+     :default
+     (ByteBuffer/wrap
+       (.getBytes
+         (str value)
+         ^Charset (->charset charset))))))
 
 (defn <-byte-buffer [^ByteBuffer value]
   (.array value))
@@ -329,9 +329,9 @@
     (attribute-conversion value)))
 
 (defrecord FileAttribute [name value]
-  java.nio.file.attribute.FileAttribute
-  (name [_] name)
-  (value [_] value))
+           java.nio.file.attribute.FileAttribute
+           (name [_] name)
+           (value [_] value))
 
 (defn ->file-attribute [attribute-spec value]
   (map->FileAttribute
@@ -347,7 +347,7 @@
   `(->varargs-array java.nio.file.attribute.FileAttribute ~args))
 
 (defn <-file-attributes-array [value]
-  (merge (map <-file-attribute value)))
+  (map <-file-attribute value))
 
 (def ->open-option (->lookup-fn *open-options*))
 (def <-open-option (<-lookup-fn *open-options*))

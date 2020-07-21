@@ -1,11 +1,11 @@
 (ns pathological.path-matchers-test
   (:require
-    [clojure.test :refer :all]
+   [clojure.test :refer :all]
 
-    [pathological.file-systems :as fs]
-    [pathological.path-matchers :as pm]
-    [pathological.paths :as p]
-    [pathological.testing :as t]))
+   [pathological.file-systems :as fs]
+   [pathological.path-matchers :as pm]
+   [pathological.paths :as p]
+   [pathological.testing :as t]))
 
 (deftest path-matcher
   (testing "uses the default file system when none specified"

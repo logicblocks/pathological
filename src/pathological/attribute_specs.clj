@@ -1,7 +1,7 @@
 (ns pathological.attribute-specs
   (:refer-clojure :exclude [name])
   (:require
-    [clojure.string :as string]))
+   [clojure.string :as string]))
 
 (defn- camel->kebab-keyword [value]
   (let [camel->kebab (requiring-resolve 'pathological.utils/camel->kebab)]

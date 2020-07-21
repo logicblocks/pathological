@@ -1,15 +1,15 @@
 (ns pathological.file-systems-test
   (:require
-    [clojure.test :refer :all]
+   [clojure.test :refer :all]
 
-    [pathological.file-systems :as fs]
-    [pathological.file-stores :as fst]
-    [pathological.paths :as p]
-    [pathological.testing :as t])
+   [pathological.file-systems :as fs]
+   [pathological.file-stores :as fst]
+   [pathological.paths :as p]
+   [pathological.testing :as t])
   (:import
-    [java.nio.file FileSystem
-     FileStore
-     FileSystems]))
+   [java.nio.file FileSystem
+    FileStore
+    FileSystems]))
 
 (deftest default-file-system
   (testing "returns default file system"

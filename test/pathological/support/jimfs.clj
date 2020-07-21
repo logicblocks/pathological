@@ -1,11 +1,11 @@
 (ns pathological.support.jimfs
   (:refer-clojure :exclude [class name])
   (:require
-    [pathological.utils :as u]
+   [pathological.utils :as u]
 
-    [pathological.support.reflect :as reflect])
+   [pathological.support.reflect :as reflect])
   (:import
-    [com.google.common.jimfs JimfsFileSystem]))
+   [com.google.common.jimfs JimfsFileSystem]))
 
 (defn name [^JimfsFileSystem file-system]
   (-> file-system
@@ -31,7 +31,9 @@
   (reflect/get-field (path-service file-system) :canonical-normalizations))
 
 (defn path-equality-uses-canonical-form? [^JimfsFileSystem file-system]
-  (reflect/get-field (path-service file-system) :equality-uses-canonical-form))
+  (boolean
+    (reflect/get-field
+      (path-service file-system) :equality-uses-canonical-form)))
 
 (defn disk [^JimfsFileSystem file-system]
   (reflect/get-field (file-store file-system) :disk))

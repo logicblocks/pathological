@@ -1,36 +1,36 @@
 (ns pathological.testing
   (:refer-clojure :exclude [name])
   (:require
-    [pathological.files :as f]
-    [pathological.paths :as p]
-    [pathological.utils :as u]
-    [pathological.file-systems :as fs]
-    [pathological.attribute-specs :as as])
+   [pathological.files :as f]
+   [pathological.paths :as p]
+   [pathological.utils :as u]
+   [pathological.file-systems :as fs]
+   [pathological.attribute-specs :as as])
   (:import
-    [java.util UUID]
-    [java.io IOException]
-    [java.net URI]
-    [java.lang.reflect Method]
-    [com.google.common.jimfs Configuration
-     Configuration$Builder
-     Feature
-     Jimfs
-     JimfsFileSystems
-     PathNormalization
-     PathType]
-    [org.mockito Mockito]
-    [org.mockito.stubbing Answer Stubber]
-    [org.mockito.invocation InvocationOnMock]
-    [java.nio.file AccessMode
-     CopyOption
-     DirectoryStream$Filter
-     LinkOption
-     OpenOption
-     Path]
-    [java.nio.file.attribute FileAttribute]
-    [java.util.concurrent ExecutorService]
-    [clojure.lang Reflector]
-    [java.nio.file.spi FileSystemProvider]))
+   [java.util UUID]
+   [java.io IOException]
+   [java.net URI]
+   [java.lang.reflect Method]
+   [com.google.common.jimfs Configuration
+    Configuration$Builder
+    Feature
+    Jimfs
+    JimfsFileSystems
+    PathNormalization
+    PathType]
+   [org.mockito Mockito]
+   [org.mockito.stubbing Answer Stubber]
+   [org.mockito.invocation InvocationOnMock]
+   [java.nio.file AccessMode
+    CopyOption
+    DirectoryStream$Filter
+    LinkOption
+    OpenOption
+    Path]
+   [java.nio.file.attribute FileAttribute]
+   [java.util.concurrent ExecutorService]
+   [clojure.lang Reflector]
+   [java.nio.file.spi FileSystemProvider]))
 
 (def ^:dynamic *features*
   {:links                   Feature/LINKS

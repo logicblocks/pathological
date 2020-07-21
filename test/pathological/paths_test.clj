@@ -1,17 +1,17 @@
 (ns pathological.paths-test
   (:refer-clojure :exclude [name resolve spit slurp])
   (:require
-    [clojure.test :refer :all]
-    [clojure.java.io :as io]
+   [clojure.test :refer :all]
+   [clojure.java.io :as io]
 
-    [pathological.paths :as p]
-    [pathological.files :as f]
-    [pathological.file-systems :as fs]
-    [pathological.testing :as t])
+   [pathological.paths :as p]
+   [pathological.files :as f]
+   [pathological.file-systems :as fs]
+   [pathological.testing :as t])
   (:import
-    [java.nio.file FileSystem
-     FileSystems]
-    [java.net URI]))
+   [java.nio.file FileSystem
+    FileSystems]
+   [java.net URI]))
 
 (defn empty-string-array []
   (make-array String 0))

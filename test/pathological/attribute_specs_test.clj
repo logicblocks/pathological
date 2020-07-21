@@ -1,9 +1,9 @@
 (ns pathological.attribute-specs-test
   (:refer-clojure :exclude [name])
   (:require
-    [clojure.test :refer :all]
+   [clojure.test :refer :all]
 
-    [pathological.attribute-specs :as as]))
+   [pathological.attribute-specs :as as]))
 
 (deftest ->attribute-spec
   (testing "leaves existing attribute spec map untouched"

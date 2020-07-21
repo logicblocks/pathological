@@ -1,13 +1,13 @@
 (ns pathological.attributes-test
   (:require
-    [clojure.test :refer :all]
+   [clojure.test :refer :all]
 
-    [pathological.files :as f]
-    [pathological.paths :as p]
-    [pathological.principals :as pr]
-    [pathological.attributes :as a]
-    [pathological.utils :as u]
-    [pathological.testing :as t])
+   [pathological.files :as f]
+   [pathological.paths :as p]
+   [pathological.principals :as pr]
+   [pathological.attributes :as a]
+   [pathological.utils :as u]
+   [pathological.testing :as t])
   (:import [java.util Arrays]))
 
 (deftest basic-set-last-modified-time

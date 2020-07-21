@@ -1,22 +1,22 @@
 (ns pathological.testing-test
   (:refer-clojure :exclude [class name])
   (:require
-    [clojure.test :refer :all]
+   [clojure.test :refer :all]
 
-    [pathological.testing :as t]
-    [pathological.paths :as p]
-    [pathological.utils :as u]
-    [pathological.principals :as pr]
-    [pathological.file-systems :as fs]
+   [pathological.testing :as t]
+   [pathological.paths :as p]
+   [pathological.utils :as u]
+   [pathological.principals :as pr]
+   [pathological.file-systems :as fs]
 
-    [pathological.support.jimfs :as jimfs]
-    [pathological.support.predicates :as predicates]
-    [pathological.files :as f])
+   [pathological.support.jimfs :as jimfs]
+   [pathological.support.predicates :as predicates]
+   [pathological.files :as f])
   (:import
-    [com.google.common.jimfs Feature
-     PathNormalization
-     PathType]
-    [java.io IOException]))
+   [com.google.common.jimfs Feature
+    PathNormalization
+    PathType]
+   [java.io IOException]))
 
 (declare thrown?)
 
@@ -106,7 +106,7 @@
     (is (= #{PathNormalization/CASE_FOLD_ASCII}
           (jimfs/name-canonical-normalization file-system)))))
 
-(deftest builds-unix-filesystem-with-specified-name-canonical-normalization
+(deftest builds-unix-filesystem-with-specified-name-display-normalization
   (let [file-system (t/new-unix-in-memory-file-system
                       :name-display-normalization #{:case-fold-ascii})]
     (is (= (PathType/unix) (jimfs/path-type file-system)))
@@ -244,7 +244,7 @@
     (is (= #{PathNormalization/CASE_FOLD_ASCII}
           (jimfs/name-canonical-normalization file-system)))))
 
-(deftest builds-osx-filesystem-with-specified-name-canonical-normalization
+(deftest builds-osx-filesystem-with-specified-name-display-normalization
   (let [file-system (t/new-osx-in-memory-file-system
                       :name-display-normalization #{:case-fold-ascii})]
     (is (= (PathType/unix) (jimfs/path-type file-system)))
@@ -390,7 +390,7 @@
     (is (= #{PathNormalization/CASE_FOLD_ASCII}
           (jimfs/name-canonical-normalization file-system)))))
 
-(deftest builds-windows-filesystem-with-specified-name-canonical-normalization
+(deftest builds-windows-filesystem-with-specified-name-display-normalization
   (let [file-system (t/new-windows-in-memory-file-system
                       :name-display-normalization #{:case-fold-ascii})]
     (is (= (PathType/windows) (jimfs/path-type file-system)))

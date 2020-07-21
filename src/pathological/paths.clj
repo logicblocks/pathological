@@ -1,15 +1,15 @@
 (ns pathological.paths
   (:refer-clojure :exclude [name resolve])
   (:require
-    [clojure.java.io :as io]
+   [clojure.java.io :as io]
 
-    [pathological.utils :as u]
-    [pathological.file-systems :as fs]
-    [pathological.path-matchers :as pm]
-    [pathological.file-stores :as fst])
+   [pathological.utils :as u]
+   [pathological.file-systems :as fs]
+   [pathological.path-matchers :as pm]
+   [pathological.file-stores :as fst])
   (:import
-    [java.nio.file FileSystem Path Files Paths]
-    [java.net URI]))
+   [java.nio.file FileSystem Path Files Paths]
+   [java.net URI]))
 
 (defprotocol Pathable
   "A protocol for converting things to [Path](https://docs.oracle.com/javase/7/docs/api/java/nio/file/Path.html)s.

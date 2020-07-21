@@ -1,39 +1,39 @@
 (ns pathological.files-test
   (:refer-clojure :exclude [find list])
   (:require
-    [clojure.test :refer :all]
-    [clojure.java.io :as io]
-    [clojure.string :as string]
+   [clojure.test :refer :all]
+   [clojure.java.io :as io]
+   [clojure.string :as string]
 
-    [pathological.files :as f]
-    [pathological.paths :as p]
-    [pathological.principals :as pr]
-    [pathological.attribute-specs :as as]
-    [pathological.attributes :as a]
-    [pathological.utils :as u]
-    [pathological.testing :as t])
+   [pathological.files :as f]
+   [pathological.paths :as p]
+   [pathological.principals :as pr]
+   [pathological.attribute-specs :as as]
+   [pathological.attributes :as a]
+   [pathological.utils :as u]
+   [pathological.testing :as t])
   (:import
-    [java.util Arrays]
-    [java.time Instant]
-    [java.time.temporal ChronoUnit]
-    [java.io ByteArrayOutputStream BufferedReader BufferedWriter IOException]
+   [java.util Arrays]
+   [java.time Instant]
+   [java.time.temporal ChronoUnit]
+   [java.io ByteArrayOutputStream BufferedReader BufferedWriter IOException]
 
-    [java.nio.charset StandardCharsets Charset]
-    [java.nio.file FileAlreadyExistsException
-     Files
-     LinkOption
-     NoSuchFileException
-     Path]
-    [java.nio.file.attribute AclFileAttributeView
-     BasicFileAttributes
-     BasicFileAttributeView
-     DosFileAttributeView
-     DosFileAttributes
-     FileOwnerAttributeView
-     PosixFileAttributes
-     PosixFileAttributeView
-     PosixFilePermissions
-     UserDefinedFileAttributeView]))
+   [java.nio.charset StandardCharsets Charset]
+   [java.nio.file FileAlreadyExistsException
+    Files
+    LinkOption
+    NoSuchFileException
+    Path]
+   [java.nio.file.attribute AclFileAttributeView
+    BasicFileAttributes
+    BasicFileAttributeView
+    DosFileAttributeView
+    DosFileAttributes
+    FileOwnerAttributeView
+    PosixFileAttributes
+    PosixFileAttributeView
+    PosixFilePermissions
+    UserDefinedFileAttributeView]))
 
 (declare thrown?)
 
@@ -365,8 +365,11 @@
     (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/path/to/file")
-          content ["Line 1" "Line 2" "Line 3"]]
-      (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
+          content ["Line 1" "Line 2" "Line 3"]
+
+          _ (Files/createDirectories
+              (.getParent path)
+              (u/->file-attributes-array []))]
 
       (f/write-lines path content)
 
@@ -376,8 +379,11 @@
     (let [test-file-system (t/new-unix-in-memory-file-system)
 
           path (p/path test-file-system "/path/to/file")
-          content ["Line 1" "Line 2" "Line 3"]]
-      (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
+          content ["Line 1" "Line 2" "Line 3"]
+
+          _ (Files/createDirectories
+              (.getParent path)
+              (u/->file-attributes-array []))]
 
       (f/write-lines path content :utf-16)
 
@@ -392,9 +398,12 @@
           additional-content ["additional 1" "additional 2" "additional 3"]
 
           ^"[Ljava.nio.file.OpenOption;"
-          default-options (u/->open-options-array [])]
-      (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
-      (Files/write path initial-content default-options)
+          default-options (u/->open-options-array [])
+
+          _ (Files/createDirectories
+              (.getParent path)
+              (u/->file-attributes-array []))
+          _ (Files/write path initial-content default-options)]
 
       (f/write-lines path additional-content :utf-8 :write :append)
 
@@ -420,9 +429,12 @@
           content ["Line 1" "Line 2" "Line 3"]
 
           ^"[Ljava.nio.file.OpenOption;"
-          default-options (u/->open-options-array [])]
-      (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
-      (Files/write path content default-options)
+          default-options (u/->open-options-array [])
+
+          _ (Files/createDirectories
+              (.getParent path)
+              (u/->file-attributes-array []))
+          _ (Files/write path content default-options)]
 
       (is (= content (f/read-all-lines path)))))
 
@@ -433,9 +445,12 @@
           content ["Line 1" "Line 2" "Line 3"]
 
           ^"[Ljava.nio.file.OpenOption;"
-          default-options (u/->open-options-array [])]
-      (Files/createDirectories (.getParent path) (u/->file-attributes-array []))
-      (Files/write path content StandardCharsets/UTF_16 default-options)
+          default-options (u/->open-options-array [])
+
+          _ (Files/createDirectories
+              (.getParent path)
+              (u/->file-attributes-array []))
+          _ (Files/write path content StandardCharsets/UTF_16 default-options)]
 
       (is (= content (f/read-all-lines path :utf-16))))))
 
@@ -829,9 +844,10 @@
       (f/create-file target)
       (f/create-symbolic-link link target)
 
-      (Files/setOwner target (pr/->user-principal test-file-system "other"))
+      (let [_ (Files/setOwner
+                target (pr/->user-principal test-file-system "other"))]
 
-      (is (= "other" (:name (f/read-owner link))))))
+        (is (= "other" (:name (f/read-owner link)))))))
 
   (testing "does not follow symbolic links when requested"
     (let [test-file-system (t/new-unix-in-memory-file-system)
@@ -841,9 +857,10 @@
       (f/create-file target)
       (f/create-symbolic-link link target)
 
-      (Files/setOwner target (pr/->user-principal test-file-system "other"))
+      (let [_ (Files/setOwner
+                target (pr/->user-principal test-file-system "other"))]
 
-      (is (= "user" (:name (f/read-owner link :no-follow-links)))))))
+        (is (= "user" (:name (f/read-owner link :no-follow-links))))))))
 
 (deftest set-owner
   (testing "sets the owner of the path"
@@ -2093,6 +2110,8 @@
               (as/->attribute-spec-string attribute-spec)
               (u/->link-options-array [])))))))
 
+; Not currently implemented on OS X
+; https://bugs.openjdk.java.net/browse/JDK-7133484
 (deftest probe-content-type
   (testing "returns the content type of the path"
     (let [test-file-system (t/new-unix-in-memory-file-system)
@@ -2948,7 +2967,7 @@
              [:file-2 {:content ["Item 2"]}]
              [:file-3 {:content ["Item 3"]}]]
             :error-on
-            [['java.nio.file.spi.FileSystemProvider#readAttributes
+            [['java.nio.file.spi.FileSystemProvider#newInputStream
               ["/file-2"]]])
 
           root-path (p/path test-file-system "/")]

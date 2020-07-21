@@ -3,7 +3,6 @@ TODO
 
 * Add missing tests
 * Allow `paths/matches?` to take a regex 
-* Add `eastwood`
 * Add `rebase` to path
 * Add `set-attributes`
 * Add `new-byte-channel` and associated machinery

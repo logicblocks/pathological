@@ -1,8 +1,8 @@
 (ns pathological.path-matchers
   (:require
-    [pathological.file-systems :as fs])
+   [pathological.file-systems :as fs])
   (:import
-    [java.nio.file FileSystem PathMatcher]))
+   [java.nio.file FileSystem PathMatcher]))
 
 (defn path-matcher
   "Constructs a [PathMatcher](https://docs.oracle.com/javase/7/docs/api/java/nio/file/PathMatcher.html)
@@ -19,7 +19,7 @@
   for more details of acceptable patterns."
   ([pattern] (path-matcher fs/*file-system* pattern))
   ([^FileSystem file-system pattern]
-    (.getPathMatcher file-system pattern)))
+   (.getPathMatcher file-system pattern)))
 
 (defn matches?
   "Returns true if the path satisfies the path matcher, false otherwise.

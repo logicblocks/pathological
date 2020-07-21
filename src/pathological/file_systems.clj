@@ -1,6 +1,6 @@
 (ns pathological.file-systems
   (:import
-    [java.nio.file FileSystem FileSystems]))
+   [java.nio.file FileSystem FileSystems]))
 
 (defn ^FileSystem default-file-system
   "Returns the default file system for the JVM.
