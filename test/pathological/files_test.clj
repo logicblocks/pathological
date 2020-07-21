@@ -2965,7 +2965,7 @@
              [:file-2 {:content ["Item 2"]}]
              [:file-3 {:content ["Item 3"]}]]
             :error-on
-            [['java.nio.file.spi.FileSystemProvider#newInputStream
+            [['java.nio.file.spi.FileSystemProvider#readAttributes
               ["/file-2"]]])
 
           root-path (p/path test-file-system "/")]

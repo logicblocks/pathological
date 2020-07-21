@@ -31,9 +31,9 @@
                    [nrepl "0.7.0"]
 
                    [org.apache.tika/tika-core "1.24.1"]
+                   [org.apache.tika/tika-java7 "1.24.1"]
                    [org.apache.tika/tika-parsers "1.24.1"
                     :exclusions [com.google.guava/guava]]
-                   [org.apache.tika/tika-java7 "1.24.1"]
 
                    [ch.qos.logback/logback-classic "1.2.3"]
 
