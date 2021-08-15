@@ -25,7 +25,7 @@ FIXME
 
 ## License
 
-Copyright &copy; 2019 LogicBlocks Maintainers
+Copyright &copy; 2021 LogicBlocks Maintainers
 
 Distributed under the terms of the 
 [MIT License](http://opensource.org/licenses/MIT).
