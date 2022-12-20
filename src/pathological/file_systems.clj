@@ -17,7 +17,7 @@
   [[pathological.principals/->user-principal]] and
   [[pathological.principals/->group-principal]]
 
-  By default, the [[default-file-system]] is used. However this var is dynamic
+  By default, the [[default-file-system]] is used. However, this var is dynamic
   and can be altered / rebound to any file system instance."
   (default-file-system))
 
