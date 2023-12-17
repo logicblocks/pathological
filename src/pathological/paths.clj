@@ -183,7 +183,7 @@
   (.getName path index))
 
 (defn names
-  "Returns a seq over all of the name elements in the `path`, iterating
+  "Returns a seq over all the name elements in the `path`, iterating
   forwards through the path from the root component.
 
   See [the Java documentation](...)

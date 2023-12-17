@@ -132,7 +132,7 @@
 
     - `:name`: the name of the file store,
     - `:type`: the type of the file store,
-    - `:read-only?`: whether or not the file store is read only, as a boolean,
+    - `:read-only?`: whether the file store is read only, as a boolean,
     - `:total-space`: the total space in the file store, in bytes,
     - `:usable-space`: the usable space for this JVM in the file store, in
       bytes,

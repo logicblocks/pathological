@@ -414,9 +414,9 @@
     - `:last-modified-time`: the last modified time of the file, as a string,
     - `:last-access-time`: the last access time of the file, as a string,
     - `:creation-time`: the creation time of the file, as a string,
-    - `:regular-file?`: whether or not the file is a regular file, as a boolean,
-    - `:directory?`: whether or not the file is a directory, as a boolean,
-    - `:symbolic-link?`: whether or not the file is a symbolic link, as a
+    - `:regular-file?`: whether the file is a regular file, as a boolean,
+    - `:directory?`: whether the file is a directory, as a boolean,
+    - `:symbolic-link?`: whether the file is a symbolic link, as a
       boolean,
     - `:other?`: whether the file is something other than a regular file,
       directory or symbolic link, as a boolean,
@@ -468,9 +468,9 @@
     - `:last-modified-time`: the last modified time of the file, as a string,
     - `:last-access-time`: the last access time of the file, as a string,
     - `:creation-time`: the creation time of the file, as a string,
-    - `:regular-file?`: whether or not the file is a regular file, as a boolean,
-    - `:directory?`: whether or not the file is a directory, as a boolean,
-    - `:symbolic-link?`: whether or not the file is a symbolic link, as a
+    - `:regular-file?`: whether the file is a regular file, as a boolean,
+    - `:directory?`: whether the file is a directory, as a boolean,
+    - `:symbolic-link?`: whether the file is a symbolic link, as a
       boolean,
     - `:other?`: whether the file is something other than a regular file,
       directory or symbolic link, as a boolean,
