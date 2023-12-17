@@ -7,30 +7,30 @@
    [pathological.file-systems :as fs]
    [pathological.attribute-specs :as as])
   (:import
-   [java.util UUID]
+   [java.util Set UUID]
    [java.io IOException]
    [java.net URI]
    [java.lang.reflect Method]
-   [com.google.common.jimfs Configuration
+   [com.google.common.jimfs
+    Configuration
     Configuration$Builder
     Feature
     Jimfs
-    JimfsFileSystems
+    JimfsFileSystem JimfsFileSystemProvider JimfsFileSystems
     PathNormalization
     PathType]
-   [org.mockito Mockito]
+   [org.mockito MockSettings Mockito]
    [org.mockito.stubbing Answer Stubber]
    [org.mockito.invocation InvocationOnMock]
    [java.nio.file AccessMode
     CopyOption
     DirectoryStream$Filter
-    LinkOption
+    FileSystem LinkOption
     OpenOption
     Path]
    [java.nio.file.attribute FileAttribute]
    [java.util.concurrent ExecutorService]
-   [clojure.lang Reflector]
-   [java.nio.file.spi FileSystemProvider]))
+   [clojure.lang Reflector]))
 
 (def ^:dynamic *features*
   {:links                   Feature/LINKS
@@ -387,8 +387,8 @@
       erroring-argument-specs
       invocation-arguments)))
 
-(defn- throw-on-match [file-system erroring-argument-specs argument-types]
-  ^Stubber
+(defn- ^Stubber throw-on-match
+  [file-system erroring-argument-specs argument-types]
   (Mockito/doAnswer
     (reify Answer
       (answer [_ ^InvocationOnMock invocation]
@@ -412,11 +412,16 @@
                        " as requested.")))
             (.callRealMethod invocation)))))))
 
+(defn- array-class [^Class class]
+  (Class/forName (str "[L" (.getName class) ";")))
+
 (defn- matchers-for [argument-types]
   (mapv
-    #(if (coll? %)
-       (Mockito/any)
-       (Mockito/any %))
+    (fn [argument-type]
+      (cond
+        (set? argument-type) (Mockito/any Set)
+        (coll? argument-type) (Mockito/any (array-class (first argument-type)))
+        :else (Mockito/any argument-type)))
     argument-types))
 
 (defn- on-call
@@ -436,15 +441,22 @@
 
 (defn- configure-error-on
   [file-system [method argument-specs]]
-  (let [provider-methods-for-method (lookup-provider-methods-for method)]
+  (let [argument-specs (vec argument-specs)
+        provider-methods-for-method (lookup-provider-methods-for method)]
     (doseq
      [{:keys [method-name arguments-signatures]} provider-methods-for-method
       argument-signature arguments-signatures]
       (on-call (fs/provider file-system) method-name argument-signature
-        (throw-on-match file-system argument-specs argument-signature)))))
+        (throw-on-match file-system
+          argument-specs
+          argument-signature)))))
 
-(defn- new-errorable-file-system-provider [file-system]
-  ^FileSystemProvider (Mockito/spy (fs/provider file-system)))
+(defn- ^JimfsFileSystemProvider new-errorable-file-system-provider [file-system]
+  (Mockito/mock
+    ^Class JimfsFileSystemProvider
+    ^MockSettings (-> (Mockito/withSettings)
+                    (.spiedInstance (fs/provider file-system))
+                    (.defaultAnswer Mockito/CALLS_REAL_METHODS))))
 
 (defn- consolidate-error-definitions [error-definitions]
   (letfn [(aggregate-argument-specs [error-definition]
@@ -457,13 +469,13 @@
             method (aggregate-argument-specs error-definitions)))
         {}))))
 
-(defn- configure-errors-on [file-system error-definitions]
+(defn- ^FileSystem configure-errors-on [file-system error-definitions]
   (let [error-definitions (consolidate-error-definitions error-definitions)]
     (run! #(configure-error-on file-system %)
       error-definitions)
     file-system))
 
-(defn- new-jimfs-file-system [provider uri configuration]
+(defn- ^JimfsFileSystem new-jimfs-file-system [provider uri configuration]
   (let [method
         (first
           (filter
@@ -474,7 +486,7 @@
     (.invoke ^Method method nil
       (into-array Object [provider uri configuration]))))
 
-(defn new-in-memory-file-system [options]
+(defn ^FileSystem new-in-memory-file-system [options]
   (let [{:keys [name working-directory contents error-on]
          :or   {name     (random-file-system-name)
                 contents []
@@ -523,11 +535,11 @@
                                          :symbolic-links
                                          :file-channel}})
 
-(defn new-unix-in-memory-file-system [& {:as overrides}]
+(defn ^FileSystem new-unix-in-memory-file-system [& {:as overrides}]
   (new-in-memory-file-system (merge unix-defaults overrides)))
 
-(defn new-osx-in-memory-file-system [& {:as overrides}]
+(defn ^FileSystem new-osx-in-memory-file-system [& {:as overrides}]
   (new-in-memory-file-system (merge osx-defaults overrides)))
 
-(defn new-windows-in-memory-file-system [& {:as overrides}]
+(defn ^FileSystem new-windows-in-memory-file-system [& {:as overrides}]
   (new-in-memory-file-system (merge windows-defaults overrides)))

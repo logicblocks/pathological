@@ -5,40 +5,37 @@
   (:import
    [java.lang.reflect Method Field]))
 
-(defn class [object]
-  ^Class
+(defn ^Class class [^Object object]
   (.getClass object))
 
-(defn declared-methods [klass]
-  ^"[Ljava.lang.reflect.Method;"
+(defn ^"[Ljava.lang.reflect.Method;" declared-methods [^Class klass]
   (.getDeclaredMethods klass))
 
-(defn declared-fields [klass]
-  ^"[Ljava.lang.reflect.Field;"
+(defn ^"[Ljava.lang.reflect.Field;" declared-fields [^Class klass]
   (.getDeclaredFields klass))
 
-(defn methods-by-name [^"[Ljava.lang.reflect.Method;" methods method-name]
+(defn ^"[Ljava.lang.reflect.Method;" methods-by-name
+  [^"[Ljava.lang.reflect.Method;" methods method-name]
   (let [normalised-method-name (u/kebab->camel method-name)]
-    ^"[Ljava.lang.reflect.Method;"
     (filter
       #(= (.getName ^Method %) normalised-method-name)
       methods)))
 
-(defn fields-by-name [^"[Ljava.lang.reflect.Field;" fields field-name]
+(defn ^"[Ljava.lang.reflect.Field;" fields-by-name
+  [^"[Ljava.lang.reflect.Field;" fields field-name]
   (let [normalised-field-name (u/kebab->camel field-name)]
-    ^"[Ljava.lang.reflect.Field;"
     (filter
       #(= (.getName ^Field %) normalised-field-name)
       fields)))
 
-(defn first-method [^"[Ljava.lang.reflect.Method;" methods]
-  ^Method (first methods))
+(defn ^Method first-method [^"[Ljava.lang.reflect.Method;" methods]
+  (first methods))
 
-(defn first-field [^"[Ljava.lang.reflect.Field;" fields]
-  ^Field (first fields))
+(defn ^Field first-field [^"[Ljava.lang.reflect.Field;" fields]
+  (first fields))
 
-(defn array-of-objects [args]
-  ^"[Ljava.lang.Object;" (into-array Object args))
+(defn ^"[Ljava.lang.Object;" array-of-objects [args]
+  (into-array Object args))
 
 (defn invoke [object method-name & args]
   (let [klass (class object)

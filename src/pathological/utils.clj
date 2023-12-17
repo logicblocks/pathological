@@ -280,7 +280,8 @@
 (defn <-posix-file-permissions [permissions]
   (set (map <-posix-file-permission permissions)))
 
-(defn ->posix-file-permissions-attribute [string-or-set]
+(defn ^java.nio.file.attribute.FileAttribute ->posix-file-permissions-attribute
+  [string-or-set]
   (PosixFilePermissions/asFileAttribute
     (->posix-file-permissions string-or-set)))
 

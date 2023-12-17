@@ -11,14 +11,14 @@
    [pathological.utils :as u]
    [clojure.java.io :as io])
   (:import
-   [java.nio.file DirectoryStream$Filter
+   [java.nio.file DirectoryStream DirectoryStream$Filter
     Files
     FileVisitor
     Path FileAlreadyExistsException]
    [java.nio.charset Charset
     StandardCharsets]
    [java.util.function BiPredicate]
-   [java.io InputStream OutputStream IOException]))
+   [java.io BufferedReader BufferedWriter InputStream OutputStream IOException]))
 
 (defn create-directories
   [^Path path & options]
@@ -343,7 +343,7 @@
   (accept [_ path]
     (filter-fn path)))
 
-(defn new-directory-stream
+(defn ^DirectoryStream new-directory-stream
   ([^Path path]
    (Files/newDirectoryStream path))
   ([^Path path glob-or-filter]
@@ -353,24 +353,24 @@
        ^DirectoryStream$Filter
        (->FnBackedDirectoryStreamFilter glob-or-filter)))))
 
-(defn new-input-stream
+(defn ^InputStream new-input-stream
   [^Path path & options]
   (let [^"[Ljava.nio.file.OpenOption;"
         open-options (u/->open-options-array options)]
     (Files/newInputStream path open-options)))
 
-(defn new-output-stream
+(defn ^OutputStream new-output-stream
   [^Path path & options]
   (let [^"[Ljava.nio.file.OpenOption;"
         open-options (u/->open-options-array options)]
     (Files/newOutputStream path open-options)))
 
-(defn new-buffered-reader
+(defn ^BufferedReader new-buffered-reader
   ([^Path path] (new-buffered-reader path :utf-8))
   ([^Path path charset]
    (Files/newBufferedReader path (u/->charset charset))))
 
-(defn new-buffered-writer
+(defn ^BufferedWriter new-buffered-writer
   ([^Path path & args]
    (let [[first & rest] args
          charset (u/->charset (if (u/charset? first) first :utf-8))

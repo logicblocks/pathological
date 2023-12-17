@@ -72,7 +72,7 @@
       (io/make-output-stream
         (Files/newOutputStream path (opts->open-options-array opts)) opts))))
 
-(defn path
+(defn ^Path path
   "Creates a [Path](https://docs.oracle.com/javase/7/docs/api/java/nio/file/Path.html)
   instance.
 
@@ -96,7 +96,7 @@
   [& [pathable & names]]
   (->path pathable names))
 
-(defn subpath
+(defn ^Path subpath
   "Returns the subpath within `path` between the `from` index inclusive and the
   `to` index exclusive.
 
@@ -105,7 +105,7 @@
   [^Path path from to]
   (.subpath path from to))
 
-(defn file-system
+(defn ^FileSystem file-system
   "Returns the [FileSystem](https://docs.oracle.com/javase/7/docs/api/java/nio/file/FileSystem.html)
   associated with the `path`.
 

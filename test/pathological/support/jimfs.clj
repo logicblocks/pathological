@@ -5,7 +5,8 @@
 
    [pathological.support.reflect :as reflect])
   (:import
-   [com.google.common.jimfs JimfsFileSystem]))
+   [com.google.common.jimfs JimfsFileSystem]
+   [java.nio.file.attribute FileAttribute]))
 
 (defn name [^JimfsFileSystem file-system]
   (-> file-system
@@ -61,7 +62,7 @@
                          (reflect/get-field :attributes)
                          (reflect/get-field :default-values))]
     (mapv
-      (fn [value]
+      (fn [^FileAttribute value]
         (u/->file-attribute
           (.name value)
           (u/<-attribute-value (.name value) (.value value))))

@@ -95,15 +95,13 @@
           path (p/path test-file-system "/some-directory")
           user (pr/->user-principal test-file-system "some-user")]
       (f/create-directory path
-        {"posix:permissions"         "rwxrw-rw-"
-         {:view :owner :name :owner} user})
+        {"posix:permissions" "rwxrw-rw-"})
 
       (is (true? (f/exists? path)))
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-write
                :others-read :others-write}
-            (f/read-attribute path "posix:permissions")))
-      (is (= user (f/read-attribute path "owner:owner"))))))
+            (f/read-attribute path "posix:permissions"))))))
 
 (deftest create-file
   (testing "creates a file"
@@ -133,18 +131,15 @@
   (testing "allows file attributes to be provided as a map when creating file"
     (let [test-file-system (t/new-unix-in-memory-file-system)
 
-          path (p/path test-file-system "/some-file")
-          user (pr/->user-principal test-file-system "some-user")]
+          path (p/path test-file-system "/some-file")]
       (f/create-file path
-        {"posix:permissions"         "rwxrw-rw-"
-         {:view :owner :name :owner} user})
+        {"posix:permissions" "rwxrw-rw-"})
 
       (is (true? (f/exists? path)))
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-write
                :others-read :others-write}
-            (f/read-attribute path "posix:permissions")))
-      (is (= user (f/read-attribute path "owner:owner"))))))
+            (f/read-attribute path "posix:permissions"))))))
 
 (deftest create-symbolic-link
   (testing "creates a symbolic link"
@@ -192,16 +187,14 @@
           user (pr/->user-principal test-file-system "some-user")]
       (f/create-file target-path)
       (f/create-symbolic-link link-path target-path
-        {"posix:permissions"         "rwxrw-rw-"
-         {:view :owner :name :owner} user})
+        {"posix:permissions" "rwxrw-rw-"})
 
       (is (true? (f/exists? link-path :no-follow-links)))
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-write
                :others-read :others-write}
-            (f/read-attribute link-path "posix:permissions" :no-follow-links)))
-      (is (= user
-            (f/read-attribute link-path "owner:owner" :no-follow-links))))))
+            (f/read-attribute link-path "posix:permissions"
+              :no-follow-links))))))
 
 (deftest create-link
   (testing "creates a link"
@@ -403,7 +396,7 @@
           _ (Files/createDirectories
               (.getParent path)
               (u/->file-attributes-array []))
-          _ (Files/write path initial-content default-options)]
+          _ (Files/write path ^Iterable initial-content default-options)]
 
       (f/write-lines path additional-content :utf-8 :write :append)
 
@@ -434,7 +427,7 @@
           _ (Files/createDirectories
               (.getParent path)
               (u/->file-attributes-array []))
-          _ (Files/write path content default-options)]
+          _ (Files/write path ^Iterable content default-options)]
 
       (is (= content (f/read-all-lines path)))))
 
@@ -3582,27 +3575,20 @@
 
           root-path (p/path test-file-system "/")
 
-          user-1 (pr/->user-principal test-file-system "first-user")
-          user-2 (pr/->user-principal test-file-system "second-user")
-
           path-1 (p/path test-file-system "/file-1")
           path-2 (p/path test-file-system "/file-2")]
       (f/populate-file-tree root-path
         [[:file-1 {:file-attributes
-                   {"posix:permissions" "rwxrw-rw-"
-                    "owner:owner"       user-1}}]
+                   {"posix:permissions" "rwxrw-rw-"}}]
          [:file-2 {:file-attributes
-                   {"posix:permissions" "r--r--r--"
-                    "owner:owner"       user-2}}]])
+                   {"posix:permissions" "r--r--r--"}}]])
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-write
                :others-read :others-write}
             (f/read-posix-file-permissions path-1)))
-      (is (= user-1 (f/read-attribute path-1 "owner:owner")))
       (is (= #{:owner-read :group-read :others-read}
-            (f/read-posix-file-permissions path-2)))
-      (is (= user-2 (f/read-attribute path-2 "owner:owner")))))
+            (f/read-posix-file-permissions path-2)))))
 
   (testing "creates top level symbolic links"
     (let [test-file-system (t/new-unix-in-memory-file-system)
@@ -3637,9 +3623,6 @@
 
           root-path (p/path test-file-system "/")
 
-          user-1 (pr/->user-principal test-file-system "first-user")
-          user-2 (pr/->user-principal test-file-system "second-user")
-
           file-1-path (p/path test-file-system "/file-1")
           file-2-path (p/path test-file-system "/file-2")
           symlink-1-path (p/path test-file-system "/symlink-1")
@@ -3650,35 +3633,25 @@
          [:symlink-1 {:type   :symbolic-link
                       :target "/file-1"
                       :file-attributes
-                      {"posix:permissions" "rwxrw-rw-"
-                       "owner:owner"       user-1}}]
+                      {"posix:permissions" "rwxrw-rw-"}}]
          [:symlink-2 {:type   :symbolic-link
                       :target "/file-2"
                       :file-attributes
-                      {"posix:permissions" "r--r--r--"
-                       "owner:owner"       user-2}}]])
+                      {"posix:permissions" "r--r--r--"}}]])
 
       (is (not= #{:owner-read :owner-write :owner-execute
                   :group-read :group-write
                   :others-read :others-write}
             (f/read-posix-file-permissions file-1-path :no-follow-links)))
-      (is (not= user-1
-            (f/read-attribute file-1-path "owner:owner" :no-follow-links)))
       (is (not= #{:owner-read :group-read :others-read}
             (f/read-posix-file-permissions file-2-path :no-follow-links)))
-      (is (not= user-2
-            (f/read-attribute file-2-path "owner:owner" :no-follow-links)))
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-write
                :others-read :others-write}
             (f/read-posix-file-permissions symlink-1-path :no-follow-links)))
-      (is (= user-1
-            (f/read-attribute symlink-1-path "owner:owner" :no-follow-links)))
       (is (= #{:owner-read :group-read :others-read}
-            (f/read-posix-file-permissions symlink-2-path :no-follow-links)))
-      (is (= user-2
-            (f/read-attribute symlink-2-path "owner:owner" :no-follow-links)))))
+            (f/read-posix-file-permissions symlink-2-path :no-follow-links)))))
 
   (testing "creates top level links"
     (let [test-file-system (t/new-unix-in-memory-file-system)
@@ -3717,42 +3690,29 @@
 
           root-path (p/path test-file-system "/")
 
-          user-1 (pr/->user-principal test-file-system "first-user")
-          user-2 (pr/->user-principal test-file-system "second-user")
-
           directory-1-path (p/path test-file-system "/directory-1")
           directory-2-path (p/path test-file-system "/directory-2")]
       (f/populate-file-tree root-path
         [[:directory-1 {:type :directory
                         :file-attributes
-                        {"posix:permissions" "rwxr-xr-x"
-                         "owner:owner"       user-1}}]
+                        {"posix:permissions" "rwxr-xr-x"}}]
          [:directory-2 {:type :directory
                         :file-attributes
-                        {"posix:permissions" "r-xr-xr-x"
-                         "owner:owner"       user-2}}]])
+                        {"posix:permissions" "r-xr-xr-x"}}]])
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-execute
                :others-read :others-execute}
             (f/read-posix-file-permissions directory-1-path :no-follow-links)))
-      (is (= user-1
-            (f/read-attribute directory-1-path "owner:owner" :no-follow-links)))
       (is (= #{:owner-read :owner-execute
                :group-read :group-execute
                :others-read :others-execute}
-            (f/read-posix-file-permissions directory-2-path :no-follow-links)))
-      (is (= user-2
-            (f/read-attribute
-              directory-2-path "owner:owner" :no-follow-links)))))
+            (f/read-posix-file-permissions directory-2-path :no-follow-links)))))
 
   (testing "allows nested files for top level directories with file attributes"
     (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
-
-          user-1 (pr/->user-principal test-file-system "first-user")
-          user-2 (pr/->user-principal test-file-system "second-user")
 
           directory-1-path (p/path test-file-system "/directory-1")
           directory-2-path (p/path test-file-system "/directory-2")
@@ -3761,13 +3721,11 @@
           file-3-path (p/path test-file-system "/directory-2/file-3")]
       (f/populate-file-tree root-path
         [[:directory-1 {:file-attributes
-                        {"posix:permissions" "rwxr-xr-x"
-                         "owner:owner"       user-1}}
+                        {"posix:permissions" "rwxr-xr-x"}}
           [:file-1 {:content ["Line 1" "Line 2"]}]
           [:file-2 {:content ["Line 3" "Line 4"]}]]
          [:directory-2 {:file-attributes
-                        {"posix:permissions" "r-xr-xr-x"
-                         "owner:owner"       user-2}}
+                        {"posix:permissions" "r-xr-xr-x"}}
           [:file-3 {:content ["Line 5" "Line 6"]}]]])
 
       (is (true? (f/exists? file-1-path)))
@@ -3778,32 +3736,21 @@
                   :group-read :group-write
                   :others-read :others-write}
             (f/read-posix-file-permissions file-1-path :no-follow-links)))
-      (is (not= user-1
-            (f/read-attribute file-1-path "owner:owner" :no-follow-links)))
       (is (not= #{:owner-read :owner-write :owner-execute
                   :group-read :group-write
                   :others-read :others-write}
             (f/read-posix-file-permissions file-2-path :no-follow-links)))
-      (is (not= user-1
-            (f/read-attribute file-2-path "owner:owner" :no-follow-links)))
       (is (not= #{:owner-read :group-read :others-read}
             (f/read-posix-file-permissions file-3-path :no-follow-links)))
-      (is (not= user-2
-            (f/read-attribute file-3-path "owner:owner" :no-follow-links)))
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-execute
                :others-read :others-execute}
             (f/read-posix-file-permissions directory-1-path :no-follow-links)))
-      (is (= user-1
-            (f/read-attribute directory-1-path "owner:owner" :no-follow-links)))
       (is (= #{:owner-read :owner-execute
                :group-read :group-execute
                :others-read :others-execute}
-            (f/read-posix-file-permissions directory-2-path :no-follow-links)))
-      (is (= user-2
-            (f/read-attribute directory-2-path
-              "owner:owner" :no-follow-links)))))
+            (f/read-posix-file-permissions directory-2-path :no-follow-links)))))
 
   (testing "creates nested files"
     (let [test-file-system (t/new-unix-in-memory-file-system)
@@ -3828,9 +3775,6 @@
 
           root-path (p/path test-file-system "/")
 
-          user-1 (pr/->user-principal test-file-system "first-user")
-          user-2 (pr/->user-principal test-file-system "second-user")
-
           path-1 (p/path test-file-system "/some/path/to/file-1")
           path-2 (p/path test-file-system "/some/path/to/file-2")]
       (f/populate-file-tree root-path
@@ -3838,20 +3782,16 @@
           [:path
            [:to
             [:file-1 {:file-attributes
-                      {"posix:permissions" "rwxrw-rw-"
-                       "owner:owner"       user-1}}]
+                      {"posix:permissions" "rwxrw-rw-"}}]
             [:file-2 {:file-attributes
-                      {"posix:permissions" "r--r--r--"
-                       "owner:owner"       user-2}}]]]]])
+                      {"posix:permissions" "r--r--r--"}}]]]]])
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-write
                :others-read :others-write}
             (f/read-posix-file-permissions path-1)))
-      (is (= user-1 (f/read-attribute path-1 "owner:owner")))
       (is (= #{:owner-read :group-read :others-read}
-            (f/read-posix-file-permissions path-2)))
-      (is (= user-2 (f/read-attribute path-2 "owner:owner")))))
+            (f/read-posix-file-permissions path-2)))))
 
   (testing "creates nested symbolic links"
     (let [test-file-system (t/new-unix-in-memory-file-system)
@@ -3924,43 +3864,30 @@
 
           root-path (p/path test-file-system "/")
 
-          user-1 (pr/->user-principal test-file-system "first-user")
-          user-2 (pr/->user-principal test-file-system "second-user")
-
           directory-1-path (p/path test-file-system "/some/directory-1")
           directory-2-path (p/path test-file-system "/some/directory-2")]
       (f/populate-file-tree root-path
         [[:some
           [:directory-1 {:type :directory
                          :file-attributes
-                         {"posix:permissions" "rwxr-xr-x"
-                          "owner:owner"       user-1}}]
+                         {"posix:permissions" "rwxr-xr-x"}}]
           [:directory-2 {:type :directory
                          :file-attributes
-                         {"posix:permissions" "r-xr-xr-x"
-                          "owner:owner"       user-2}}]]])
+                         {"posix:permissions" "r-xr-xr-x"}}]]])
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-execute
                :others-read :others-execute}
             (f/read-posix-file-permissions directory-1-path :no-follow-links)))
-      (is (= user-1
-            (f/read-attribute directory-1-path "owner:owner" :no-follow-links)))
       (is (= #{:owner-read :owner-execute
                :group-read :group-execute
                :others-read :others-execute}
-            (f/read-posix-file-permissions directory-2-path :no-follow-links)))
-      (is (= user-2
-            (f/read-attribute
-              directory-2-path "owner:owner" :no-follow-links)))))
+            (f/read-posix-file-permissions directory-2-path :no-follow-links)))))
 
   (testing "allows nested files under nested directories with file attributes"
     (let [test-file-system (t/new-unix-in-memory-file-system)
 
           root-path (p/path test-file-system "/")
-
-          user-1 (pr/->user-principal test-file-system "first-user")
-          user-2 (pr/->user-principal test-file-system "second-user")
 
           directory-1-path (p/path test-file-system "/some/directory-1")
           directory-2-path (p/path test-file-system "/some/directory-2")
@@ -3970,13 +3897,11 @@
       (f/populate-file-tree root-path
         [[:some
           [:directory-1 {:file-attributes
-                         {"posix:permissions" "rwxr-xr-x"
-                          "owner:owner"       user-1}}
+                         {"posix:permissions" "rwxr-xr-x"}}
            [:file-1 {:content ["Line 1" "Line 2"]}]
            [:file-2 {:content ["Line 3" "Line 4"]}]]
           [:directory-2 {:file-attributes
-                         {"posix:permissions" "r-xr-xr-x"
-                          "owner:owner"       user-2}}
+                         {"posix:permissions" "r-xr-xr-x"}}
            [:file-3 {:content ["Line 5" "Line 6"]}]]]])
 
       (is (true? (f/exists? file-1-path)))
@@ -3987,32 +3912,21 @@
                   :group-read :group-write
                   :others-read :others-write}
             (f/read-posix-file-permissions file-1-path :no-follow-links)))
-      (is (not= user-1
-            (f/read-attribute file-1-path "owner:owner" :no-follow-links)))
       (is (not= #{:owner-read :owner-write :owner-execute
                   :group-read :group-write
                   :others-read :others-write}
             (f/read-posix-file-permissions file-2-path :no-follow-links)))
-      (is (not= user-1
-            (f/read-attribute file-2-path "owner:owner" :no-follow-links)))
       (is (not= #{:owner-read :group-read :others-read}
             (f/read-posix-file-permissions file-3-path :no-follow-links)))
-      (is (not= user-2
-            (f/read-attribute file-3-path "owner:owner" :no-follow-links)))
 
       (is (= #{:owner-read :owner-write :owner-execute
                :group-read :group-execute
                :others-read :others-execute}
             (f/read-posix-file-permissions directory-1-path :no-follow-links)))
-      (is (= user-1
-            (f/read-attribute directory-1-path "owner:owner" :no-follow-links)))
       (is (= #{:owner-read :owner-execute
                :group-read :group-execute
                :others-read :others-execute}
-            (f/read-posix-file-permissions directory-2-path :no-follow-links)))
-      (is (= user-2
-            (f/read-attribute directory-2-path
-              "owner:owner" :no-follow-links)))))
+            (f/read-posix-file-permissions directory-2-path :no-follow-links)))))
 
   (let [initial-target-path "/initial-target"
         new-target-path "/new-target"
