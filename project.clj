@@ -1,4 +1,4 @@
-(defproject io.logicblocks/pathological "0.1.22-RC2"
+(defproject io.logicblocks/pathological "0.1.22-RC3"
   :description "A thin but complete wrapper of Java NIO2 for Clojure."
   :url "https://github.com/logicblocks/pathological"
 
